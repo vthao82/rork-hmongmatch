@@ -37,12 +37,12 @@ export default function RootLayout() {
       <SafeAreaProvider>
         <LanguageProvider>
           <OnboardingProvider>
-          <LikesProvider>
-            <GestureHandlerRootView style={{ flex: 1 }}>
-              <StatusBar style="light" />
-              <RootLayoutNav />
-            </GestureHandlerRootView>
-          </LikesProvider>
+            <LikesProvider>
+              <GestureHandlerRootView style={{ flex: 1 }}>
+                <StatusBar style="light" />
+                <RootLayoutNav />
+              </GestureHandlerRootView>
+            </LikesProvider>
           </OnboardingProvider>
         </LanguageProvider>
       </SafeAreaProvider>
