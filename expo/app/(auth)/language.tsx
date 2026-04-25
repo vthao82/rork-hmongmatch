@@ -70,7 +70,7 @@ export default function LanguageScreen() {
                   <Image source={{ uri: o.icon }} style={s.iconImg} resizeMode="contain" />
                 ) : (
                   <View style={s.enBadge}>
-                    <Languages size={22} color={Colors.gold} />
+                    <Text style={s.flagEmoji}>🇺🇸</Text>
                   </View>
                 )}
                 <View style={{ flex: 1 }}>
@@ -112,6 +112,7 @@ const s = StyleSheet.create({
   optActive: { borderColor: Colors.gold, backgroundColor: "rgba(212,168,67,0.15)" },
   iconImg: { width: 38, height: 38 },
   enBadge: { width: 38, height: 38, borderRadius: 10, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(212,168,67,0.15)", borderWidth: 1, borderColor: "rgba(212,168,67,0.35)" },
+  flagEmoji: { fontSize: 22, color: Colors.gold },
   optTitle: { color: Colors.offwhite, fontSize: 17, fontWeight: "800" as const, letterSpacing: -0.2 },
   optSub: { color: "rgba(245,240,235,0.7)", fontSize: 13, marginTop: 2 },
   check: { width: 26, height: 26, borderRadius: 13, borderWidth: 1.5, borderColor: "rgba(255,255,255,0.35)", alignItems: "center", justifyContent: "center" },
