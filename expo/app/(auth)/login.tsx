@@ -38,7 +38,7 @@ export default function LoginScreen() {
 
   const onGoogle = () => {
     update({ method: "google" });
-    router.push("/(auth)/account-picker");
+    router.push("/(auth)/terms");
   };
 
   return (
@@ -51,9 +51,7 @@ export default function LoginScreen() {
         </View>
         <Animated.View style={[s.top, { opacity: fade, transform: [{ translateY: rise }] }]}>
           <HmongLogo size={96} />
-          <Text style={s.brand}>Hmong Match</Text>
-          <Text style={s.tag}>{t("itStartsWithAStory")}</Text>
-        </Animated.View>
+          <Text style={s.brand}>Hmong Date</Text>
 
         <View style={s.middle} />
 

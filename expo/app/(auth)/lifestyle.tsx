@@ -51,18 +51,13 @@ export default function LifestyleScreen() {
 
   return (
     <OnboardingScreen
-      step={11}
-      total={15}
-      gradient={[Colors.dark.bg, Colors.dark.bgSoft] as const}
+      step={15}
+      total={19}
+      gradient={[Colors.indigo, "#3c0a24", Colors.crimson] as const}
       topRight={
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <Pressable onPress={() => router.back()} style={s.back}>
-            <ArrowLeft size={22} color={Colors.dark.text} />
-          </Pressable>
-          <Pressable onPress={onSkip} testID="lifestyle-skip">
-            <Text style={s.skip}>{t("skip")}</Text>
-          </Pressable>
-        </View>
+        <Pressable onPress={onSkip} testID="lifestyle-skip">
+          <Text style={s.skip}>{t("skip")}</Text>
+        </Pressable>
       }
       footer={<PillButton label={`${t("next")}  ${filled}/4`} onPress={onNext} disabled={filled === 0} variant="light" testID="lifestyle-next" />}
     >

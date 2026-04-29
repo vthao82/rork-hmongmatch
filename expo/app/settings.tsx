@@ -456,7 +456,7 @@ export default function SettingsScreen() {
             <View style={{ flex: 1 }}>
               <View style={s.visTitleRow}>
                 <Text style={s.visTitle}>Incognito</Text>
-                <View style={s.plusBadge}><Text style={s.plusBadgeText}>Hmong Match Plus™</Text></View>
+                <View style={s.plusBadge}><Text style={s.plusBadgeText}>Hmong Date Plus™</Text></View>
               </View>
               <Text style={s.visSub}>You will be discoverable only by people you Like</Text>
             </View>
@@ -570,7 +570,7 @@ export default function SettingsScreen() {
                 />
               </View>
             </View>
-            <Text style={s.hint}>Manage how {featureOpen} appears and behaves across Hmong Match.</Text>
+            <Text style={s.hint}>Manage how {featureOpen} appears and behaves across Hmong Date.</Text>
           </View>
         </View>
       </Modal>

@@ -36,14 +36,9 @@ export default function LookingForScreen() {
 
   return (
     <OnboardingScreen
-      step={7}
-      total={15}
-      gradient={[Colors.dark.bg, Colors.dark.bgSoft] as const}
-      topRight={
-        <Pressable onPress={() => router.back()} style={s.back}>
-          <ArrowLeft size={22} color={Colors.dark.text} />
-        </Pressable>
-      }
+      step={11}
+      total={19}
+      gradient={[Colors.indigo, "#3c0a24", Colors.crimson] as const}
       footer={<PillButton label={t("next")} onPress={onNext} disabled={!selected} variant="light" testID="lookingfor-next" />}
     >
       <Text style={s.head}>{t("lookingForQ")}</Text>

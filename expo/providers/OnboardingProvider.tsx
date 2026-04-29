@@ -29,12 +29,25 @@ export type OnboardingData = {
   genders: GenderId[];
   genderDetail?: string;
   showGender?: boolean;
+  clan?: string;
+  showClan?: boolean;
+  dialect?: string;
+  showDialect?: boolean;
+  fromCountry?: string;
+  fromState?: string;
+  fromCity?: string;
+  showLocation?: boolean;
+  work?: string;
+  workOther?: string;
+  showWork?: boolean;
   orientations: string[];
   showOrientation?: boolean;
   seeking: SeekingId[];
   lookingFor?: LookingForId;
   distance?: number;
+  distanceSearch?: boolean;
   distanceWorldwide?: boolean;
+  distanceUSOnly?: boolean;
   education?: string;
   interests: string[];
   lifestyle: Lifestyle;
@@ -55,9 +68,15 @@ const defaults: OnboardingData = {
   orientations: [],
   seeking: [],
   showGender: true,
+  showClan: true,
+  showDialect: true,
+  showLocation: true,
+  showWork: true,
   showOrientation: true,
   distance: 50,
+  distanceSearch: true,
   distanceWorldwide: false,
+  distanceUSOnly: false,
   lifestyle: {},
   extras: {},
 };

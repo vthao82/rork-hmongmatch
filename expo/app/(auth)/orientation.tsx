@@ -36,18 +36,13 @@ export default function OrientationScreen() {
 
   return (
     <OnboardingScreen
-      step={5}
-      total={15}
-      gradient={[Colors.dark.bg, Colors.dark.bgSoft] as const}
+      step={9}
+      total={19}
+      gradient={[Colors.indigo, "#3c0a24", Colors.crimson] as const}
       topRight={
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <Pressable onPress={() => router.back()} style={s.back}>
-            <ArrowLeft size={22} color={Colors.dark.text} />
-          </Pressable>
-          <Pressable onPress={() => save(true)} testID="orientation-skip">
-            <Text style={s.skip}>{t("skip")}</Text>
-          </Pressable>
-        </View>
+        <Pressable onPress={() => save(true)} testID="orientation-skip">
+          <Text style={s.skip}>{t("skip")}</Text>
+        </Pressable>
       }
       footer={
         <View>

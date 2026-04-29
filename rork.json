@@ -1,12 +1,12 @@
 {
   "apps": [
     {
-      "name": "HmongMatch",
+      "name": "Hmong Date",
       "path": "expo",
       "framework": "react-native"
     },
     {
-      "name": "HmongMatch",
+      "name": "Hmong Date",
       "path": "expo",
       "framework": "react-native"
     }
