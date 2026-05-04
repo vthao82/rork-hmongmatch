@@ -34,13 +34,18 @@ export default function ExtrasScreen() {
 
   return (
     <OnboardingScreen
-      step={16}
-      total={19}
-      gradient={[Colors.indigo, "#3c0a24", Colors.crimson] as const}
+      step={12}
+      total={15}
+      gradient={[Colors.dark.bg, Colors.dark.bgSoft] as const}
       topRight={
-        <Pressable onPress={onSkip} testID="extras-skip">
-          <Text style={s.skip}>{t("skip")}</Text>
-        </Pressable>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+          <Pressable onPress={() => router.back()} style={s.back}>
+            <ArrowLeft size={22} color={Colors.dark.text} />
+          </Pressable>
+          <Pressable onPress={onSkip} testID="extras-skip">
+            <Text style={s.skip}>{t("skip")}</Text>
+          </Pressable>
+        </View>
       }
       footer={<PillButton label={`${t("next")}  ${filled}/3`} onPress={onNext} disabled={filled === 0} variant="light" testID="extras-next" />}
     >

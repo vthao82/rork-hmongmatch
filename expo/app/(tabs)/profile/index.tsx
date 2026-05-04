@@ -96,7 +96,7 @@ export default function ProfileScreen() {
           <View style={s.goldHeader}>
             <View style={s.goldBadge}>
               <Flame size={18} color={Colors.accent} fill={Colors.accent} />
-              <Text style={s.goldWordmark}>Hmong Date</Text>
+              <Text style={s.goldWordmark}>Hmong Match</Text>
               <View style={s.goldChip}><Text style={s.goldChipText}>GOLD</Text></View>
             </View>
             <View style={s.upgradeBtn}><Text style={s.upgradeText}>Upgrade</Text></View>

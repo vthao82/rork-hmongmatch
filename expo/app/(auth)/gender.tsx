@@ -34,14 +34,19 @@ export default function GenderScreen() {
 
   const onNext = () => {
     update({ genders: selected, showGender: show });
-    router.push("/(auth)/clan");
+    router.push("/(auth)/orientation");
   };
 
   return (
     <OnboardingScreen
       step={4}
-      total={19}
-      gradient={[Colors.indigo, "#3c0a24", Colors.crimson] as const}
+      total={15}
+      gradient={[Colors.dark.bg, Colors.dark.bgSoft] as const}
+      topRight={
+        <Pressable onPress={() => router.back()} style={s.back}>
+          <ArrowLeft size={22} color={Colors.dark.text} />
+        </Pressable>
+      }
       footer={
         <View>
           <ShowOnProfile label={t("showGender")} value={show} onChange={setShow} testID="show-gender" />

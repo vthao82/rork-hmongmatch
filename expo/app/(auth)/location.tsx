@@ -44,9 +44,14 @@ export default function LocationScreen() {
 
   return (
     <OnboardingScreen
-      step={19}
-      total={19}
-      gradient={[Colors.indigo, "#3c0a24", Colors.crimson] as const}
+      step={15}
+      total={15}
+      gradient={[Colors.dark.bg, Colors.dark.bgSoft] as const}
+      topRight={
+        <Pressable onPress={() => router.back()} style={s.back}>
+          <ArrowLeft size={22} color={Colors.dark.text} />
+        </Pressable>
+      }
       footer={<PillButton label={t("locationAllow")} onPress={allow} variant="light" testID="allow-location" />}
       scroll={false}
     >

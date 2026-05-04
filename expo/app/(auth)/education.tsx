@@ -33,9 +33,14 @@ export default function EducationScreen() {
 
   return (
     <OnboardingScreen
-      step={13}
-      total={19}
-      gradient={[Colors.indigo, "#3c0a24", Colors.crimson] as const}
+      step={9}
+      total={15}
+      gradient={[Colors.dark.bg, Colors.dark.bgSoft] as const}
+      topRight={
+        <Pressable onPress={() => router.back()} style={s.back}>
+          <ArrowLeft size={22} color={Colors.dark.text} />
+        </Pressable>
+      }
       footer={<PillButton label={t("next")} onPress={onNext} disabled={!selected} variant="light" testID="education-next" />}
     >
       <Text style={s.head}>{t("educationQ")}</Text>

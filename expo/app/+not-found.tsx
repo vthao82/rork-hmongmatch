@@ -8,7 +8,7 @@ export default function NotFoundScreen() {
   return (
     <>
       <Stack.Screen options={{ title: "Oops" }} />
-      <View style={s.c}><Flame size={48} color={Colors.primary} /><Text style={s.t}>Page not found</Text><Text style={s.st}>The page you are looking for does not exist.</Text><Link href="/" style={s.l}><Text style={s.lt}>Back to Hmong Date</Text></Link></View>
+      <View style={s.c}><Flame size={48} color={Colors.primary} /><Text style={s.t}>Page not found</Text><Text style={s.st}>The page you are looking for does not exist.</Text><Link href="/" style={s.l}><Text style={s.lt}>Back to HmongMatch</Text></Link></View>
     </>
   );
 }

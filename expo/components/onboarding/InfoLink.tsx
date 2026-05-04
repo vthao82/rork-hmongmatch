@@ -6,7 +6,7 @@ type Props = {
   testID?: string;
 };
 
-function InfoLink({ label = "Learn how Hmong Date uses this info", testID }: Props) {
+function InfoLink({ label = "Learn how Hmong Match uses this info", testID }: Props) {
   const onPress = () => {
     const msg = "We use this information only to show you compatible people. You can change or hide it anytime in Settings.";
     if (Platform.OS === "web") {

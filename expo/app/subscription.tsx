@@ -11,9 +11,9 @@ const SW = Dimensions.get("window").width;
 type Plan = { id: "plus" | "gold" | "platinum"; name: string; price: string; color: string; border: string; bg: readonly [string, string] };
 
 const PLANS: Plan[] = [
-  { id: "plus", name: "Hmong Date +", price: "STARTING AT $29.99", color: Colors.primary, border: "#ff5574", bg: ["#3a0512", "#1a0208"] as const },
-  { id: "gold", name: "Hmong Date GOLD", price: "STARTING AT $44.99", color: Colors.accent, border: Colors.accent, bg: ["#2a1f05", "#140e02"] as const },
-  { id: "platinum", name: "Hmong Date PLATINUM", price: "STARTING AT $59.99", color: "#c0c0d6", border: "#c0c0d6", bg: ["#1a1a22", "#0c0c10"] as const },
+  { id: "plus", name: "Hmong Match +", price: "STARTING AT $29.99", color: Colors.primary, border: "#ff5574", bg: ["#3a0512", "#1a0208"] as const },
+  { id: "gold", name: "Hmong Match GOLD", price: "STARTING AT $44.99", color: Colors.accent, border: Colors.accent, bg: ["#2a1f05", "#140e02"] as const },
+  { id: "platinum", name: "Hmong Match PLATINUM", price: "STARTING AT $59.99", color: "#c0c0d6", border: "#c0c0d6", bg: ["#1a1a22", "#0c0c10"] as const },
 ];
 
 type Feature = { label: string; desc?: string; plus: boolean; gold: boolean; platinum: boolean };

@@ -61,9 +61,14 @@ export default function PhotosScreen() {
 
   return (
     <OnboardingScreen
-      step={17}
-      total={19}
-      gradient={[Colors.indigo, "#3c0a24", Colors.crimson] as const}
+      step={13}
+      total={15}
+      gradient={[Colors.dark.bg, Colors.dark.bgSoft] as const}
+      topRight={
+        <Pressable onPress={() => router.back()} style={s.back}>
+          <ArrowLeft size={22} color={Colors.dark.text} />
+        </Pressable>
+      }
       footer={<PillButton label={t("next")} onPress={onNext} disabled={!valid} variant="light" testID="photos-next" />}
     >
       <Text style={s.head}>{t("photosQ")}</Text>

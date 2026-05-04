@@ -79,7 +79,7 @@ export default function LikesScreen() {
         </ScrollView>
       ) : (
         <ScrollView contentContainerStyle={s.topGrid} showsVerticalScrollIndicator={false}>
-          <Text style={s.topPrompt}>Upgrade to Hmong Date Gold™ for more Top Picks!</Text>
+          <Text style={s.topPrompt}>Upgrade to Hmong Match Gold™ for more Top Picks!</Text>
           <View style={s.grid}>
             {profiles.slice(0, 4).map(p => (
               <View key={p.id} style={[s.pick, { width: CW }]}>

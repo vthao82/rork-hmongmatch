@@ -1,12 +1,13 @@
 {
+  "$schema": "https://rork.com/schema/rork.json",
   "apps": [
     {
-      "name": "Hmong Date",
+      "name": "HmongMatch",
       "path": "expo",
       "framework": "react-native"
     },
     {
-      "name": "Hmong Date",
+      "name": "HmongMatch",
       "path": "expo",
       "framework": "react-native"
     }
