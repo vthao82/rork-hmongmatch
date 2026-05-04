@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import { router } from "expo-router";
-import { ArrowLeft } from "lucide-react-native";
 import Colors from "@/constants/colors";
 import OnboardingScreen from "@/components/onboarding/OnboardingScreen";
 import PillButton from "@/components/onboarding/PillButton";
@@ -36,18 +35,12 @@ export default function OrientationScreen() {
 
   return (
     <OnboardingScreen
-      step={5}
-      total={15}
-      gradient={[Colors.dark.bg, Colors.dark.bgSoft] as const}
+      step={8}
+      total={19}
       topRight={
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <Pressable onPress={() => router.back()} style={s.back}>
-            <ArrowLeft size={22} color={Colors.dark.text} />
-          </Pressable>
-          <Pressable onPress={() => save(true)} testID="orientation-skip">
-            <Text style={s.skip}>{t("skip")}</Text>
-          </Pressable>
-        </View>
+        <Pressable onPress={() => save(true)} testID="orientation-skip">
+          <Text style={s.skip}>{t("skip")}</Text>
+        </Pressable>
       }
       footer={
         <View>
@@ -77,7 +70,6 @@ export default function OrientationScreen() {
 }
 
 const s = StyleSheet.create({
-  back: { width: 38, height: 38, borderRadius: 19, backgroundColor: "rgba(255,255,255,0.06)", justifyContent: "center", alignItems: "center" },
   skip: { color: Colors.dark.textDim, fontSize: 14, fontWeight: "600" as const, padding: 8 },
   head: { fontSize: 28, fontWeight: "800" as const, color: Colors.dark.text, letterSpacing: -0.5, marginTop: 6 },
   sub: { fontSize: 14, color: Colors.dark.textDim, marginTop: 10, lineHeight: 20 },

@@ -3,9 +3,10 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
-import { ArrowLeft, BadgeCheck, MapPin, Users } from "lucide-react-native";
+import { ArrowLeft, BadgeCheck, MapPin, Users, Plus, Check } from "lucide-react-native";
 import Colors from "@/constants/colors";
 import { profiles, Profile } from "@/mocks/profiles";
+import { useOnboarding } from "@/providers/OnboardingProvider";
 
 const SW = Dimensions.get("window").width;
 const CW = (SW - 16 * 2 - 12) / 2;
@@ -30,6 +31,8 @@ export default function CategoryScreen() {
   const ins = useSafeAreaInsets();
   const router = useRouter();
   const title = decodeURIComponent(id ?? "");
+  const { data, update } = useOnboarding();
+  const inCategory = (data.interests ?? []).includes(title);
 
   const { filtered, subtitle } = useMemo(() => {
     const entry = CATEGORY_MAP[title];
@@ -53,6 +56,19 @@ export default function CategoryScreen() {
         </View>
       </View>
       <Text style={s.sub}>{subtitle}</Text>
+      <TouchableOpacity
+        onPress={() => {
+          const cur = data.interests ?? [];
+          const next = inCategory ? cur.filter(x => x !== title) : [...cur, title];
+          update({ interests: next });
+        }}
+        activeOpacity={0.85}
+        style={[s.addSelf, inCategory && s.addSelfOn]}
+        testID="add-self-category"
+      >
+        {inCategory ? <Check size={16} color="#FFF" /> : <Plus size={16} color="#FFF" />}
+        <Text style={s.addSelfText}>{inCategory ? "You're in this category" : "Add yourself to this category"}</Text>
+      </TouchableOpacity>
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
         {filtered.length === 0 ? (
@@ -109,4 +125,7 @@ const s = StyleSheet.create({
   empty: { alignItems: "center", paddingVertical: 80 },
   emptyTitle: { color: "#FFF", fontSize: 18, fontWeight: "700" as const },
   emptySub: { color: "rgba(255,255,255,0.55)", fontSize: 13, marginTop: 6, textAlign: "center" as const, paddingHorizontal: 40 },
+  addSelf: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, marginHorizontal: 16, marginBottom: 14, backgroundColor: Colors.crimson, paddingVertical: 12, borderRadius: 999 },
+  addSelfOn: { backgroundColor: "#1f7a47" },
+  addSelfText: { color: "#FFF", fontSize: 14, fontWeight: "800" as const },
 });

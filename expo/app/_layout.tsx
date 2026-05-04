@@ -25,6 +25,8 @@ function RootLayoutNav() {
       <Stack.Screen name="settings" options={{ headerShown: false }} />
       <Stack.Screen name="edit-profile" options={{ headerShown: false, presentation: "modal" }} />
       <Stack.Screen name="category/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="report" options={{ headerShown: false, presentation: "modal" }} />
+      <Stack.Screen name="photo-verify" options={{ headerShown: false, presentation: "modal" }} />
       <Stack.Screen name="+not-found" />
     </Stack>
   );

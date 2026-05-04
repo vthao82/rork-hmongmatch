@@ -5,6 +5,8 @@ import { useEffect, useState, useCallback } from "react";
 export type GenderId = "man" | "woman" | "beyond";
 export type SeekingId = "men" | "women" | "beyond" | "everyone";
 export type LookingForId = "long" | "long-open" | "short-open" | "short" | "friends" | "unsure";
+export type DialectId = "green" | "white";
+export type WorkId = "wfh" | "full-time" | "part-time" | "school" | "government" | "labor" | "other";
 
 export type Lifestyle = {
   drink?: string;
@@ -35,6 +37,17 @@ export type OnboardingData = {
   lookingFor?: LookingForId;
   distance?: number;
   distanceWorldwide?: boolean;
+  distanceUSOnly?: boolean;
+  searchByDistance?: boolean;
+  clan?: string;
+  dialect?: DialectId;
+  hometownCountry?: string;
+  hometownState?: string;
+  hometownCity?: string;
+  work?: WorkId;
+  workOther?: string;
+  photoVerified?: boolean;
+  likedIds?: string[];
   education?: string;
   interests: string[];
   lifestyle: Lifestyle;
@@ -58,6 +71,9 @@ const defaults: OnboardingData = {
   showOrientation: true,
   distance: 50,
   distanceWorldwide: false,
+  distanceUSOnly: false,
+  searchByDistance: true,
+  likedIds: [],
   lifestyle: {},
   extras: {},
 };

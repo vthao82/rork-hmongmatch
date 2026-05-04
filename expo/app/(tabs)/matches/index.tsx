@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ScrollView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
-import { Heart, Star, Zap } from "lucide-react-native";
+import { Heart, Star, Zap, ArrowRight } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import Colors from "@/constants/colors";
 import HmongMatchHeader from "@/components/HmongMatchHeader";
@@ -15,8 +15,9 @@ const CW = (SW - 32 - 12) / 2;
 export default function LikesScreen() {
   const ins = useSafeAreaInsets();
   const router = useRouter();
-  const { used, remaining, premium } = useLikes();
-  const [tab, setTab] = useState<"likes" | "top">("likes");
+  const { used, premium, likedIds } = useLikes();
+  const [tab, setTab] = useState<"likes" | "liked" | "top">("likes");
+  const myLiked = profiles.filter(p => likedIds.includes(p.id));
 
   const likesCount = premium ? used : used;
   const shownRemaining = premium ? "Unlimited" : `${Math.max(0, DAILY_LIMIT - used)} left today`;
@@ -26,8 +27,13 @@ export default function LikesScreen() {
       <HmongMatchHeader />
       <View style={s.tabs}>
         <TouchableOpacity style={s.tab} onPress={() => setTab("likes")} testID="tab-likes">
-          <Text style={[s.tabText, tab === "likes" && s.tabTextActive]}>{likesCount} Likes</Text>
+          <Text style={[s.tabText, tab === "likes" && s.tabTextActive]}>Likes You</Text>
           {tab === "likes" && <View style={s.tabBar} />}
+        </TouchableOpacity>
+        <View style={s.tabDivider} />
+        <TouchableOpacity style={s.tab} onPress={() => setTab("liked")} testID="tab-liked">
+          <Text style={[s.tabText, tab === "liked" && s.tabTextActive]}>You Liked</Text>
+          {tab === "liked" && <View style={s.tabBar} />}
         </TouchableOpacity>
         <View style={s.tabDivider} />
         <TouchableOpacity style={s.tab} onPress={() => setTab("top")} testID="tab-top">
@@ -36,7 +42,36 @@ export default function LikesScreen() {
         </TouchableOpacity>
       </View>
 
-      {tab === "likes" ? (
+      {tab === "liked" ? (
+        <ScrollView contentContainerStyle={s.likesScroll} showsVerticalScrollIndicator={false}>
+          <Text style={s.sectionHead}>People you liked ({myLiked.length})</Text>
+          {myLiked.length === 0 ? (
+            <View style={s.emptyLiked}>
+              <Heart size={36} color={Colors.dark.textFaint} />
+              <Text style={s.emptyTitle}>You haven&apos;t liked anyone yet</Text>
+              <Text style={s.emptySub}>Start swiping to find your match.</Text>
+              <TouchableOpacity onPress={() => router.push("/(tabs)/discover" as never)} style={s.startBtn} testID="start-swiping-likes">
+                <Text style={s.startBtnText}>Start swiping</Text>
+                <ArrowRight size={16} color="#FFF" />
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <View style={s.grid}>
+              {myLiked.map(p => (
+                <TouchableOpacity key={p.id} style={[s.pick, { width: CW }]} onPress={() => router.push(`/user/${p.id}`)} testID={`liked-${p.id}`}>
+                  <Image source={{ uri: p.photos[0] }} style={s.pickImg} contentFit="cover" />
+                  <View style={s.pickOverlay} />
+                  <View style={s.pickInfo}>
+                    <Text style={s.pickName}>{p.name}, {p.age}</Text>
+                    <Text style={s.pickTime}>{p.distance}</Text>
+                  </View>
+                  <View style={s.likedBadge}><Heart size={12} color="#FFF" fill="#FFF" /></View>
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+        </ScrollView>
+      ) : tab === "likes" ? (
         <ScrollView contentContainerStyle={s.likesScroll} showsVerticalScrollIndicator={false}>
           <View style={s.counterCard}>
             <View style={s.counterRow}>
@@ -79,7 +114,7 @@ export default function LikesScreen() {
         </ScrollView>
       ) : (
         <ScrollView contentContainerStyle={s.topGrid} showsVerticalScrollIndicator={false}>
-          <Text style={s.topPrompt}>Upgrade to Hmong Match Gold™ for more Top Picks!</Text>
+          <Text style={s.topPrompt}>Upgrade to Hmong Date Gold™ for more Top Picks!</Text>
           <View style={s.grid}>
             {profiles.slice(0, 4).map(p => (
               <View key={p.id} style={[s.pick, { width: CW }]}>
@@ -138,4 +173,10 @@ const s = StyleSheet.create({
   goldBtn: { backgroundColor: Colors.accent, borderRadius: 999, paddingVertical: 16, paddingHorizontal: 40, marginTop: 24, alignSelf: "center" },
   goldBtnText: { color: "#1a1a1f", fontSize: 16, fontWeight: "800" as const },
   unlockWrap: { alignItems: "center", marginTop: 24 },
+  emptyLiked: { alignItems: "center", paddingVertical: 60, gap: 8 },
+  emptyTitle: { color: "#FFF", fontSize: 17, fontWeight: "800" as const, marginTop: 8 },
+  emptySub: { color: "rgba(255,255,255,0.6)", fontSize: 13, textAlign: "center" as const },
+  startBtn: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: Colors.primary, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 999, marginTop: 14 },
+  startBtnText: { color: "#FFF", fontWeight: "800" as const, fontSize: 14 },
+  likedBadge: { position: "absolute", top: 10, right: 10, width: 26, height: 26, borderRadius: 13, backgroundColor: Colors.crimson, alignItems: "center", justifyContent: "center" },
 });

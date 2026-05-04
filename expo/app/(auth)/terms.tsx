@@ -14,16 +14,16 @@ import { useT } from "@/providers/LanguageProvider";
 type Section = { title: string; body?: string; bullets?: string[] };
 
 const TOS: Section[] = [
-  { title: "1. Acceptance of Terms", body: "By accessing or using HmongMatch (\"the App\"), you agree to be bound by these Terms of Service. If you do not agree, you may not use the App." },
-  { title: "2. Eligibility", body: "You must be at least 18 years old to use HmongHeart. By using the App, you confirm that you meet this requirement." },
+  { title: "1. Acceptance of Terms", body: "By accessing or using Hmong Date (\"the App\"), you agree to be bound by these Terms of Service. If you do not agree, you may not use the App." },
+  { title: "2. Eligibility", body: "You must be at least 18 years old to use Hmong Date. By using the App, you confirm that you meet this requirement." },
   { title: "3. User Accounts", body: "You agree to provide accurate and truthful information, including name, age, and profile details. You are responsible for maintaining the confidentiality of your account." },
   { title: "4. User Conduct", body: "You agree NOT to:", bullets: ["Harass, abuse, or harm other users", "Share false or misleading information", "Use the app for illegal purposes", "Send spam or solicit money"] },
-  { title: "5. User Interactions", body: "HmongMatch does not conduct background checks or guarantee user identity. You are solely responsible for your interactions with other users." },
+  { title: "5. User Interactions", body: "Hmong Date does not conduct background checks or guarantee user identity. You are solely responsible for your interactions with other users." },
   { title: "6. Safety Disclaimer", body: "All interactions are at your own risk. Users should exercise caution when communicating or meeting others." },
   { title: "7. Premium Services", body: "Some features require payment. All purchases are final unless required otherwise by law." },
-  { title: "8. Intellectual Property", body: "All content, branding, and design of HmongMatch are owned by us and may not be copied or reused without permission." },
-  { title: "9. Limitation of Liability", body: "To the fullest extent permitted by law, HmongHeart is not liable for any damages, injuries, or losses resulting from use of the App." },
-  { title: "10. Indemnification", body: "You agree to indemnify and hold harmless HmongMatch from any claims arising from your use of the App." },
+  { title: "8. Intellectual Property", body: "All content, branding, and design of Hmong Date are owned by us and may not be copied or reused without permission." },
+  { title: "9. Limitation of Liability", body: "To the fullest extent permitted by law, Hmong Date is not liable for any damages, injuries, or losses resulting from use of the App." },
+  { title: "10. Indemnification", body: "You agree to indemnify and hold harmless Hmong Date from any claims arising from your use of the App." },
   { title: "11. Termination", body: "We may suspend or terminate your account at any time for violations of these terms." },
   { title: "12. Changes to Terms", body: "We may update these Terms at any time. Continued use means you accept the changes." },
 ];
@@ -35,9 +35,9 @@ const PRIVACY: Section[] = [
   { title: "4. Data Storage", body: "Your data is stored securely. However, no system is 100% secure." },
   { title: "5. User Control", body: "You may:", bullets: ["Edit your profile", "Delete your account", "Control notifications"] },
   { title: "6. Cookies & Tracking", body: "We may use cookies and similar technologies to improve user experience." },
-  { title: "7. Children's Privacy", body: "HmongHeart is not intended for users under 18." },
+  { title: "7. Children's Privacy", body: "Hmong Date is not intended for users under 18." },
   { title: "8. Changes to Privacy Policy", body: "We may update this policy at any time." },
-  { title: "9. Contact", body: "For questions, contact: support@hmongheart.com" },
+  { title: "9. Contact", body: "For questions, contact: support@hmongdate.com" },
 ];
 
 function SectionBlock({ title, body, bullets }: Section) {
@@ -124,7 +124,7 @@ export default function TermsScreen() {
           <View style={s.finalNote}>
             <Text style={s.finalTitle}>{t("finalNote")}</Text>
             <Text style={s.finalBody}>
-              By using HmongHeart, you acknowledge that you have read and agreed to both the Terms of Service and Privacy Policy.
+              By using Hmong Date, you acknowledge that you have read and agreed to both the Terms of Service and Privacy Policy.
             </Text>
           </View>
         </ScrollView>

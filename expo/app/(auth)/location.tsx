@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import { View, Text, StyleSheet, Pressable, Animated, Easing, Platform } from "react-native";
 import { router } from "expo-router";
-import { ArrowLeft, MapPin, ChevronDown } from "lucide-react-native";
+import { MapPin, ChevronDown } from "lucide-react-native";
 import * as Location from "expo-location";
 import Colors from "@/constants/colors";
 import OnboardingScreen from "@/components/onboarding/OnboardingScreen";
@@ -44,14 +44,8 @@ export default function LocationScreen() {
 
   return (
     <OnboardingScreen
-      step={15}
-      total={15}
-      gradient={[Colors.dark.bg, Colors.dark.bgSoft] as const}
-      topRight={
-        <Pressable onPress={() => router.back()} style={s.back}>
-          <ArrowLeft size={22} color={Colors.dark.text} />
-        </Pressable>
-      }
+      step={19}
+      total={19}
       footer={<PillButton label={t("locationAllow")} onPress={allow} variant="light" testID="allow-location" />}
       scroll={false}
     >
@@ -83,7 +77,6 @@ export default function LocationScreen() {
 }
 
 const s = StyleSheet.create({
-  back: { width: 38, height: 38, borderRadius: 19, backgroundColor: "rgba(255,255,255,0.06)", justifyContent: "center", alignItems: "center" },
   wrap: { flex: 1, alignItems: "center", paddingHorizontal: 24, paddingTop: 20 },
   head: { fontSize: 28, fontWeight: "800" as const, color: Colors.dark.text, textAlign: "center" as const, letterSpacing: -0.5, lineHeight: 34 },
   iconWrap: { marginTop: 50, marginBottom: 30, width: 180, height: 180, justifyContent: "center", alignItems: "center" },

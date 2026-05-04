@@ -1,7 +1,6 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, Pressable } from "react-native";
+import { View, Text, StyleSheet } from "react-native";
 import { router } from "expo-router";
-import { ArrowLeft } from "lucide-react-native";
 import Colors from "@/constants/colors";
 import OnboardingScreen from "@/components/onboarding/OnboardingScreen";
 import PillButton from "@/components/onboarding/PillButton";
@@ -37,14 +36,8 @@ export default function SeekingScreen() {
 
   return (
     <OnboardingScreen
-      step={6}
-      total={15}
-      gradient={[Colors.dark.bg, Colors.dark.bgSoft] as const}
-      topRight={
-        <Pressable onPress={() => router.back()} style={s.back}>
-          <ArrowLeft size={22} color={Colors.dark.text} />
-        </Pressable>
-      }
+      step={9}
+      total={19}
       footer={<PillButton label={t("next")} onPress={onNext} disabled={selected.length === 0} variant="light" testID="seeking-next" />}
     >
       <Text style={s.head}>{t("seekingQ")}</Text>
@@ -61,7 +54,6 @@ export default function SeekingScreen() {
 }
 
 const s = StyleSheet.create({
-  back: { width: 38, height: 38, borderRadius: 19, backgroundColor: "rgba(255,255,255,0.06)", justifyContent: "center", alignItems: "center" },
   head: { fontSize: 28, fontWeight: "800" as const, color: Colors.dark.text, letterSpacing: -0.5, marginTop: 6, lineHeight: 34 },
   sub: { fontSize: 14, color: Colors.dark.textDim, marginTop: 10, lineHeight: 20 },
 });

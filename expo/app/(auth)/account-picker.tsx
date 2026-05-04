@@ -59,7 +59,7 @@ export default function AccountPicker() {
         <View style={s.head}>
           <HmongLogo size={48} />
           <Text style={s.title}>Choose an account to continue</Text>
-          <Text style={s.sub}>to Hmong Match</Text>
+          <Text style={s.sub}>to Hmong Date</Text>
         </View>
         <ScrollView style={s.list} showsVerticalScrollIndicator={false}>
           {ACCOUNTS.map((a, i) => (

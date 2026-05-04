@@ -267,7 +267,7 @@ function TextModal({ visible, title, initial, placeholder, onClose, onSave }: { 
   );
 }
 
-const PROFILE_FEATURES = ["Web Profile", "Q&A Events", "Top Picks", "Hmong Double Date", "Zodiac Mode", "Music", "Swipe Surge", "Active Status"] as const;
+const PROFILE_FEATURES = ["Web Profile", "Q&A Events", "Top Picks", "Zodiac Mode", "Music", "Swipe Surge", "Active Status"] as const;
 
 export default function SettingsScreen() {
   const ins = useSafeAreaInsets();
@@ -456,7 +456,7 @@ export default function SettingsScreen() {
             <View style={{ flex: 1 }}>
               <View style={s.visTitleRow}>
                 <Text style={s.visTitle}>Incognito</Text>
-                <View style={s.plusBadge}><Text style={s.plusBadgeText}>Hmong Match Plus™</Text></View>
+                <View style={s.plusBadge}><Text style={s.plusBadgeText}>Hmong Date Plus™</Text></View>
               </View>
               <Text style={s.visSub}>You will be discoverable only by people you Like</Text>
             </View>
@@ -480,25 +480,15 @@ export default function SettingsScreen() {
               <View style={{ flex: 1, paddingRight: 10 }}>
                 <View style={s.verifiedBadge}><Text style={s.verifiedText}>Must be verified</Text></View>
                 <Text style={[s.rowLabel, { marginTop: 6 }]}>Photo Verified Chat</Text>
-                <Text style={s.rowSub}>Photo Verified members can enable this to only receive messages from other Photo Verified profiles.</Text>
+                <Text style={s.rowSub}>Take a quick selfie to verify your photos. Verified members can enable this to only receive messages from other verified profiles.</Text>
               </View>
-              <Toggle value={photoVerifiedChat} onChange={setPhotoVerifiedChat} />
+              <Toggle value={photoVerifiedChat} onChange={(v) => { if (v) router.push("/photo-verify"); else setPhotoVerifiedChat(false); }} />
             </View>
-          </View>
-        </Section>
-
-        <Section title="Safety Partnerships">
-          <View style={s.card}>
-            <View style={s.rowToggle}>
-              <View style={{ flex: 1, paddingRight: 10 }}>
-                <View style={s.rowTitleLine}>
-                  <Text style={s.rowLabel}>Connect Safety Partner</Text>
-                  <Info size={14} color="rgba(255,255,255,0.55)" />
-                </View>
-                <Text style={s.rowSub}>Link your account to share meet-up details and access emergency support.</Text>
-              </View>
-              <Toggle value={safetyPartner} onChange={setSafetyPartner} />
-            </View>
+            {photoVerifiedChat && (
+              <TouchableOpacity onPress={() => router.push("/photo-verify")} style={{ marginTop: 10 }}>
+                <Text style={s.link}>Re-take selfie verification</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </Section>
 
@@ -570,7 +560,7 @@ export default function SettingsScreen() {
                 />
               </View>
             </View>
-            <Text style={s.hint}>Manage how {featureOpen} appears and behaves across Hmong Match.</Text>
+            <Text style={s.hint}>Manage how {featureOpen} appears and behaves across Hmong Date.</Text>
           </View>
         </View>
       </Modal>

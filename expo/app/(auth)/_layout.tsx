@@ -17,11 +17,16 @@ export default function AuthLayout() {
       <Stack.Screen name="name" />
       <Stack.Screen name="birthday" />
       <Stack.Screen name="gender" />
+      <Stack.Screen name="clan" />
+      <Stack.Screen name="dialect" />
+      <Stack.Screen name="hometown" />
       <Stack.Screen name="orientation" />
       <Stack.Screen name="seeking" />
       <Stack.Screen name="looking-for" />
       <Stack.Screen name="distance" />
+      <Stack.Screen name="work" />
       <Stack.Screen name="education" />
+      <Stack.Screen name="photo-verify" />
       <Stack.Screen name="interests" />
       <Stack.Screen name="lifestyle" />
       <Stack.Screen name="extras" />

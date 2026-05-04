@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { View, Text, StyleSheet, TextInput, Animated, Easing, Pressable, Modal } from "react-native";
 import { router } from "expo-router";
-import { ArrowLeft } from "lucide-react-native";
 import Colors from "@/constants/colors";
 import OnboardingScreen from "@/components/onboarding/OnboardingScreen";
 import PillButton from "@/components/onboarding/PillButton";
@@ -70,13 +69,7 @@ export default function NameScreen() {
   return (
     <OnboardingScreen
       step={2}
-      total={15}
-      gradient={[Colors.dark.bg, Colors.dark.bgSoft] as const}
-      topRight={
-        <Pressable onPress={() => router.back()} style={s.back} testID="name-back">
-          <ArrowLeft size={22} color={Colors.dark.text} />
-        </Pressable>
-      }
+      total={19}
       footer={<PillButton label={t("next")} onPress={onNext} disabled={!ok} variant="light" testID="name-next" />}
     >
       <Text style={s.head}>{t("firstNameQ")}</Text>
@@ -119,7 +112,6 @@ export default function NameScreen() {
 }
 
 const s = StyleSheet.create({
-  back: { width: 38, height: 38, borderRadius: 19, backgroundColor: "rgba(255,255,255,0.06)", justifyContent: "center", alignItems: "center" },
   head: { fontSize: 34, fontWeight: "800" as const, color: Colors.dark.text, letterSpacing: -0.5, marginTop: 10, lineHeight: 40 },
   row: { marginTop: 40, flexDirection: "row" },
   input: { fontSize: 32, fontWeight: "700" as const, color: Colors.dark.text, flex: 1, paddingVertical: 6 },

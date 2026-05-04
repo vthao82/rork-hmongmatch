@@ -1,7 +1,7 @@
 import React, { useState, useRef } from "react";
 import { View, Text, StyleSheet, Pressable, PanResponder, LayoutChangeEvent, Platform } from "react-native";
 import { router } from "expo-router";
-import { ArrowLeft, Minus, Plus, Globe2 } from "lucide-react-native";
+import { Minus, Plus, Globe2, Flag } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import OnboardingScreen from "@/components/onboarding/OnboardingScreen";
@@ -17,6 +17,8 @@ export default function DistanceScreen() {
   const { t } = useLanguage();
   const [value, setValue] = useState<number>(data.distance ?? 50);
   const [worldwide, setWorldwide] = useState<boolean>(data.distanceWorldwide ?? false);
+  const [usOnly, setUsOnly] = useState<boolean>(data.distanceUSOnly ?? false);
+  const [searchByDistance, setSearchByDistance] = useState<boolean>(data.searchByDistance ?? true);
   const [width, setWidth] = useState<number>(0);
   const lastHaptic = useRef<number>(value);
 
@@ -54,56 +56,100 @@ export default function DistanceScreen() {
   };
 
   const onNext = () => {
-    update({ distance: value, distanceWorldwide: worldwide });
-    router.push("/(auth)/education");
+    update({ distance: value, distanceWorldwide: worldwide, distanceUSOnly: usOnly, searchByDistance });
+    router.push("/(auth)/work");
   };
 
   const toggleWorldwide = () => {
     if (Platform.OS !== "web") Haptics.selectionAsync().catch(() => {});
-    setWorldwide(w => !w);
+    setWorldwide(w => {
+      const next = !w;
+      if (next) { setUsOnly(false); setSearchByDistance(false); }
+      return next;
+    });
+  };
+  const toggleUS = () => {
+    if (Platform.OS !== "web") Haptics.selectionAsync().catch(() => {});
+    setUsOnly(u => {
+      const next = !u;
+      if (next) setWorldwide(false);
+      return next;
+    });
+  };
+  const toggleSearchByDistance = () => {
+    if (Platform.OS !== "web") Haptics.selectionAsync().catch(() => {});
+    setSearchByDistance(v => {
+      const next = !v;
+      if (next) setWorldwide(false);
+      return next;
+    });
   };
 
   return (
     <OnboardingScreen
-      step={8}
-      total={15}
-      gradient={[Colors.dark.bg, Colors.dark.bgSoft] as const}
-      topRight={
-        <Pressable onPress={() => router.back()} style={s.back}>
-          <ArrowLeft size={22} color={Colors.dark.text} />
-        </Pressable>
-      }
+      step={11}
+      total={19}
       footer={<PillButton label="Next" onPress={onNext} variant="light" testID="distance-next" />}
     >
       <Text style={s.head}>Your distance{"\n"}preference?</Text>
-      <Text style={s.sub}>Use the slider to set the maximum distance you want your potential matches to be located.</Text>
+      <Text style={s.sub}>Toggle search by distance, US only, or worldwide — your choice.</Text>
 
-      <View style={s.labelRow}>
-        <Text style={s.lead}>{t("distancePref")}</Text>
-        <View style={s.stepper}>
-          <Pressable disabled={worldwide} onPress={() => bump(-1)} onLongPress={() => bump(-5)} style={({ pressed }) => [s.stepBtn, pressed && s.stepBtnPressed, worldwide && s.stepBtnDisabled]} testID="distance-minus">
-            <Minus size={16} color={worldwide ? "rgba(255,255,255,0.3)" : Colors.dark.text} />
-          </Pressable>
-          <Text style={[s.val, worldwide && s.valDim]}>{worldwide ? "Worldwide" : `${value} Mi`}</Text>
-          <Pressable disabled={worldwide} onPress={() => bump(1)} onLongPress={() => bump(5)} style={({ pressed }) => [s.stepBtn, pressed && s.stepBtnPressed, worldwide && s.stepBtnDisabled]} testID="distance-plus">
-            <Plus size={16} color={worldwide ? "rgba(255,255,255,0.3)" : Colors.dark.text} />
-          </Pressable>
+      <Pressable onPress={toggleSearchByDistance} style={({ pressed }) => [s.wwCard, searchByDistance && s.wwCardOn, pressed && s.wwPressed]} testID="distance-by-toggle">
+        <View style={[s.wwIcon, searchByDistance && s.wwIconOn]}>
+          <Minus size={20} color={searchByDistance ? "#fff" : Colors.crimson} />
         </View>
-      </View>
+        <View style={s.wwTextWrap}>
+          <Text style={s.wwTitle}>Search by distance</Text>
+          <Text style={s.wwSub}>Use a max distance slider to find nearby matches.</Text>
+        </View>
+        <View style={[s.wwSwitch, searchByDistance && s.wwSwitchOn]}>
+          <View style={[s.wwKnob, searchByDistance && s.wwKnobOn]} />
+        </View>
+      </Pressable>
 
-      <View style={[s.sliderWrap, worldwide && s.sliderDisabled]} {...(worldwide ? {} : pan.panHandlers)} onLayout={onLayout}>
-        <View style={s.track} />
-        <View style={[s.fill, { width: `${pct * 100}%` }]} />
-        <View style={[s.handle, { left: `${pct * 100}%` }]} />
-      </View>
+      {searchByDistance && !worldwide && (
+        <>
+          <View style={s.labelRow}>
+            <Text style={s.lead}>{t("distancePref")}</Text>
+            <View style={s.stepper}>
+              <Pressable onPress={() => bump(-1)} onLongPress={() => bump(-5)} style={({ pressed }) => [s.stepBtn, pressed && s.stepBtnPressed]} testID="distance-minus">
+                <Minus size={16} color={Colors.dark.text} />
+              </Pressable>
+              <Text style={s.val}>{`${value} Mi`}</Text>
+              <Pressable onPress={() => bump(1)} onLongPress={() => bump(5)} style={({ pressed }) => [s.stepBtn, pressed && s.stepBtnPressed]} testID="distance-plus">
+                <Plus size={16} color={Colors.dark.text} />
+              </Pressable>
+            </View>
+          </View>
 
-      <Pressable onPress={toggleWorldwide} style={({ pressed }) => [s.wwCard, worldwide && s.wwCardOn, pressed && s.wwPressed]} testID="distance-worldwide">
+          <View style={s.sliderWrap} {...pan.panHandlers} onLayout={onLayout}>
+            <View style={s.track} />
+            <View style={[s.fill, { width: `${pct * 100}%` }]} />
+            <View style={[s.handle, { left: `${pct * 100}%` }]} />
+          </View>
+        </>
+      )}
+
+      <Pressable onPress={toggleUS} style={({ pressed }) => [s.wwCard, usOnly && s.wwCardOn, pressed && s.wwPressed, { marginTop: 14 }]} testID="distance-us-only">
+        <View style={[s.wwIcon, usOnly && s.wwIconOn]}>
+          <Flag size={20} color={usOnly ? "#fff" : Colors.crimson} />
+        </View>
+        <View style={s.wwTextWrap}>
+          <Text style={s.wwTitle}>US only</Text>
+          <Text style={s.wwSub}>Limit your matches to people across the United States.</Text>
+        </View>
+        <View style={[s.wwSwitch, usOnly && s.wwSwitchOn]}>
+          <View style={[s.wwKnob, usOnly && s.wwKnobOn]} />
+        </View>
+      </Pressable>
+
+      <Pressable onPress={toggleWorldwide} style={({ pressed }) => [s.wwCard, worldwide && s.wwCardOn, pressed && s.wwPressed, { marginTop: 14 }]} testID="distance-worldwide">
         <View style={[s.wwIcon, worldwide && s.wwIconOn]}>
           <Globe2 size={20} color={worldwide ? "#fff" : Colors.crimson} />
         </View>
         <View style={s.wwTextWrap}>
           <Text style={s.wwTitle}>Search worldwide</Text>
-          <Text style={s.wwSub}>Disable distance filter and see people from anywhere.</Text>
+          <Text style={s.wwSub}>See people from any country across the globe.</Text>
         </View>
         <View style={[s.wwSwitch, worldwide && s.wwSwitchOn]}>
           <View style={[s.wwKnob, worldwide && s.wwKnobOn]} />
@@ -116,7 +162,6 @@ export default function DistanceScreen() {
 }
 
 const s = StyleSheet.create({
-  back: { width: 38, height: 38, borderRadius: 19, backgroundColor: "rgba(255,255,255,0.06)", justifyContent: "center", alignItems: "center" },
   head: { fontSize: 28, fontWeight: "800" as const, color: Colors.dark.text, letterSpacing: -0.5, marginTop: 6, lineHeight: 34 },
   sub: { fontSize: 14, color: Colors.dark.textDim, marginTop: 10, lineHeight: 20 },
   labelRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "baseline", marginTop: 34 },

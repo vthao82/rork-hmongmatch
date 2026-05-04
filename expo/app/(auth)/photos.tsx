@@ -1,7 +1,7 @@
 import React, { useCallback, useState } from "react";
 import { View, Text, StyleSheet, Pressable, Image, Dimensions, Platform, Alert } from "react-native";
 import { router } from "expo-router";
-import { ArrowLeft, Plus, X } from "lucide-react-native";
+import { Plus, X } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
 import Colors from "@/constants/colors";
 import OnboardingScreen from "@/components/onboarding/OnboardingScreen";
@@ -31,14 +31,21 @@ export default function PhotosScreen() {
       const res = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         quality: 0.85,
-        allowsEditing: true,
-        aspect: [3, 4],
+        allowsMultipleSelection: true,
+        selectionLimit: 6,
       });
-      if (!res.canceled && res.assets[0]) {
+      if (!res.canceled && res.assets.length > 0) {
+        const uris = res.assets.map(a => a.uri);
         setPhotos(prev => {
           const next = [...prev];
-          next[idx] = res.assets[0].uri;
-          return next.filter(Boolean);
+          let i = idx;
+          for (const u of uris) {
+            if (i < 6) {
+              next[i] = u;
+              i += 1;
+            }
+          }
+          return next.filter(Boolean).slice(0, 6);
         });
       }
     } catch (e) {
@@ -54,21 +61,15 @@ export default function PhotosScreen() {
 
   const onNext = () => {
     update({ photos });
-    router.push("/(auth)/bio");
+    router.push({ pathname: "/(auth)/photo-verify", params: { mode: "onboarding" } });
   };
 
   const slots = Array.from({ length: 6 }, (_, i) => photos[i] ?? null);
 
   return (
     <OnboardingScreen
-      step={13}
-      total={15}
-      gradient={[Colors.dark.bg, Colors.dark.bgSoft] as const}
-      topRight={
-        <Pressable onPress={() => router.back()} style={s.back}>
-          <ArrowLeft size={22} color={Colors.dark.text} />
-        </Pressable>
-      }
+      step={17}
+      total={19}
       footer={<PillButton label={t("next")} onPress={onNext} disabled={!valid} variant="light" testID="photos-next" />}
     >
       <Text style={s.head}>{t("photosQ")}</Text>
@@ -99,7 +100,6 @@ export default function PhotosScreen() {
 }
 
 const s = StyleSheet.create({
-  back: { width: 38, height: 38, borderRadius: 19, backgroundColor: "rgba(255,255,255,0.06)", justifyContent: "center", alignItems: "center" },
   head: { fontSize: 28, fontWeight: "800" as const, color: Colors.dark.text, letterSpacing: -0.5, marginTop: 6 },
   sub: { fontSize: 14, color: Colors.dark.textDim, marginTop: 8, lineHeight: 20 },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: GAP, marginTop: 24 },

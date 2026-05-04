@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { View, Text, StyleSheet, Pressable } from "react-native";
 import { router } from "expo-router";
-import { ArrowLeft, Wine, Cigarette, Dumbbell, PawPrint } from "lucide-react-native";
+import { Wine, Cigarette, Dumbbell, PawPrint } from "lucide-react-native";
 import Colors from "@/constants/colors";
 import OnboardingScreen from "@/components/onboarding/OnboardingScreen";
 import PillButton from "@/components/onboarding/PillButton";
@@ -51,18 +51,12 @@ export default function LifestyleScreen() {
 
   return (
     <OnboardingScreen
-      step={11}
-      total={15}
-      gradient={[Colors.dark.bg, Colors.dark.bgSoft] as const}
+      step={15}
+      total={19}
       topRight={
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <Pressable onPress={() => router.back()} style={s.back}>
-            <ArrowLeft size={22} color={Colors.dark.text} />
-          </Pressable>
-          <Pressable onPress={onSkip} testID="lifestyle-skip">
-            <Text style={s.skip}>{t("skip")}</Text>
-          </Pressable>
-        </View>
+        <Pressable onPress={onSkip} testID="lifestyle-skip">
+          <Text style={s.skip}>{t("skip")}</Text>
+        </Pressable>
       }
       footer={<PillButton label={`${t("next")}  ${filled}/4`} onPress={onNext} disabled={filled === 0} variant="light" testID="lifestyle-next" />}
     >
@@ -114,7 +108,6 @@ function Section({ icon, title, children }: { icon: React.ReactNode; title: stri
 }
 
 const s = StyleSheet.create({
-  back: { width: 38, height: 38, borderRadius: 19, backgroundColor: "rgba(255,255,255,0.06)", justifyContent: "center", alignItems: "center" },
   skip: { color: Colors.dark.textDim, fontSize: 14, fontWeight: "600" as const, padding: 8 },
   head: { fontSize: 26, fontWeight: "800" as const, color: Colors.dark.text, letterSpacing: -0.5, marginTop: 6, lineHeight: 32 },
   sub: { fontSize: 14, color: Colors.dark.textDim, marginTop: 8, lineHeight: 20 },

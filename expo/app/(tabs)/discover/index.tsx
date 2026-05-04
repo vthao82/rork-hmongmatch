@@ -2,18 +2,18 @@ import React, { useState, useCallback, useMemo, useRef } from "react";
 import { View, Text, StyleSheet, Dimensions, Animated, PanResponder, TouchableOpacity, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
-import { MapPin, BadgeCheck, X, Heart, Zap, SlidersHorizontal, MessageSquare } from "lucide-react-native";
+import { MapPin, BadgeCheck, X, Heart, RotateCcw } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 import Colors from "@/constants/colors";
 import { profiles as allProfiles, Profile } from "@/mocks/profiles";
 import HmongMatchHeader from "@/components/HmongMatchHeader";
-import { useLikes, DAILY_LIMIT } from "@/providers/LikesProvider";
+import { useLikes, DAILY_LIMIT, REWIND_LIMIT } from "@/providers/LikesProvider";
 
 const W = Dimensions.get("window");
 const SW = W.width; const SH = W.height; const TH = SW * 0.25;
 
-function Card({ profile, isFirst, onSwipeLeft, onSwipeRight, onSuperLike, height }: { profile: Profile; isFirst: boolean; onSwipeLeft: () => void; onSwipeRight: () => void; onSuperLike: () => void; height: number }) {
+function Card({ profile, isFirst, onSwipeLeft, onSwipeRight, height }: { profile: Profile; isFirst: boolean; onSwipeLeft: () => void; onSwipeRight: () => void; height: number }) {
   const pos = useRef(new Animated.ValueXY()).current;
   const rot = pos.x.interpolate({ inputRange: [-SW / 2, 0, SW / 2], outputRange: ["-8deg", "0deg", "8deg"], extrapolate: "clamp" });
   const likeOp = pos.x.interpolate({ inputRange: [0, SW / 4], outputRange: [0, 1], extrapolate: "clamp" });
@@ -34,20 +34,19 @@ function Card({ profile, isFirst, onSwipeLeft, onSwipeRight, onSuperLike, height
   return (
     <Animated.View style={[st.card, { height }, cs]} {...(isFirst ? pan.panHandlers : {})}>
       <Image source={{ uri: profile.photos[0] }} style={st.img} contentFit="cover" transition={300} />
-      <View style={st.ov} />
       <View style={st.inf}>
         <View style={st.nr}><Text style={st.cn}>{profile.name}</Text><Text style={st.ca}>{profile.age}</Text>{profile.verified && <BadgeCheck size={20} color="#4A90D9" fill="#4A90D9" />}</View>
         <Text style={st.cl}>{profile.clan} Clan</Text>
-        <View style={st.lr}><MapPin size={13} color="rgba(255,255,255,0.75)" /><Text style={st.lt}>{profile.location} · {profile.distance}</Text></View>
+        <View style={st.lr}><MapPin size={13} color="rgba(255,255,255,0.85)" /><Text style={st.lt}>{profile.location} · {profile.distance}</Text></View>
       </View>
       {isFirst && <><Animated.View style={[st.sp, st.ls, { opacity: likeOp }]}><Text style={st.lst}>LIKE</Text></Animated.View><Animated.View style={[st.sp, st.ns, { opacity: nopeOp }]}><Text style={st.nst}>NOPE</Text></Animated.View></>}
     </Animated.View>
   );
 }
 
-function ActionBtn({ onPress, color, children, testID }: { onPress: () => void; color: string; children: React.ReactNode; testID?: string }) {
+function ActionBtn({ onPress, color, children, testID, disabled }: { onPress: () => void; color: string; children: React.ReactNode; testID?: string; disabled?: boolean }) {
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.8} style={[st.ab, { borderColor: color }]} testID={testID}>
+    <TouchableOpacity onPress={onPress} disabled={disabled} activeOpacity={0.8} style={[st.ab, { borderColor: color }, disabled && { opacity: 0.4 }]} testID={testID}>
       {children}
     </TouchableOpacity>
   );
@@ -56,34 +55,41 @@ function ActionBtn({ onPress, color, children, testID }: { onPress: () => void; 
 export default function DiscoverScreen() {
   const ins = useSafeAreaInsets();
   const router = useRouter();
-  const { consume, canLike, remaining, premium, used } = useLikes();
+  const { consume, premium, used, rewind, canRewind, rewindUsed } = useLikes();
   const [idx, setIdx] = useState<number>(0);
+  const [history, setHistory] = useState<{ id: string; liked: boolean }[]>([]);
   const [showTutorial, setShowTutorial] = useState<boolean>(true);
   const [limitOpen, setLimitOpen] = useState<boolean>(false);
-  const onL = useCallback(() => { setIdx(p => p + 1); }, []);
+
+  const onL = useCallback(() => {
+    const cur = allProfiles[idx];
+    if (cur) setHistory(h => [...h, { id: cur.id, liked: false }]);
+    setIdx(p => p + 1);
+  }, [idx]);
   const onR = useCallback(() => {
-    const ok = consume();
+    const cur = allProfiles[idx];
+    const ok = consume(cur?.id);
     if (!ok) { setLimitOpen(true); return; }
+    if (cur) setHistory(h => [...h, { id: cur.id, liked: true }]);
     setIdx(p => p + 1);
-  }, [consume]);
-  const onS = useCallback(() => {
-    const ok = consume();
-    if (!ok) { setLimitOpen(true); return; }
-    setIdx(p => p + 1);
-  }, [consume]);
+  }, [consume, idx]);
+  const onRewind = useCallback(() => {
+    if (history.length === 0 || idx === 0) return;
+    const last = history[history.length - 1];
+    const ok = rewind(last.liked ? last.id : undefined);
+    if (!ok) return;
+    setHistory(h => h.slice(0, -1));
+    setIdx(p => Math.max(0, p - 1));
+  }, [history, idx, rewind]);
+
   const rem = allProfiles.slice(idx);
   const emp = rem.length === 0;
   const cardHeight = SH - ins.top - ins.bottom - 220;
+  const canRewindNow = canRewind && history.length > 0 && idx > 0;
 
   return (
     <View style={[st.ct, { paddingTop: ins.top }]}>
-      <HmongMatchHeader right={
-        <>
-          <View style={st.iconBtn}><MessageSquare size={22} color={Colors.dark.text} /><View style={st.redDot} /></View>
-          <SlidersHorizontal size={22} color={Colors.dark.text} />
-          <Zap size={22} color={Colors.accent} fill={Colors.accent} />
-        </>
-      } />
+      <HmongMatchHeader />
       <View style={st.likesCounter} testID="likes-counter">
         <Heart size={13} color={Colors.crimsonLight} fill={Colors.crimsonLight} />
         <Text style={st.likesCounterText}>{premium ? "Unlimited likes" : `${Math.max(0, DAILY_LIMIT - used)}/${DAILY_LIMIT} likes left today`}</Text>
@@ -94,11 +100,11 @@ export default function DiscoverScreen() {
             <Heart size={48} color={Colors.dark.textFaint} />
             <Text style={st.et}>No more profiles</Text>
             <Text style={st.esu}>Check back later for more Hmong singles.</Text>
-            <TouchableOpacity style={st.rb} onPress={() => setIdx(0)} testID="reset-button"><Text style={st.rt}>Start Over</Text></TouchableOpacity>
+            <TouchableOpacity style={st.rb} onPress={() => { setIdx(0); setHistory([]); }} testID="reset-button"><Text style={st.rt}>Start Over</Text></TouchableOpacity>
           </View>
         ) : (
           rem.slice(0, 2).reverse().map((p, i) => (
-            <Card key={p.id} profile={p} isFirst={i === rem.slice(0, 2).length - 1} onSwipeLeft={onL} onSwipeRight={onR} onSuperLike={onS} height={cardHeight} />
+            <Card key={p.id} profile={p} isFirst={i === rem.slice(0, 2).length - 1} onSwipeLeft={onL} onSwipeRight={onR} height={cardHeight} />
           ))
         )}
 
@@ -119,9 +125,13 @@ export default function DiscoverScreen() {
         )}
 
         <View style={st.actions}>
+          <ActionBtn color={Colors.accent} onPress={onRewind} disabled={!canRewindNow} testID="rewind-button">
+            <RotateCcw size={24} color={Colors.accent} strokeWidth={3} />
+          </ActionBtn>
           <ActionBtn color={Colors.nope} onPress={() => onL()} testID="nope-button"><X size={30} color={Colors.nope} strokeWidth={3} /></ActionBtn>
           <ActionBtn color={Colors.like} onPress={() => onR()} testID="like-button"><Heart size={30} color={Colors.like} strokeWidth={3} /></ActionBtn>
         </View>
+        <Text style={st.rewindHint}>{premium ? "Unlimited rewinds" : `${Math.max(0, REWIND_LIMIT - rewindUsed)}/${REWIND_LIMIT} rewinds left today`}</Text>
 
         {limitOpen && (
           <View style={st.limitOv} pointerEvents="auto">
@@ -145,19 +155,16 @@ export default function DiscoverScreen() {
 
 const st = StyleSheet.create({
   ct: { flex: 1, backgroundColor: "#000" },
-  iconBtn: { position: "relative" },
-  redDot: { position: "absolute", top: -2, right: -2, width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.primary },
   cc: { flex: 1, alignItems: "center", justifyContent: "flex-start", paddingHorizontal: 16, paddingTop: 4 },
   card: { width: SW - 32, borderRadius: 20, position: "absolute", overflow: "hidden", backgroundColor: "#111", top: 4 },
   img: { width: "100%", height: "100%" },
-  ov: { position: "absolute", bottom: 0, left: 0, right: 0, height: "55%", backgroundColor: "rgba(0,0,0,0.45)" },
   inf: { position: "absolute", bottom: 20, left: 20, right: 20 },
   nr: { flexDirection: "row", alignItems: "center", gap: 8 },
-  cn: { fontSize: 28, fontWeight: "700" as const, color: "#FFF" },
-  ca: { fontSize: 24, fontWeight: "400" as const, color: "rgba(255,255,255,0.9)" },
-  cl: { fontSize: 15, fontWeight: "600" as const, color: Colors.accentLight, marginTop: 2 },
+  cn: { fontSize: 28, fontWeight: "700" as const, color: "#FFF", textShadowColor: "rgba(0,0,0,0.6)", textShadowRadius: 6 },
+  ca: { fontSize: 24, fontWeight: "400" as const, color: "rgba(255,255,255,0.95)", textShadowColor: "rgba(0,0,0,0.6)", textShadowRadius: 6 },
+  cl: { fontSize: 15, fontWeight: "600" as const, color: Colors.accentLight, marginTop: 2, textShadowColor: "rgba(0,0,0,0.6)", textShadowRadius: 6 },
   lr: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4 },
-  lt: { fontSize: 13, color: "rgba(255,255,255,0.75)" },
+  lt: { fontSize: 13, color: "rgba(255,255,255,0.95)", textShadowColor: "rgba(0,0,0,0.6)", textShadowRadius: 6 },
   sp: { position: "absolute", top: 50, padding: 10, borderWidth: 4, borderRadius: 8 },
   ls: { left: 20, borderColor: Colors.like, transform: [{ rotate: "-15deg" }] },
   ns: { right: 20, borderColor: Colors.nope, transform: [{ rotate: "15deg" }] },
@@ -171,8 +178,9 @@ const st = StyleSheet.create({
   tutBtn: { backgroundColor: "#FFF", borderRadius: 999, paddingVertical: 16, paddingHorizontal: 48, marginBottom: 18 },
   tutBtnT: { color: "#1a1a1f", fontSize: 14, fontWeight: "800" as const, letterSpacing: 1 },
   skip: { color: "#FFF", fontSize: 13, fontWeight: "700" as const, letterSpacing: 1 },
-  actions: { position: "absolute", bottom: 12, left: 0, right: 0, flexDirection: "row", justifyContent: "space-evenly", alignItems: "center", paddingHorizontal: 16 },
+  actions: { position: "absolute", bottom: 30, left: 0, right: 0, flexDirection: "row", justifyContent: "space-evenly", alignItems: "center", paddingHorizontal: 16 },
   ab: { width: 52, height: 52, borderRadius: 26, backgroundColor: "rgba(255,255,255,0.06)", borderWidth: 1.5, justifyContent: "center", alignItems: "center" },
+  rewindHint: { position: "absolute", bottom: 8, left: 0, right: 0, color: "rgba(255,255,255,0.5)", fontSize: 11, fontWeight: "600" as const, textAlign: "center" as const },
   es: { alignItems: "center", justifyContent: "center", flex: 1, gap: 8 },
   et: { fontSize: 20, fontWeight: "700" as const, color: Colors.dark.text, marginTop: 12 },
   esu: { fontSize: 14, color: Colors.dark.textDim, textAlign: "center", paddingHorizontal: 40 },

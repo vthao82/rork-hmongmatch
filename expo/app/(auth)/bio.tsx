@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet, Pressable, TextInput, Modal, ScrollView } from "react-native";
 import { router } from "expo-router";
-import { ArrowLeft, Sparkles, ChevronRight, X } from "lucide-react-native";
+import { Sparkles, ChevronRight, X } from "lucide-react-native";
 import Colors from "@/constants/colors";
 import OnboardingScreen from "@/components/onboarding/OnboardingScreen";
 import PillButton from "@/components/onboarding/PillButton";
@@ -26,17 +26,9 @@ export default function BioScreen() {
 
   return (
     <OnboardingScreen
-      step={14}
-      total={15}
-      gradient={[Colors.dark.bg, Colors.dark.bgSoft] as const}
-      topRight={
-        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-          <Pressable onPress={() => router.back()} style={s.back}>
-            <ArrowLeft size={22} color={Colors.dark.text} />
-          </Pressable>
-          <Pressable onPress={onSkip} testID="bio-skip"><Text style={s.skip}>{t("skip")}</Text></Pressable>
-        </View>
-      }
+      step={18}
+      total={19}
+      topRight={<Pressable onPress={onSkip} testID="bio-skip"><Text style={s.skip}>{t("skip")}</Text></Pressable>}
       footer={
         <View style={{ gap: 10 }}>
           <View style={s.bannerWrap}>
@@ -132,7 +124,6 @@ export default function BioScreen() {
 }
 
 const s = StyleSheet.create({
-  back: { width: 38, height: 38, borderRadius: 19, backgroundColor: "rgba(255,255,255,0.06)", justifyContent: "center", alignItems: "center" },
   skip: { color: Colors.dark.textDim, fontSize: 14, fontWeight: "600" as const, padding: 8 },
   head: { fontSize: 28, fontWeight: "800" as const, color: Colors.dark.text, letterSpacing: -0.5, marginTop: 6, lineHeight: 34 },
   sub: { fontSize: 14, color: Colors.dark.textDim, marginTop: 8 },

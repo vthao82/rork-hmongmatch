@@ -36,9 +36,22 @@ export default function LoginScreen() {
     ]).start();
   }, [fade, rise]);
 
-  const onGoogle = () => {
+  const onGoogle = async () => {
     update({ method: "google" });
-    router.push("/(auth)/account-picker");
+    if (Platform.OS === "web") {
+      router.push("/(auth)/account-picker");
+      return;
+    }
+    try {
+      const supported = await Linking.canOpenURL("https://accounts.google.com");
+      if (supported) {
+        await Linking.openURL("https://accounts.google.com/signin");
+      }
+      router.push("/(auth)/terms");
+    } catch (e) {
+      console.log("google login error", e);
+      router.push("/(auth)/terms");
+    }
   };
 
   return (
@@ -51,7 +64,7 @@ export default function LoginScreen() {
         </View>
         <Animated.View style={[s.top, { opacity: fade, transform: [{ translateY: rise }] }]}>
           <HmongLogo size={96} />
-          <Text style={s.brand}>Hmong Match</Text>
+          <Text style={s.brand}>Hmong Date</Text>
           <Text style={s.tag}>{t("itStartsWithAStory")}</Text>
         </Animated.View>
 

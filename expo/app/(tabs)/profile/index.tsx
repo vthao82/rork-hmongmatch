@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-nati
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { Settings as SettingsIcon, Edit3, BadgeCheck, Image as ImageIcon, Type, Quote, Star, Zap, Flame, Plus, Lock, Check } from "lucide-react-native";
+import { Settings as SettingsIcon, Edit3, BadgeCheck, Image as ImageIcon, Type, Quote, Star, Zap, Flame, Plus, Lock, Check, Eye, AlertTriangle } from "lucide-react-native";
 import Colors from "@/constants/colors";
 import { currentUser } from "@/mocks/profiles";
 import { useOnboarding } from "@/providers/OnboardingProvider";
@@ -63,10 +63,16 @@ export default function ProfileScreen() {
               <Text style={s.name}>{displayName}</Text>
               <BadgeCheck size={18} color="#4A90D9" fill="#4A90D9" />
             </View>
-            <TouchableOpacity style={s.editBtn} onPress={() => router.push("/edit-profile")} testID="edit-profile">
-              <Edit3 size={14} color="#1a1a1f" />
-              <Text style={s.editText}>Edit profile</Text>
-            </TouchableOpacity>
+            <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
+              <TouchableOpacity style={s.editBtn} onPress={() => router.push("/edit-profile")} testID="edit-profile">
+                <Edit3 size={14} color="#1a1a1f" />
+                <Text style={s.editText}>Edit profile</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={s.viewBtn} onPress={() => router.push(`/user/${currentUser.id}`)} testID="view-profile">
+                <Eye size={14} color="#FFF" />
+                <Text style={s.viewBtnText}>View profile</Text>
+              </TouchableOpacity>
+            </View>
           </View>
           <TouchableOpacity onPress={() => router.push("/settings")} testID="settings-btn">
             <SettingsIcon size={24} color={Colors.dark.text} />
@@ -96,7 +102,7 @@ export default function ProfileScreen() {
           <View style={s.goldHeader}>
             <View style={s.goldBadge}>
               <Flame size={18} color={Colors.accent} fill={Colors.accent} />
-              <Text style={s.goldWordmark}>Hmong Match</Text>
+              <Text style={s.goldWordmark}>Hmong Date</Text>
               <View style={s.goldChip}><Text style={s.goldChipText}>GOLD</Text></View>
             </View>
             <View style={s.upgradeBtn}><Text style={s.upgradeText}>Upgrade</Text></View>
@@ -112,7 +118,7 @@ export default function ProfileScreen() {
             { label: "See Who Likes You", free: false },
             { label: "Top Picks", free: false },
             { label: "Unlimited Likes", free: false },
-            { label: "Hmong Double Date", free: true },
+            { label: "Profile Boosts", free: false },
           ].map(r => (
             <View key={r.label} style={s.compareRow}>
               <Text style={s.compareRowText}>{r.label}</Text>
@@ -122,6 +128,11 @@ export default function ProfileScreen() {
               </View>
             </View>
           ))}
+        </TouchableOpacity>
+
+        <TouchableOpacity style={s.reportRow} onPress={() => router.push("/report")} testID="report-row">
+          <AlertTriangle size={18} color={Colors.crimsonLight} />
+          <Text style={s.reportText}>Report a problem or user</Text>
         </TouchableOpacity>
 
         <View style={{ height: 24 }} />
@@ -140,6 +151,10 @@ const s = StyleSheet.create({
   name: { color: "#FFF", fontSize: 22, fontWeight: "800" as const },
   editBtn: { flexDirection: "row", alignSelf: "flex-start", alignItems: "center", gap: 6, backgroundColor: "#FFF", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999 },
   editText: { color: "#1a1a1f", fontWeight: "700" as const, fontSize: 13 },
+  viewBtn: { flexDirection: "row", alignSelf: "flex-start", alignItems: "center", gap: 6, backgroundColor: "rgba(255,255,255,0.1)", borderWidth: 1, borderColor: "rgba(255,255,255,0.18)", paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999 },
+  viewBtnText: { color: "#FFF", fontWeight: "700" as const, fontSize: 13 },
+  reportRow: { marginTop: 16, flexDirection: "row", alignItems: "center", gap: 10, paddingVertical: 14, paddingHorizontal: 16, borderRadius: 16, backgroundColor: "#141414", borderWidth: 1, borderColor: "rgba(192,21,47,0.25)" },
+  reportText: { color: "#FFF", fontSize: 14, fontWeight: "700" as const },
   progressRow: { marginTop: 18 },
   progressBar: { height: 8, backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 4, overflow: "visible" },
   progressFill: { height: 8, backgroundColor: Colors.primary, borderRadius: 4, justifyContent: "center", alignItems: "flex-end", paddingRight: 6 },

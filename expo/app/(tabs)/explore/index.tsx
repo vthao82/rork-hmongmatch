@@ -6,6 +6,7 @@ import { User } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import Colors from "@/constants/colors";
 import HmongMatchHeader from "@/components/HmongMatchHeader";
+import { useOnboarding } from "@/providers/OnboardingProvider";
 
 const SW = Dimensions.get("window").width;
 const GAP = 12;
@@ -77,7 +78,22 @@ function CategoryCard({ c, w, h, onPress }: { c: Card; w: number; h: number; onP
 export default function ExploreScreen() {
   const ins = useSafeAreaInsets();
   const router = useRouter();
-  const rows = useMemo(() => SECTIONS, []);
+  const { data } = useOnboarding();
+  const userInterests = data.interests ?? [];
+  const advFilters = [data.lookingFor, data.dialect, ...(data.genders ?? []), ...(data.seeking ?? [])].filter(Boolean) as string[];
+  const matchTokens = [...userInterests, ...advFilters].map(s => s.toLowerCase());
+
+  const rows = useMemo(() => {
+    if (matchTokens.length === 0) return SECTIONS;
+    return SECTIONS.map(sec => {
+      const filteredCards = sec.cards.filter(c => {
+        const t = c.title.toLowerCase();
+        return matchTokens.some(token => t.includes(token) || token.includes(t.split(" ")[0]));
+      });
+      return { ...sec, cards: filteredCards.length > 0 ? filteredCards : sec.cards.slice(0, 2) };
+    });
+  }, [matchTokens]);
+
   const go = (title: string) => router.push(`/category/${encodeURIComponent(title)}`);
   return (
     <View style={[s.ct, { paddingTop: ins.top }]}>

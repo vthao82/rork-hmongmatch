@@ -21,8 +21,10 @@ type Props = {
   testID?: string;
 };
 
+const RED_GRADIENT = [Colors.indigo, "#3c0a24", Colors.crimson] as const;
+
 function OnboardingScreen({ children, step, total, showPattern = true, gradient, scroll = true, footer, topRight, showBack = true, onBack, testID }: Props) {
-  const colors = gradient ?? ([Colors.dark.bg, Colors.dark.bg] as const);
+  const colors = gradient ?? RED_GRADIENT;
   const Content = scroll ? ScrollView : View;
   return (
     <View style={s.root} testID={testID}>
@@ -67,7 +69,7 @@ const s = StyleSheet.create({
   backRow: { paddingHorizontal: 16, paddingTop: 6, paddingBottom: 4, flexDirection: "row", alignItems: "center" },
   progressRow: { paddingHorizontal: 20, paddingTop: 4, paddingBottom: 8, position: "relative" },
   topRight: { position: "absolute", right: 20, top: 0 },
-  footer: { paddingHorizontal: 24, paddingTop: 10 },
+  footer: { paddingHorizontal: 24, paddingTop: 10, paddingBottom: 18 },
 });
 
 export default memo(OnboardingScreen);

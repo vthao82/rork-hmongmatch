@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { View, Text, StyleSheet, TextInput, Animated, Easing, Pressable } from "react-native";
+import { View, Text, StyleSheet, TextInput, Animated, Easing } from "react-native";
 import { router } from "expo-router";
-import { ArrowLeft } from "lucide-react-native";
 import Colors from "@/constants/colors";
 import OnboardingScreen from "@/components/onboarding/OnboardingScreen";
 import PillButton from "@/components/onboarding/PillButton";
@@ -58,13 +57,7 @@ export default function BirthdayScreen() {
   return (
     <OnboardingScreen
       step={3}
-      total={15}
-      gradient={[Colors.dark.bg, Colors.dark.bgSoft] as const}
-      topRight={
-        <Pressable onPress={() => router.back()} style={s.back}>
-          <ArrowLeft size={22} color={Colors.dark.text} />
-        </Pressable>
-      }
+      total={19}
       footer={<PillButton label={t("next")} onPress={onNext} disabled={!ok} variant="light" testID="bday-next" />}
     >
       <Text style={s.head}>{t("bdayQ")}</Text>
@@ -89,7 +82,6 @@ export default function BirthdayScreen() {
 }
 
 const s = StyleSheet.create({
-  back: { width: 38, height: 38, borderRadius: 19, backgroundColor: "rgba(255,255,255,0.06)", justifyContent: "center", alignItems: "center" },
   head: { fontSize: 30, fontWeight: "800" as const, color: Colors.dark.text, letterSpacing: -0.5, marginTop: 10 },
   row: { marginTop: 40, flexDirection: "row" },
   input: { fontSize: 34, fontWeight: "700" as const, color: Colors.dark.text, letterSpacing: 1, flex: 1, paddingVertical: 6 },

@@ -1,7 +1,7 @@
 import React, { useCallback, useMemo, useState } from "react";
 import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
 import { router } from "expo-router";
-import { ArrowLeft, Check } from "lucide-react-native";
+import { Check } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import { Platform } from "react-native";
 import Colors from "@/constants/colors";
@@ -39,18 +39,13 @@ export default function InterestsScreen() {
 
   return (
     <OnboardingScreen
-      step={10}
-      total={15}
-      gradient={[Colors.dark.bg, Colors.dark.bgSoft] as const}
-      topRight={
-        <Pressable onPress={() => router.back()} style={s.back}>
-          <ArrowLeft size={22} color={Colors.dark.text} />
-        </Pressable>
-      }
+      step={14}
+      total={19}
       footer={<PillButton label={headerLabel} onPress={onNext} disabled={!valid} variant="light" testID="interests-next" />}
     >
       <Text style={s.head}>{t("interestsQ")}</Text>
       <Text style={s.sub}>{t("interestsSub")}</Text>
+      <Text style={s.sub2}>Your interests will be used to display your profile inside the explore page.</Text>
 
       <View style={{ height: 10 }} />
       {INTEREST_GROUPS.map(g => (
@@ -80,9 +75,9 @@ export default function InterestsScreen() {
 }
 
 const s = StyleSheet.create({
-  back: { width: 38, height: 38, borderRadius: 19, backgroundColor: "rgba(255,255,255,0.06)", justifyContent: "center", alignItems: "center" },
   head: { fontSize: 28, fontWeight: "800" as const, color: Colors.dark.text, letterSpacing: -0.5, marginTop: 6 },
   sub: { fontSize: 14, color: Colors.dark.textDim, marginTop: 8, lineHeight: 20 },
+  sub2: { fontSize: 13, color: Colors.gold, marginTop: 8, lineHeight: 18, fontStyle: "italic" as const },
   group: { marginTop: 22 },
   gTitle: { fontSize: 13, color: Colors.gold, fontWeight: "700" as const, letterSpacing: 1.1, textTransform: "uppercase" as const, marginBottom: 10 },
   tags: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
