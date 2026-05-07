@@ -47,7 +47,7 @@ export default function ChatScreen() {
 }
 
 const s = StyleSheet.create({
-  ct: { flex: 1, backgroundColor: "#000" },
+  ct: { flex: 1, backgroundColor: "transparent" },
   redDot: { position: "absolute", top: -2, right: -2, width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.primary },
   searchWrap: { flexDirection: "row", alignItems: "center", gap: 10, marginHorizontal: 20, marginTop: 8, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.15)" },
   search: { flex: 1, color: "#FFF", fontSize: 16 },

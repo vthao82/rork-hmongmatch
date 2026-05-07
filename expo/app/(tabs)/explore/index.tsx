@@ -148,7 +148,7 @@ export default function ExploreScreen() {
 }
 
 const s = StyleSheet.create({
-  ct: { flex: 1, backgroundColor: "#000" },
+  ct: { flex: 1, backgroundColor: "transparent" },
   scroll: { paddingHorizontal: 16, paddingBottom: 24 },
   sectionHeader: { marginTop: 20, marginBottom: 12 },
   sTitle: { color: "#FFF", fontSize: 20, fontWeight: "800" as const },
