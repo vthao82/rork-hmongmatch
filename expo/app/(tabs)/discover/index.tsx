@@ -154,7 +154,7 @@ export default function DiscoverScreen() {
 }
 
 const st = StyleSheet.create({
-  ct: { flex: 1, backgroundColor: "transparent" },
+  ct: { flex: 1, backgroundColor: "#000" },
   cc: { flex: 1, alignItems: "center", justifyContent: "flex-start", paddingHorizontal: 16, paddingTop: 4 },
   card: { width: SW - 32, borderRadius: 20, position: "absolute", overflow: "hidden", backgroundColor: "#111", top: 4 },
   img: { width: "100%", height: "100%" },

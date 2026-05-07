@@ -16,12 +16,11 @@ export default function HmongMatchTabLayout() {
     <Tabs
       screenOptions={{
         headerShown: false,
-        sceneContainerStyle: { backgroundColor: "transparent" },
         tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: "#9a9aa5",
+        tabBarInactiveTintColor: "#6b6b75",
         tabBarStyle: {
-          backgroundColor: Colors.primaryDark,
-          borderTopColor: "rgba(192,21,47,0.4)",
+          backgroundColor: "#000",
+          borderTopColor: "rgba(255,255,255,0.06)",
           borderTopWidth: 1,
           elevation: 0,
           shadowOpacity: 0,

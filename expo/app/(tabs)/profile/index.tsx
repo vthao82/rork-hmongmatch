@@ -142,7 +142,7 @@ export default function ProfileScreen() {
 }
 
 const s = StyleSheet.create({
-  ct: { flex: 1, backgroundColor: "transparent" },
+  ct: { flex: 1, backgroundColor: "#000" },
   scroll: { paddingHorizontal: 16, paddingTop: 8 },
   topRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 8 },
   avatar: { width: 68, height: 68, borderRadius: 34, backgroundColor: "#222" },

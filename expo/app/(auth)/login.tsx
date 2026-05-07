@@ -1,11 +1,9 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import { View, Text, StyleSheet, Animated, Easing, Platform, Linking } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import Svg, { Path } from "react-native-svg";
-import * as AuthSession from "expo-auth-session";
-import * as WebBrowser from "expo-web-browser";
 import Colors from "@/constants/colors";
 import PajNtaubPattern from "@/components/onboarding/PajNtaubPattern";
 import PillButton from "@/components/onboarding/PillButton";
@@ -13,7 +11,6 @@ import HmongLogo from "@/components/onboarding/HmongLogo";
 import BackButton from "@/components/onboarding/BackButton";
 import { useOnboarding } from "@/providers/OnboardingProvider";
 import { useT } from "@/providers/LanguageProvider";
-import { supabase } from "@/lib/supabase";
 
 function GoogleG() {
   return (
@@ -39,39 +36,21 @@ export default function LoginScreen() {
     ]).start();
   }, [fade, rise]);
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
   const onGoogle = async () => {
-    setLoading(true);
-    setError(null);
-
+    update({ method: "google" });
+    if (Platform.OS === "web") {
+      router.push("/(auth)/account-picker");
+      return;
+    }
     try {
-      const redirectUrl = AuthSession.makeRedirectUri({ scheme: "rork-app" });
-      const { data, error: signInError } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: { redirectTo: redirectUrl },
-      });
-
-      if (signInError) throw signInError;
-      if (!data?.url) throw new Error("Unable to start Google sign in.");
-
-      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
-      if (result.type !== "success" || !result.url) {
-        throw new Error("Google sign in was canceled.");
+      const supported = await Linking.canOpenURL("https://accounts.google.com");
+      if (supported) {
+        await Linking.openURL("https://accounts.google.com/signin");
       }
-
-      const { error: sessionError } = await supabase.auth.getSessionFromUrl({ storeSession: true, url: result.url });
-      if (sessionError) throw sessionError;
-
-      update({ method: "google" });
-      router.replace("/(auth)/terms");
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to sign in with Google.";
-      setError(message);
-      console.warn("Google sign-in error", err);
-    } finally {
-      setLoading(false);
+      router.push("/(auth)/terms");
+    } catch (e) {
+      console.log("google login error", e);
+      router.push("/(auth)/terms");
     }
   };
 
@@ -88,6 +67,7 @@ export default function LoginScreen() {
           <Text style={s.brand}>Hmong Date</Text>
           <Text style={s.tag}>{t("itStartsWithAStory")}</Text>
         </Animated.View>
+
         <View style={s.middle} />
 
         <Animated.View style={[s.bottom, { opacity: fade }]}>
@@ -96,11 +76,8 @@ export default function LoginScreen() {
             onPress={onGoogle}
             variant="light"
             left={<GoogleG />}
-            loading={loading}
-            disabled={loading}
             testID="continue-google"
           />
-          {error ? <Text style={s.error}>{error}</Text> : null}
           <Text style={s.fine}>
             By tapping Continue you agree to our{" "}
             <Text style={s.link} onPress={() => Platform.OS !== "web" && Linking.openURL("https://example.com/terms")}>Terms</Text>
@@ -126,5 +103,4 @@ const s = StyleSheet.create({
   bottom: { paddingBottom: 20, gap: 10 },
   fine: { color: "rgba(245,240,235,0.62)", fontSize: 11.5, textAlign: "center", marginTop: 18, lineHeight: 17 },
   link: { color: Colors.gold, fontWeight: "600" as const },
-  error: { color: "#F8D7DA", backgroundColor: "rgba(255,255,255,0.12)", borderRadius: 12, padding: 10, textAlign: "center", marginTop: 12, fontSize: 13 },
 });

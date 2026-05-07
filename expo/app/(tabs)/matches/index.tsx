@@ -140,7 +140,7 @@ export default function LikesScreen() {
 }
 
 const s = StyleSheet.create({
-  ct: { flex: 1, backgroundColor: "transparent" },
+  ct: { flex: 1, backgroundColor: "#000" },
   tabs: { flexDirection: "row", paddingHorizontal: 20, paddingTop: 8, alignItems: "center", borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)" },
   tab: { flex: 1, alignItems: "center", paddingVertical: 14, position: "relative" },
   tabRow: { flexDirection: "row", alignItems: "center", gap: 6 },
