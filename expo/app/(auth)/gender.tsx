@@ -6,7 +6,6 @@ import OnboardingScreen from "@/components/onboarding/OnboardingScreen";
 import PillButton from "@/components/onboarding/PillButton";
 import OptionCard from "@/components/onboarding/OptionCard";
 import InfoLink from "@/components/onboarding/InfoLink";
-import ShowOnProfile from "@/components/onboarding/ShowOnProfile";
 import { useOnboarding, GenderId } from "@/providers/OnboardingProvider";
 import { useT } from "@/providers/LanguageProvider";
 
@@ -24,7 +23,6 @@ export default function GenderScreen() {
   const { data, update } = useOnboarding();
   const t = useT();
   const [selected, setSelected] = useState<GenderId[]>(data.genders ?? []);
-  const [show, setShow] = useState<boolean>(data.showGender ?? true);
 
   const toggle = (id: GenderId) => {
     if (Platform.OS !== "web") LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -32,7 +30,7 @@ export default function GenderScreen() {
   };
 
   const onNext = () => {
-    update({ genders: selected, showGender: show });
+    update({ genders: selected });
     router.push("/(auth)/clan");
   };
 
@@ -40,12 +38,7 @@ export default function GenderScreen() {
     <OnboardingScreen
       step={4}
       total={19}
-      footer={
-        <View>
-          <ShowOnProfile label={t("showGender")} value={show} onChange={setShow} testID="show-gender" />
-          <PillButton label={t("next")} onPress={onNext} disabled={selected.length === 0} variant="light" testID="gender-next" />
-        </View>
-      }
+      footer={<PillButton label={t("next")} onPress={onNext} disabled={selected.length === 0} variant="light" testID="gender-next" />}
     >
       <Text style={s.head}>{t("genderQ")}</Text>
       <Text style={s.sub}>{t("genderSub")}</Text>

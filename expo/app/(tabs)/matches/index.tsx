@@ -16,7 +16,7 @@ export default function LikesScreen() {
   const ins = useSafeAreaInsets();
   const router = useRouter();
   const { used, premium, likedIds } = useLikes();
-  const [tab, setTab] = useState<"likes" | "liked" | "top">("likes");
+  const [tab, setTab] = useState<"likes" | "liked" | "top">("liked");
   const myLiked = profiles.filter(p => likedIds.includes(p.id));
 
   const likesCount = premium ? used : used;

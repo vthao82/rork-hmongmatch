@@ -6,7 +6,6 @@ import OnboardingScreen from "@/components/onboarding/OnboardingScreen";
 import PillButton from "@/components/onboarding/PillButton";
 import OptionCard from "@/components/onboarding/OptionCard";
 import InfoLink from "@/components/onboarding/InfoLink";
-import ShowOnProfile from "@/components/onboarding/ShowOnProfile";
 import { useOnboarding } from "@/providers/OnboardingProvider";
 import { useT } from "@/providers/LanguageProvider";
 
@@ -21,16 +20,14 @@ export default function OrientationScreen() {
   const { data, update } = useOnboarding();
   const t = useT();
   const [selected, setSelected] = useState<string[]>(data.orientations ?? []);
-  const [show, setShow] = useState<boolean>(data.showOrientation ?? true);
 
   const toggle = (id: string) => {
     setSelected(prev => (prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]));
   };
 
-  const save = (goNext: boolean) => {
-    update({ orientations: selected, showOrientation: show });
-    if (goNext) router.push("/(auth)/seeking");
-    else router.push("/(auth)/seeking");
+  const save = () => {
+    update({ orientations: selected });
+    router.push("/(auth)/religion");
   };
 
   return (
@@ -38,15 +35,12 @@ export default function OrientationScreen() {
       step={8}
       total={19}
       topRight={
-        <Pressable onPress={() => save(true)} testID="orientation-skip">
+        <Pressable onPress={save} testID="orientation-skip" hitSlop={12}>
           <Text style={s.skip}>{t("skip")}</Text>
         </Pressable>
       }
       footer={
-        <View>
-          <ShowOnProfile label={t("showOrientation")} value={show} onChange={setShow} testID="show-orientation" />
-          <PillButton label={t("next")} onPress={() => save(true)} disabled={selected.length === 0} variant="light" testID="orientation-next" />
-        </View>
+        <PillButton label={t("next")} onPress={save} disabled={selected.length === 0} variant="light" testID="orientation-next" />
       }
     >
       <Text style={s.head}>{t("orientationQ")}</Text>

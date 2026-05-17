@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { View, Text, StyleSheet, Animated, Image } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -8,6 +8,7 @@ import Colors from "@/constants/colors";
 import PajNtaubPattern from "@/components/onboarding/PajNtaubPattern";
 import PillButton from "@/components/onboarding/PillButton";
 import BackButton from "@/components/onboarding/BackButton";
+import FreeTierWelcomeModal from "@/components/FreeTierWelcomeModal";
 import { useOnboarding } from "@/providers/OnboardingProvider";
 import { useT } from "@/providers/LanguageProvider";
 
@@ -30,8 +31,15 @@ export default function CompleteScreen() {
     ]).start();
   }, [a1, a2]);
 
+  const [showFreeTier, setShowFreeTier] = useState<boolean>(false);
+
   const go = async () => {
+    setShowFreeTier(true);
+  };
+
+  const finishAndGo = async () => {
     await finish();
+    setShowFreeTier(false);
     router.replace("/discover");
   };
 
@@ -75,6 +83,7 @@ export default function CompleteScreen() {
           <PillButton label={t("startSwiping")} onPress={go} variant="light" testID="start-swiping" />
         </View>
       </SafeAreaView>
+      <FreeTierWelcomeModal visible={showFreeTier} onClose={finishAndGo} onUpgrade={async () => { await finish(); setShowFreeTier(false); router.replace("/subscription"); }} />
     </View>
   );
 }

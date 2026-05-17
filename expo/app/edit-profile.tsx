@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Dimens
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import { useRouter, Stack, useLocalSearchParams } from "expo-router";
-import { X, Plus, Check, ChevronRight } from "lucide-react-native";
+import { X, Plus, Check, ChevronRight, Star, BadgeCheck, Camera } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
 import Colors from "@/constants/colors";
 import { useOnboarding } from "@/providers/OnboardingProvider";
@@ -20,6 +20,7 @@ export default function EditProfileScreen() {
   const router = useRouter();
   const { data, update } = useOnboarding();
 
+  const [mainPhotoIndex, setMainPhotoIndex] = useState<number>(data.mainPhotoIndex ?? 0);
   const [name, setName] = useState<string>(data.name ?? currentUser.name);
   const [bio, setBio] = useState<string>(data.bio ?? currentUser.bio);
   const [photos, setPhotos] = useState<string[]>(data.photos && data.photos.length > 0 ? data.photos : currentUser.photos);
@@ -85,10 +86,10 @@ export default function EditProfileScreen() {
 
   const save = useCallback(() => {
     const prompt = promptQ && promptA.trim() ? { q: promptQ, a: promptA.trim() } : undefined;
-    update({ name: name.trim(), bio, photos, interests, prompt });
+    update({ name: name.trim(), bio, photos, interests, prompt, mainPhotoIndex });
     console.log("profile saved", { name, bio, photoCount: photos.length, interestCount: interests.length, prompt });
     router.back();
-  }, [name, bio, photos, interests, promptQ, promptA, router, update]);
+  }, [name, bio, photos, interests, promptQ, promptA, router, update, mainPhotoIndex]);
 
   const slots = Array.from({ length: 6 }, (_, i) => photos[i] ?? null);
 
@@ -107,13 +108,16 @@ export default function EditProfileScreen() {
 
       <ScrollView ref={scrollRef} contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
         <Text style={s.sectionLabel} onLayout={e => { yPhotos.current = e.nativeEvent.layout.y; }}>Photos</Text>
-        <Text style={s.sectionSub}>Tap to add or change — 2 minimum.</Text>
+        <Text style={s.sectionSub}>Tap to add or change. Long-press a photo to make it your main photo.</Text>
         <View style={s.grid}>
           {slots.map((uri, i) => (
-            <TouchableOpacity key={i} style={[s.slot, uri && s.slotFilled]} onPress={() => pickPhoto(photos.length > i ? i : photos.length)} testID={`edit-slot-${i}`}>
+            <TouchableOpacity key={i} style={[s.slot, uri && s.slotFilled, mainPhotoIndex === i && uri && s.slotMain]} onPress={() => pickPhoto(photos.length > i ? i : photos.length)} onLongPress={() => uri && setMainPhotoIndex(i)} testID={`edit-slot-${i}`}>
               {uri ? (
                 <>
                   <Image source={{ uri }} style={s.slotImg} contentFit="cover" />
+                  {mainPhotoIndex === i && (
+                    <View style={s.mainBadge}><Star size={10} color="#1a1404" fill="#1a1404" /><Text style={s.mainBadgeTxt}>MAIN</Text></View>
+                  )}
                   <TouchableOpacity style={s.removeBtn} onPress={() => removePhoto(i)} testID={`remove-photo-${i}`}>
                     <X size={12} color="#FFF" />
                   </TouchableOpacity>
@@ -124,6 +128,17 @@ export default function EditProfileScreen() {
             </TouchableOpacity>
           ))}
         </View>
+
+        <TouchableOpacity style={s.verifyRow} onPress={() => router.push("/photo-verify")} testID="go-verify">
+          <View style={[s.verifyIcon, { backgroundColor: data.photoVerified ? "#2a8ae0" : "#e89216" }]}>
+            {data.photoVerified ? <BadgeCheck size={20} color="#FFF" fill="#FFF" /> : <Camera size={20} color="#FFF" />}
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={s.verifyTitle}>{data.photoVerified ? "Photo Verified" : "Get Photo Verified"}</Text>
+            <Text style={s.verifySub}>{data.photoVerified ? "You have the blue badge on your profile." : "Take a quick selfie to earn the blue badge."}</Text>
+          </View>
+          <ChevronRight size={18} color="rgba(255,255,255,0.5)" />
+        </TouchableOpacity>
 
         <Text style={s.sectionLabel}>Name</Text>
         <View style={s.inputBox}>
@@ -257,6 +272,13 @@ const s = StyleSheet.create({
   grid: { flexDirection: "row", flexWrap: "wrap", gap: GAP },
   slot: { width: SLOT, height: SLOT * 1.35, borderRadius: 14, borderWidth: 2, borderStyle: "dashed", borderColor: "rgba(245,240,235,0.22)", justifyContent: "center", alignItems: "center", overflow: "hidden", backgroundColor: "rgba(255,255,255,0.03)" },
   slotFilled: { borderStyle: "solid", borderColor: Colors.crimson },
+  slotMain: { borderColor: Colors.accent, borderWidth: 3 },
+  mainBadge: { position: "absolute", top: 6, left: 6, flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: Colors.accent, paddingHorizontal: 6, paddingVertical: 3, borderRadius: 999 },
+  mainBadgeTxt: { color: "#1a1404", fontSize: 9, fontWeight: "800" as const, letterSpacing: 0.4 },
+  verifyRow: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 16, backgroundColor: "rgba(212,168,67,0.08)", borderWidth: 1, borderColor: "rgba(212,168,67,0.3)", marginTop: 16 },
+  verifyIcon: { width: 40, height: 40, borderRadius: 20, justifyContent: "center", alignItems: "center" },
+  verifyTitle: { color: "#FFF", fontSize: 15, fontWeight: "700" as const },
+  verifySub: { color: "rgba(255,255,255,0.6)", fontSize: 12, marginTop: 2 },
   slotImg: { ...StyleSheet.absoluteFillObject },
   plusWrap: { width: 34, height: 34, borderRadius: 17, backgroundColor: "rgba(192,21,47,0.18)", justifyContent: "center", alignItems: "center" },
   removeBtn: { position: "absolute", top: 6, right: 6, width: 22, height: 22, borderRadius: 11, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "center", alignItems: "center" },

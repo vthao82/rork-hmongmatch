@@ -46,6 +46,9 @@ export type OnboardingData = {
   hometownCity?: string;
   work?: WorkId;
   workOther?: string;
+  religion?: string;
+  religionOther?: string;
+  mainPhotoIndex?: number;
   photoVerified?: boolean;
   likedIds?: string[];
   education?: string;

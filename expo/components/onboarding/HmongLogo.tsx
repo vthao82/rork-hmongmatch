@@ -1,10 +1,19 @@
 import React, { memo } from "react";
-import { View } from "react-native";
+import { Image } from "react-native";
 
-type Props = { size?: number };
+type Props = { size?: number; width?: number };
 
-function HmongLogo({ size = 0 }: Props) {
-  return <View style={{ width: 0, height: size }} testID="hm-logo-empty" />;
+function HmongLogo({ size = 48, width }: Props) {
+  const w = width ?? size * 2.4;
+  const h = w / 2.4;
+  return (
+    <Image
+      source={require("@/assets/images/hmongdate-logo.png")}
+      style={{ width: w, height: h }}
+      resizeMode="contain"
+      testID="hmongdate-logo"
+    />
+  );
 }
 
 export default memo(HmongLogo);

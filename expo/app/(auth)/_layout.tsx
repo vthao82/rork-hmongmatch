@@ -21,6 +21,7 @@ export default function AuthLayout() {
       <Stack.Screen name="dialect" />
       <Stack.Screen name="hometown" />
       <Stack.Screen name="orientation" />
+      <Stack.Screen name="religion" />
       <Stack.Screen name="seeking" />
       <Stack.Screen name="looking-for" />
       <Stack.Screen name="distance" />
