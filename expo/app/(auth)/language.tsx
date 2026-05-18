@@ -47,7 +47,7 @@ export default function LanguageScreen() {
           <BackButton tint="light" />
         </View>
         <Animated.View style={[s.top, { opacity: fade, transform: [{ translateY: rise }] }]}>
-          <HmongLogo width={320} />
+          <HmongLogo fullWidth />
           <View style={s.iconRow}>
             <Globe size={18} color={Colors.gold} />
             <Text style={s.eyebrow}>Language · Hom Lus</Text>

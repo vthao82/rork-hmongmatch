@@ -18,6 +18,7 @@ const USAGE_KEY = "hmongdate.usage.v1";
 type Usage = {
   date: string;
   likes: number;
+  dislikes: number;
   swipes: number;
   rewinds: number;
   messages: number;
@@ -32,7 +33,7 @@ function today(): string {
 }
 
 function emptyUsage(): Usage {
-  return { date: today(), likes: 0, swipes: 0, rewinds: 0, messages: 0, seenIds: [] };
+  return { date: today(), likes: 0, dislikes: 0, swipes: 0, rewinds: 0, messages: 0, seenIds: [] };
 }
 
 export const [TierProvider, useTier] = createContextHook(() => {
@@ -111,6 +112,13 @@ export const [TierProvider, useTier] = createContextHook(() => {
     return true;
   }, [isPaid, usage, persistUsage, checkAndPrompt]);
 
+  const consumeDislike = useCallback((): boolean => {
+    const next: Usage = { ...usage, dislikes: usage.dislikes + 1 };
+    setUsage(next);
+    persistUsage(next);
+    return true;
+  }, [usage, persistUsage]);
+
   const consumeRewind = useCallback((): boolean => {
     if (!isPaid && usage.rewinds >= FREE_LIMITS.rewinds) {
       setShowLimitModal(true);
@@ -171,6 +179,7 @@ export const [TierProvider, useTier] = createContextHook(() => {
     usage,
     remaining,
     consumeLike,
+    consumeDislike,
     consumeSwipe,
     consumeRewind,
     consumeMessage,

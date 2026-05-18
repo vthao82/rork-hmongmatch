@@ -10,7 +10,7 @@ import Colors from "@/constants/colors";
 import { profiles as allProfiles, Profile } from "@/mocks/profiles";
 import HmongMatchHeader from "@/components/HmongMatchHeader";
 import RedBackground from "@/components/RedBackground";
-import { useTier, FREE_LIMITS } from "@/providers/TierProvider";
+import { useTier } from "@/providers/TierProvider";
 import { useLikes } from "@/providers/LikesProvider";
 
 const W = Dimensions.get("window");
@@ -39,13 +39,13 @@ function PhotoCarousel({ photos }: { photos: string[] }) {
   );
 }
 
-function ProfileCard({ profile, onLike, onDislike, onMessage, height, translateY }: { profile: Profile; onLike: () => void; onDislike: () => void; onMessage: () => void; height: number; translateY: Animated.Value }) {
+function ProfileCard({ profile, height, translateY }: { profile: Profile; height: number; translateY: Animated.Value }) {
   const verified = profile.verified;
   return (
-    <Animated.View style={[st.card, { height, transform: [{ translateY }] }]}>
+    <Animated.View style={[st.card, { height, transform: [{ translateY }] }]} pointerEvents="box-none">
       <PhotoCarousel photos={profile.photos} />
       <LinearGradient colors={["transparent", "rgba(0,0,0,0.85)"]} locations={[0.45, 1]} style={st.shade} pointerEvents="none" />
-      <View style={st.info}>
+      <View style={st.info} pointerEvents="none">
         <View style={st.nameRow}>
           <Text style={st.name}>{profile.name}</Text>
           <View style={[st.badge, { backgroundColor: verified ? "#2a8ae0" : "#e89216" }]}>
@@ -56,17 +56,6 @@ function ProfileCard({ profile, onLike, onDislike, onMessage, height, translateY
         <Text style={st.meta}>{profile.age} · <MapPin size={11} color="rgba(255,255,255,0.85)" /> {profile.location}</Text>
         <Text style={st.clan}>{profile.clan} Clan</Text>
       </View>
-      <View style={st.actions}>
-        <TouchableOpacity onPress={onDislike} style={[st.actBtn, { borderColor: Colors.nope }]} testID={`dislike-${profile.id}`}>
-          <X size={26} color={Colors.nope} strokeWidth={3} />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={onMessage} style={[st.actBtn, { borderColor: "#2a8ae0" }]} testID={`msg-${profile.id}`}>
-          <MessageCircle size={24} color="#2a8ae0" strokeWidth={2.5} />
-        </TouchableOpacity>
-        <TouchableOpacity onPress={onLike} style={[st.actBtn, { borderColor: Colors.like }]} testID={`like-${profile.id}`}>
-          <Heart size={26} color={Colors.like} strokeWidth={3} />
-        </TouchableOpacity>
-      </View>
     </Animated.View>
   );
 }
@@ -74,7 +63,7 @@ function ProfileCard({ profile, onLike, onDislike, onMessage, height, translateY
 export default function BrowseScreen() {
   const ins = useSafeAreaInsets();
   const router = useRouter();
-  const { isPaid, tier, remaining, consumeLike, consumeSwipe, consumeRewind, startBoost, stopBoost, boostActive, showLimitModal, setShowLimitModal, show75Modal, setShow75Modal, usage } = useTier();
+  const { isPaid, remaining, consumeLike, consumeDislike, consumeSwipe, consumeRewind, startBoost, stopBoost, boostActive, showLimitModal, setShowLimitModal, show75Modal, setShow75Modal, usage } = useTier();
   const { likedIds, consume: addLike } = useLikes();
   const [idx, setIdx] = useState<number>(0);
   const [history, setHistory] = useState<{ id: string; liked: boolean }[]>([]);
@@ -113,8 +102,14 @@ export default function BrowseScreen() {
   }, [current, consumeLike, addLike]);
 
   const onDislike = useCallback(() => {
-    swipeNext();
-  }, [swipeNext]);
+    if (!current) return;
+    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    consumeDislike();
+    const ok = consumeSwipe(current.id);
+    if (!ok) return;
+    setHistory(h => [...h, { id: current.id, liked: false }]);
+    setIdx(i => i + 1);
+  }, [current, consumeDislike, consumeSwipe]);
 
   const onMessage = useCallback(() => {
     if (!current) return;
@@ -172,7 +167,7 @@ export default function BrowseScreen() {
       } />
 
       <View style={st.statRow}>
-        <Text style={st.statTxt}>{isPaid ? "Unlimited" : `${remaining.likes} likes · ${remaining.swipes} swipes · ${remaining.rewinds} rewinds`}</Text>
+        <Text style={st.statTxt}>{isPaid ? `Unlimited · ${usage.dislikes} passes today` : `${remaining.likes} likes · ${usage.dislikes} passes · ${remaining.swipes} swipes · ${remaining.rewinds} rewinds`}</Text>
       </View>
 
       <View style={st.cardArea}>
@@ -183,10 +178,23 @@ export default function BrowseScreen() {
             <Text style={st.emptySub}>Check back later for new Hmong singles.</Text>
           </View>
         ) : (
-          <View {...panResponder.panHandlers}>
-            <ProfileCard profile={current} onLike={onLike} onDislike={onDislike} onMessage={onMessage} height={cardHeight} translateY={translateY} />
-            <View style={st.swipeHint} pointerEvents="none">
-              <Text style={st.swipeHintTxt}>Swipe up for next · Swipe down to rewind</Text>
+          <View style={{ flex: 1 }}>
+            <View {...panResponder.panHandlers} style={{ height: cardHeight }}>
+              <ProfileCard profile={current} height={cardHeight} translateY={translateY} />
+              <View style={st.swipeHint} pointerEvents="none">
+                <Text style={st.swipeHintTxt}>Swipe up for next · Swipe down to rewind</Text>
+              </View>
+            </View>
+            <View style={st.actions}>
+              <TouchableOpacity onPress={onDislike} style={[st.actBtn, { borderColor: Colors.nope }]} testID={`dislike-${current.id}`} activeOpacity={0.75} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <X size={26} color={Colors.nope} strokeWidth={3} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={onMessage} style={[st.actBtn, { borderColor: "#2a8ae0" }]} testID={`msg-${current.id}`} activeOpacity={0.75} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <MessageCircle size={24} color="#2a8ae0" strokeWidth={2.5} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={onLike} style={[st.actBtn, { borderColor: Colors.like }]} testID={`like-${current.id}`} activeOpacity={0.75} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Heart size={26} color={Colors.like} strokeWidth={3} />
+              </TouchableOpacity>
             </View>
           </View>
         )}
@@ -245,15 +253,15 @@ const st = StyleSheet.create({
   dots: { position: "absolute", top: 12, left: 0, right: 0, flexDirection: "row", justifyContent: "center", gap: 4 },
   dot: { width: 24, height: 3, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.35)" },
   dotActive: { backgroundColor: "#FFF" },
-  info: { position: "absolute", left: 18, right: 18, bottom: 92 },
+  info: { position: "absolute", left: 18, right: 18, bottom: 24 },
   nameRow: { flexDirection: "row", alignItems: "center", gap: 10, flexWrap: "wrap" as const },
   name: { color: "#FFF", fontSize: 30, fontWeight: "700" as const },
   badge: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999 },
   badgeTxt: { color: "#FFF", fontSize: 10, fontWeight: "700" as const, letterSpacing: 0.4 },
   meta: { color: "rgba(255,255,255,0.92)", fontSize: 14, marginTop: 4 },
   clan: { color: Colors.accentLight, fontSize: 14, fontWeight: "600" as const, marginTop: 4 },
-  actions: { position: "absolute", bottom: 18, left: 0, right: 0, flexDirection: "row", justifyContent: "center", gap: 18 },
-  actBtn: { width: 60, height: 60, borderRadius: 30, backgroundColor: "rgba(0,0,0,0.55)", borderWidth: 2, justifyContent: "center", alignItems: "center" },
+  actions: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 22, paddingTop: 14 },
+  actBtn: { width: 60, height: 60, borderRadius: 30, backgroundColor: "rgba(0,0,0,0.65)", borderWidth: 2, justifyContent: "center", alignItems: "center" },
   rewindBtn: { position: "absolute", top: 12, right: 16, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1, borderColor: Colors.accent, backgroundColor: "rgba(0,0,0,0.4)" },
   swipeHint: { position: "absolute", top: 48, left: 0, right: 0, alignItems: "center" },
   swipeHintTxt: { color: "rgba(255,255,255,0.55)", fontSize: 11, backgroundColor: "rgba(0,0,0,0.35)", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },

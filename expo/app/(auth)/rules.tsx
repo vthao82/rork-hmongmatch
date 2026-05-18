@@ -39,7 +39,7 @@ export default function RulesScreen() {
       footer={<PillButton label={t("agree")} onPress={() => router.push("/(auth)/name")} variant="light" testID="rules-agree" />}
     >
       <View style={s.head}>
-        <HmongLogo width={320} />
+        <HmongLogo fullWidth />
         <Text style={s.title}>{t("welcomeToHmongMatch")}</Text>
         <Text style={s.sub}>{t("houseRulesSub")}</Text>
       </View>

@@ -63,7 +63,7 @@ export default function LoginScreen() {
           <BackButton tint="light" />
         </View>
         <Animated.View style={[s.top, { opacity: fade, transform: [{ translateY: rise }] }]}>
-          <HmongLogo width={340} />
+          <HmongLogo fullWidth />
           <Text style={s.tag}>Where Hmong Hearts Meet and Real Connections Begin</Text>
         </Animated.View>
 
