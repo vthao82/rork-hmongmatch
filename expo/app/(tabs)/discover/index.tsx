@@ -9,6 +9,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import Colors from "@/constants/colors";
 import { profiles as allProfiles, Profile } from "@/mocks/profiles";
 import HmongMatchHeader from "@/components/HmongMatchHeader";
+import RedBackground from "@/components/RedBackground";
 import { useTier, FREE_LIMITS } from "@/providers/TierProvider";
 import { useLikes } from "@/providers/LikesProvider";
 
@@ -162,6 +163,7 @@ export default function BrowseScreen() {
 
   return (
     <View style={[st.ct, { paddingTop: ins.top }]}>
+      <RedBackground />
       <HmongMatchHeader right={
         <TouchableOpacity onPress={toggleBoost} style={[st.boost, boostActive && st.boostActive]} testID="boost-toggle">
           <Zap size={14} color={boostActive ? "#1a1404" : Colors.accent} fill={boostActive ? "#1a1404" : "transparent"} />
@@ -229,7 +231,7 @@ export default function BrowseScreen() {
 }
 
 const st = StyleSheet.create({
-  ct: { flex: 1, backgroundColor: "#0a0207" },
+  ct: { flex: 1, backgroundColor: "transparent" },
   boost: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: Colors.accent },
   boostActive: { backgroundColor: Colors.accent },
   boostTxt: { color: Colors.accent, fontWeight: "700" as const, fontSize: 12 },

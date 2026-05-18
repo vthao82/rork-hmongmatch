@@ -6,6 +6,7 @@ import { Heart, Star, Zap, ArrowRight } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import Colors from "@/constants/colors";
 import HmongMatchHeader from "@/components/HmongMatchHeader";
+import RedBackground from "@/components/RedBackground";
 import { profiles } from "@/mocks/profiles";
 import { useLikes, DAILY_LIMIT } from "@/providers/LikesProvider";
 
@@ -24,6 +25,7 @@ export default function LikesScreen() {
 
   return (
     <View style={[s.ct, { paddingTop: ins.top }]}>
+      <RedBackground />
       <HmongMatchHeader />
       <View style={s.tabs}>
         <TouchableOpacity style={s.tab} onPress={() => setTab("likes")} testID="tab-likes">
@@ -140,7 +142,7 @@ export default function LikesScreen() {
 }
 
 const s = StyleSheet.create({
-  ct: { flex: 1, backgroundColor: "#000" },
+  ct: { flex: 1, backgroundColor: "transparent" },
   tabs: { flexDirection: "row", paddingHorizontal: 20, paddingTop: 8, alignItems: "center", borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)" },
   tab: { flex: 1, alignItems: "center", paddingVertical: 14, position: "relative" },
   tabRow: { flexDirection: "row", alignItems: "center", gap: 6 },

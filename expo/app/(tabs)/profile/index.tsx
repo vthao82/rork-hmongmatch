@@ -6,6 +6,8 @@ import { useRouter } from "expo-router";
 import { Settings as SettingsIcon, Edit3, BadgeCheck, Image as ImageIcon, Type, Quote, Star, Zap, Flame, Plus, Lock, Check, AlertTriangle } from "lucide-react-native";
 import Colors from "@/constants/colors";
 import { currentUser } from "@/mocks/profiles";
+import HmongMatchHeader from "@/components/HmongMatchHeader";
+import RedBackground from "@/components/RedBackground";
 import { useOnboarding } from "@/providers/OnboardingProvider";
 
 function TaskCard({ icon, title, sub, pct, onPress, done, testID }: { icon: React.ReactNode; title: string; sub: string; pct: string; onPress: () => void; done?: boolean; testID?: string }) {
@@ -55,6 +57,8 @@ export default function ProfileScreen() {
 
   return (
     <View style={[s.ct, { paddingTop: ins.top }]}>
+      <RedBackground />
+      <HmongMatchHeader />
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
         <View style={s.topRow}>
           <Image source={{ uri: photo }} style={s.avatar} contentFit="cover" />
@@ -136,7 +140,7 @@ export default function ProfileScreen() {
 }
 
 const s = StyleSheet.create({
-  ct: { flex: 1, backgroundColor: "#000" },
+  ct: { flex: 1, backgroundColor: "transparent" },
   scroll: { paddingHorizontal: 16, paddingTop: 8 },
   topRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 8 },
   avatar: { width: 68, height: 68, borderRadius: 34, backgroundColor: "#222" },

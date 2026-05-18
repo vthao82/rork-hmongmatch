@@ -51,7 +51,12 @@ export default function PhotoVerifyScreen() {
   return (
     <OnboardingScreen
       footer={
-        <PillButton label={selfie ? "Submit verification" : "Take selfie"} onPress={selfie ? onContinue : takeSelfie} variant="light" testID="verify-cta" />
+        <View style={{ gap: 10 }}>
+          <PillButton label={selfie ? "Submit verification" : "Take selfie"} onPress={selfie ? onContinue : takeSelfie} variant="light" testID="verify-cta" />
+          <Pressable onPress={advance} style={s.skipBtn} testID="verify-skip">
+            <Text style={s.skipText}>Do this later</Text>
+          </Pressable>
+        </View>
       }
     >
       <View style={s.headIcon}><ShieldCheck size={28} color={Colors.gold} /></View>

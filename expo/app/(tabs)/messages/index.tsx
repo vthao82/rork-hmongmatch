@@ -4,12 +4,14 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Shield, MessageSquare, Search } from "lucide-react-native";
 import Colors from "@/constants/colors";
 import HmongMatchHeader from "@/components/HmongMatchHeader";
+import RedBackground from "@/components/RedBackground";
 
 export default function ChatScreen() {
   const ins = useSafeAreaInsets();
   const [q, setQ] = useState<string>("");
   return (
     <View style={[s.ct, { paddingTop: ins.top }]}>
+      <RedBackground />
       <HmongMatchHeader right={
         <>
           <Shield size={22} color={Colors.dark.text} />
@@ -47,7 +49,7 @@ export default function ChatScreen() {
 }
 
 const s = StyleSheet.create({
-  ct: { flex: 1, backgroundColor: "#000" },
+  ct: { flex: 1, backgroundColor: "transparent" },
   redDot: { position: "absolute", top: -2, right: -2, width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.primary },
   searchWrap: { flexDirection: "row", alignItems: "center", gap: 10, marginHorizontal: 20, marginTop: 8, paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.15)" },
   search: { flex: 1, color: "#FFF", fontSize: 16 },

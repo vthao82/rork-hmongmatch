@@ -6,6 +6,7 @@ import { User, Lock, Crown, Plus, ChevronRight } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import Colors from "@/constants/colors";
 import HmongMatchHeader from "@/components/HmongMatchHeader";
+import RedBackground from "@/components/RedBackground";
 import { CATEGORY_GROUPS } from "@/constants/categories";
 import { useTier } from "@/providers/TierProvider";
 import { useOnboarding } from "@/providers/OnboardingProvider";
@@ -44,6 +45,7 @@ export default function InterestsTab() {
 
   return (
     <View style={[s.ct, { paddingTop: ins.top }]}>
+      <RedBackground />
       <HmongMatchHeader />
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
         <Text style={s.heroTitle}>Explore what brings us together</Text>
@@ -123,7 +125,7 @@ export default function InterestsTab() {
 }
 
 const s = StyleSheet.create({
-  ct: { flex: 1, backgroundColor: "#0a0207" },
+  ct: { flex: 1, backgroundColor: "transparent" },
   scroll: { paddingHorizontal: 16, paddingBottom: 24 },
   heroTitle: { color: "#FFF", fontSize: 22, fontWeight: "700" as const, textAlign: "center" as const, marginTop: 6 },
   heroSub: { color: "rgba(255,255,255,0.6)", fontSize: 13, textAlign: "center" as const, marginTop: 6, marginBottom: 16 },
