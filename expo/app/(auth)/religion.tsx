@@ -26,22 +26,12 @@ export default function ReligionScreen() {
     router.push("/(auth)/seeking");
   };
 
-  const skip = () => {
-    update({ religion: undefined, religionOther: "" });
-    router.push("/(auth)/seeking");
-  };
-
   const valid = selected.length > 0 && (selected !== "other" || other.trim().length > 0);
 
   return (
     <OnboardingScreen
       step={9}
       total={20}
-      topRight={
-        <Pressable onPress={skip} hitSlop={12} testID="religion-skip">
-          <Text style={s.skip}>{t("skip")}</Text>
-        </Pressable>
-      }
       footer={<PillButton label={t("next")} onPress={onNext} disabled={!valid} variant="light" testID="religion-next" />}
     >
       <Text style={s.head}>What&apos;s your{"\n"}religion?</Text>
@@ -67,8 +57,8 @@ export default function ReligionScreen() {
 }
 
 const s = StyleSheet.create({
-  skip: { color: Colors.dark.textDim, fontSize: 14, fontFamily: "Cinzel_600SemiBold", padding: 8 },
-  head: { fontSize: 28, fontFamily: "Cinzel_700Bold", color: Colors.dark.text, letterSpacing: -0.5, marginTop: 6, lineHeight: 34 },
+  skip: { color: Colors.dark.textDim, fontSize: 14, fontWeight: "600" as const, padding: 8 },
+  head: { fontSize: 28, fontWeight: "700" as const, color: Colors.dark.text, letterSpacing: -0.5, marginTop: 6, lineHeight: 34 },
   sub: { fontSize: 14, color: Colors.dark.textDim, marginTop: 10, lineHeight: 20 },
   input: { marginTop: 14, padding: 14, borderRadius: 14, borderWidth: 1, borderColor: Colors.crimson, backgroundColor: "rgba(192,21,47,0.08)", color: Colors.dark.text, fontSize: 15 },
 });

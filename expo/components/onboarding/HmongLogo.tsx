@@ -3,7 +3,7 @@ import { Image } from "react-native";
 
 type Props = { size?: number; width?: number };
 
-function HmongLogo({ size = 48, width }: Props) {
+function HmongLogo({ size = 96, width }: Props) {
   const w = width ?? size * 2.4;
   const h = w / 2.4;
   return (

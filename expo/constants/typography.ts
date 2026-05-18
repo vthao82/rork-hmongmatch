@@ -1,6 +1,5 @@
 /**
- * Global font family applied across the app via Text default props.
- * Cinzel is a serif display face — used everywhere as requested by brand direction.
+ * Default fonts use the platform system font for a clean, native look.
  */
-export const FONT_FAMILY = "Cinzel_400Regular";
-export const FONT_FAMILY_BOLD = "Cinzel_700Bold";
+export const FONT_FAMILY = undefined;
+export const FONT_FAMILY_BOLD = undefined;

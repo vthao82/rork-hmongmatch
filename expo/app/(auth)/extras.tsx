@@ -30,17 +30,10 @@ export default function ExtrasScreen() {
     update({ extras: state });
     router.push("/(auth)/photos");
   };
-  const onSkip = () => router.push("/(auth)/photos");
-
   return (
     <OnboardingScreen
       step={16}
       total={19}
-      topRight={
-        <Pressable onPress={onSkip} testID="extras-skip">
-          <Text style={s.skip}>{t("skip")}</Text>
-        </Pressable>
-      }
       footer={<PillButton label={`${t("next")}  ${filled}/3`} onPress={onNext} disabled={filled === 0} variant="light" testID="extras-next" />}
     >
       <Text style={s.head}>{t("extrasQ")}</Text>

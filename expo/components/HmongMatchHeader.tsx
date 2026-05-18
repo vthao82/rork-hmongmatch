@@ -7,7 +7,7 @@ type Props = { right?: React.ReactNode };
 function HmongMatchHeader({ right }: Props) {
   return (
     <View style={s.row} testID="app-header">
-      <HmongLogo width={120} />
+      <HmongLogo width={240} />
       {right ? <View style={s.right}>{right}</View> : <View />}
     </View>
   );

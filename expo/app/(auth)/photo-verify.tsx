@@ -48,20 +48,10 @@ export default function PhotoVerifyScreen() {
     advance();
   };
 
-  const onSkip = () => {
-    update({ photoVerified: false });
-    advance();
-  };
-
   return (
     <OnboardingScreen
       footer={
-        <View style={{ gap: 10 }}>
-          <PillButton label={selfie ? "Submit verification" : "Take selfie"} onPress={selfie ? onContinue : takeSelfie} variant="light" testID="verify-cta" />
-          <Pressable onPress={onSkip} style={s.skipBtn} testID="verify-skip">
-            <Text style={s.skipText}>Skip — I'll verify later</Text>
-          </Pressable>
-        </View>
+        <PillButton label={selfie ? "Submit verification" : "Take selfie"} onPress={selfie ? onContinue : takeSelfie} variant="light" testID="verify-cta" />
       }
     >
       <View style={s.headIcon}><ShieldCheck size={28} color={Colors.gold} /></View>

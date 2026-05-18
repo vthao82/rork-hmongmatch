@@ -36,11 +36,10 @@ export default function RulesScreen() {
   const t = useT();
   return (
     <OnboardingScreen
-      gradient={[Colors.dark.bg, Colors.dark.bgSoft] as const}
       footer={<PillButton label={t("agree")} onPress={() => router.push("/(auth)/name")} variant="light" testID="rules-agree" />}
     >
       <View style={s.head}>
-        <HmongLogo size={44} />
+        <HmongLogo size={88} />
         <Text style={s.title}>{t("welcomeToHmongMatch")}</Text>
         <Text style={s.sub}>{t("houseRulesSub")}</Text>
       </View>

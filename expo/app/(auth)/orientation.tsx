@@ -34,11 +34,6 @@ export default function OrientationScreen() {
     <OnboardingScreen
       step={8}
       total={19}
-      topRight={
-        <Pressable onPress={save} testID="orientation-skip" hitSlop={12}>
-          <Text style={s.skip}>{t("skip")}</Text>
-        </Pressable>
-      }
       footer={
         <PillButton label={t("next")} onPress={save} disabled={selected.length === 0} variant="light" testID="orientation-next" />
       }

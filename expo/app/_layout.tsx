@@ -1,12 +1,10 @@
 import React, { useEffect } from "react";
-import { Text, TextInput } from "react-native";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
-import { useFonts, Cinzel_400Regular, Cinzel_600SemiBold, Cinzel_700Bold } from "@expo-google-fonts/cinzel";
 import Colors from "@/constants/colors";
 import { OnboardingProvider } from "@/providers/OnboardingProvider";
 import { LikesProvider } from "@/providers/LikesProvider";
@@ -15,18 +13,6 @@ import { TierProvider } from "@/providers/TierProvider";
 
 SplashScreen.preventAutoHideAsync();
 const qc = new QueryClient();
-
-function applyDefaultFont() {
-  // @ts-expect-error - default props for global font override
-  const TextAny = Text as unknown as { defaultProps?: { style?: unknown } };
-  TextAny.defaultProps = TextAny.defaultProps || {};
-  TextAny.defaultProps.style = [{ fontFamily: "Cinzel_400Regular" }, TextAny.defaultProps.style];
-
-  // @ts-expect-error - same for inputs
-  const InputAny = TextInput as unknown as { defaultProps?: { style?: unknown } };
-  InputAny.defaultProps = InputAny.defaultProps || {};
-  InputAny.defaultProps.style = [{ fontFamily: "Cinzel_400Regular" }, InputAny.defaultProps.style];
-}
 
 function RootLayoutNav() {
   return (
@@ -48,16 +34,7 @@ function RootLayoutNav() {
 }
 
 export default function RootLayout() {
-  const [fontsLoaded] = useFonts({ Cinzel_400Regular, Cinzel_600SemiBold, Cinzel_700Bold });
-  useEffect(() => {
-    if (fontsLoaded) {
-      applyDefaultFont();
-      SplashScreen.hideAsync();
-    }
-  }, [fontsLoaded]);
-
-  if (!fontsLoaded) return null;
-
+  useEffect(() => { SplashScreen.hideAsync(); }, []);
   return (
     <QueryClientProvider client={qc}>
       <SafeAreaProvider>

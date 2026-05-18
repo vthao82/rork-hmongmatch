@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-nati
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { Settings as SettingsIcon, Edit3, BadgeCheck, Image as ImageIcon, Type, Quote, Star, Zap, Flame, Plus, Lock, Check, Eye, AlertTriangle } from "lucide-react-native";
+import { Settings as SettingsIcon, Edit3, BadgeCheck, Image as ImageIcon, Type, Quote, Star, Zap, Flame, Plus, Lock, Check, AlertTriangle } from "lucide-react-native";
 import Colors from "@/constants/colors";
 import { currentUser } from "@/mocks/profiles";
 import { useOnboarding } from "@/providers/OnboardingProvider";
@@ -63,16 +63,10 @@ export default function ProfileScreen() {
               <Text style={s.name}>{displayName}</Text>
               <BadgeCheck size={18} color="#4A90D9" fill="#4A90D9" />
             </View>
-            <View style={{ flexDirection: "row", gap: 8, flexWrap: "wrap" }}>
-              <TouchableOpacity style={s.editBtn} onPress={() => router.push("/edit-profile")} testID="edit-profile">
-                <Edit3 size={14} color="#1a1a1f" />
-                <Text style={s.editText}>Edit profile</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={s.viewBtn} onPress={() => router.push(`/user/${currentUser.id}`)} testID="view-profile">
-                <Eye size={14} color="#FFF" />
-                <Text style={s.viewBtnText}>View profile</Text>
-              </TouchableOpacity>
-            </View>
+            <TouchableOpacity style={s.editBtn} onPress={() => router.push("/edit-profile")} testID="edit-profile">
+              <Edit3 size={14} color="#1a1a1f" />
+              <Text style={s.editText}>Edit profile</Text>
+            </TouchableOpacity>
           </View>
           <TouchableOpacity onPress={() => router.push("/settings")} testID="settings-btn">
             <SettingsIcon size={24} color={Colors.dark.text} />

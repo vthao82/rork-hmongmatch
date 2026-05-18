@@ -29,13 +29,10 @@ export default function WorkScreen() {
     router.push("/(auth)/education");
   };
 
-  const onSkip = () => router.push("/(auth)/education");
-
   return (
     <OnboardingScreen
       step={12}
       total={19}
-      topRight={<Pressable onPress={onSkip} testID="work-skip"><Text style={s.skip}>{t("skip")}</Text></Pressable>}
       footer={<PillButton label={t("next")} onPress={onNext} disabled={!selected || (selected === "other" && other.trim().length === 0)} variant="light" testID="work-next" />}
     >
       <Text style={s.head}>{t("workQ")}</Text>

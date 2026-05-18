@@ -192,18 +192,18 @@ function Field({ label, value, onPress, testID, disabled }: { label: string; val
 }
 
 const s = StyleSheet.create({
-  head: { fontSize: 28, fontFamily: "Cinzel_700Bold", color: Colors.dark.text, letterSpacing: -0.5, marginTop: 6, lineHeight: 34 },
+  head: { fontSize: 28, fontWeight: "700" as const, color: Colors.dark.text, letterSpacing: -0.5, marginTop: 6, lineHeight: 34 },
   sub: { fontSize: 14, color: Colors.dark.textDim, marginTop: 10, lineHeight: 20, marginBottom: 18 },
   field: { flexDirection: "row", alignItems: "center", padding: 14, borderRadius: 14, borderWidth: 1, borderColor: "rgba(255,255,255,0.12)", backgroundColor: "rgba(255,255,255,0.04)", marginTop: 10 },
   fieldDisabled: { opacity: 0.5 },
-  fieldLabel: { color: Colors.gold, fontSize: 11, fontFamily: "Cinzel_700Bold", letterSpacing: 1.2, textTransform: "uppercase" as const, marginTop: 12 },
-  fieldVal: { color: Colors.dark.text, fontSize: 16, fontFamily: "Cinzel_600SemiBold", marginTop: 4 },
+  fieldLabel: { color: Colors.gold, fontSize: 11, fontWeight: "700" as const, letterSpacing: 1.2, textTransform: "uppercase" as const, marginTop: 12 },
+  fieldVal: { color: Colors.dark.text, fontSize: 16, fontWeight: "600" as const, marginTop: 4 },
   fieldPlaceholder: { color: "rgba(255,255,255,0.4)", fontSize: 16, marginTop: 4 },
   input: { marginTop: 8, padding: 12, borderRadius: 12, borderWidth: 1, borderColor: Colors.crimson, backgroundColor: "rgba(192,21,47,0.08)", color: Colors.dark.text, fontSize: 15 },
   modalWrap: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.55)" },
   modal: { backgroundColor: Colors.dark.bgSoft, borderTopLeftRadius: 26, borderTopRightRadius: 26, paddingBottom: 30, maxHeight: "85%" },
   modalHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", padding: 18, borderBottomWidth: 1, borderBottomColor: Colors.dark.border },
-  modalTitle: { color: Colors.dark.text, fontSize: 17, fontFamily: "Cinzel_700Bold", textTransform: "capitalize" as const },
+  modalTitle: { color: Colors.dark.text, fontSize: 17, fontWeight: "700" as const, textTransform: "capitalize" as const },
   searchWrap: { flexDirection: "row", alignItems: "center", gap: 8, marginHorizontal: 18, marginVertical: 10, paddingHorizontal: 12, paddingVertical: 10, borderRadius: 12, backgroundColor: "rgba(255,255,255,0.06)" },
   searchInput: { flex: 1, color: Colors.dark.text, fontSize: 14 },
   row: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingHorizontal: 20, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.06)" },

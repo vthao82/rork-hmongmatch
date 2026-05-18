@@ -18,17 +18,15 @@ export default function BioScreen() {
   const [writingFor, setWritingFor] = useState<string | null>(null);
   const [answer, setAnswer] = useState<string>("");
 
-  const onSkip = () => {
+  const onNext = () => {
     update({ bio, prompt });
     router.push("/(auth)/location");
   };
-  const onNext = onSkip;
 
   return (
     <OnboardingScreen
       step={18}
       total={19}
-      topRight={<Pressable onPress={onSkip} testID="bio-skip"><Text style={s.skip}>{t("skip")}</Text></Pressable>}
       footer={
         <View style={{ gap: 10 }}>
           <View style={s.bannerWrap}>

@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState, useEffect } from "react";
-import { View, Text, StyleSheet, Dimensions, FlatList, TouchableOpacity, Pressable, Animated, Modal, Platform } from "react-native";
+import { View, Text, StyleSheet, Dimensions, FlatList, TouchableOpacity, PanResponder, Animated, Modal, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import { MapPin, BadgeCheck, X, Heart, RotateCcw, MessageCircle, Zap, Crown } from "lucide-react-native";
@@ -38,10 +38,10 @@ function PhotoCarousel({ photos }: { photos: string[] }) {
   );
 }
 
-function ProfileCard({ profile, onLike, onDislike, onMessage, height }: { profile: Profile; onLike: () => void; onDislike: () => void; onMessage: () => void; height: number }) {
+function ProfileCard({ profile, onLike, onDislike, onMessage, height, translateY }: { profile: Profile; onLike: () => void; onDislike: () => void; onMessage: () => void; height: number; translateY: Animated.Value }) {
   const verified = profile.verified;
   return (
-    <View style={[st.card, { height }]}>
+    <Animated.View style={[st.card, { height, transform: [{ translateY }] }]}>
       <PhotoCarousel photos={profile.photos} />
       <LinearGradient colors={["transparent", "rgba(0,0,0,0.85)"]} locations={[0.45, 1]} style={st.shade} pointerEvents="none" />
       <View style={st.info}>
@@ -66,7 +66,7 @@ function ProfileCard({ profile, onLike, onDislike, onMessage, height }: { profil
           <Heart size={26} color={Colors.like} strokeWidth={3} />
         </TouchableOpacity>
       </View>
-    </View>
+    </Animated.View>
   );
 }
 
@@ -78,6 +78,7 @@ export default function BrowseScreen() {
   const [idx, setIdx] = useState<number>(0);
   const [history, setHistory] = useState<{ id: string; liked: boolean }[]>([]);
   const cardHeight = W.height - ins.top - ins.bottom - 130;
+  const translateY = useRef(new Animated.Value(0)).current;
 
   // Filter out already-seen users to avoid showing same person again
   const queue = useMemo(() => {
@@ -128,6 +129,29 @@ export default function BrowseScreen() {
     setIdx(i => Math.max(0, i - 1));
   }, [history, idx, consumeRewind]);
 
+  const panResponder = useMemo(() => PanResponder.create({
+    onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dy) > 12 && Math.abs(g.dy) > Math.abs(g.dx),
+    onPanResponderMove: (_, g) => {
+      translateY.setValue(g.dy * 0.4);
+    },
+    onPanResponderRelease: (_, g) => {
+      const THRESH = 90;
+      if (g.dy < -THRESH) {
+        Animated.timing(translateY, { toValue: -cardHeight, duration: 180, useNativeDriver: true }).start(() => {
+          translateY.setValue(0);
+          swipeNext();
+        });
+      } else if (g.dy > THRESH) {
+        Animated.timing(translateY, { toValue: cardHeight, duration: 180, useNativeDriver: true }).start(() => {
+          translateY.setValue(0);
+          onRewind();
+        });
+      } else {
+        Animated.spring(translateY, { toValue: 0, useNativeDriver: true }).start();
+      }
+    },
+  }), [translateY, cardHeight, swipeNext, onRewind]);
+
   const toggleBoost = useCallback(() => {
     if (boostActive) stopBoost();
     else {
@@ -157,7 +181,12 @@ export default function BrowseScreen() {
             <Text style={st.emptySub}>Check back later for new Hmong singles.</Text>
           </View>
         ) : (
-          <ProfileCard profile={current} onLike={onLike} onDislike={onDislike} onMessage={onMessage} height={cardHeight} />
+          <View {...panResponder.panHandlers}>
+            <ProfileCard profile={current} onLike={onLike} onDislike={onDislike} onMessage={onMessage} height={cardHeight} translateY={translateY} />
+            <View style={st.swipeHint} pointerEvents="none">
+              <Text style={st.swipeHintTxt}>Swipe up for next · Swipe down to rewind</Text>
+            </View>
+          </View>
         )}
 
         <TouchableOpacity onPress={onRewind} disabled={history.length === 0 || idx === 0} style={[st.rewindBtn, (history.length === 0 || idx === 0) && { opacity: 0.4 }]} testID="rewind-button">
@@ -203,7 +232,7 @@ const st = StyleSheet.create({
   ct: { flex: 1, backgroundColor: "#0a0207" },
   boost: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: Colors.accent },
   boostActive: { backgroundColor: Colors.accent },
-  boostTxt: { color: Colors.accent, fontFamily: "Cinzel_700Bold", fontSize: 12 },
+  boostTxt: { color: Colors.accent, fontWeight: "700" as const, fontSize: 12 },
   statRow: { paddingHorizontal: 16, paddingBottom: 6 },
   statTxt: { color: "rgba(255,255,255,0.6)", fontSize: 11, textAlign: "center" as const },
   cardArea: { flex: 1, paddingHorizontal: 12, paddingTop: 4 },
@@ -216,23 +245,25 @@ const st = StyleSheet.create({
   dotActive: { backgroundColor: "#FFF" },
   info: { position: "absolute", left: 18, right: 18, bottom: 92 },
   nameRow: { flexDirection: "row", alignItems: "center", gap: 10, flexWrap: "wrap" as const },
-  name: { color: "#FFF", fontSize: 30, fontFamily: "Cinzel_700Bold" },
+  name: { color: "#FFF", fontSize: 30, fontWeight: "700" as const },
   badge: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999 },
-  badgeTxt: { color: "#FFF", fontSize: 10, fontFamily: "Cinzel_700Bold", letterSpacing: 0.4 },
+  badgeTxt: { color: "#FFF", fontSize: 10, fontWeight: "700" as const, letterSpacing: 0.4 },
   meta: { color: "rgba(255,255,255,0.92)", fontSize: 14, marginTop: 4 },
-  clan: { color: Colors.accentLight, fontSize: 14, fontFamily: "Cinzel_600SemiBold", marginTop: 4 },
+  clan: { color: Colors.accentLight, fontSize: 14, fontWeight: "600" as const, marginTop: 4 },
   actions: { position: "absolute", bottom: 18, left: 0, right: 0, flexDirection: "row", justifyContent: "center", gap: 18 },
   actBtn: { width: 60, height: 60, borderRadius: 30, backgroundColor: "rgba(0,0,0,0.55)", borderWidth: 2, justifyContent: "center", alignItems: "center" },
   rewindBtn: { position: "absolute", top: 12, right: 16, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1, borderColor: Colors.accent, backgroundColor: "rgba(0,0,0,0.4)" },
-  rewindTxt: { color: Colors.accent, fontSize: 12, fontFamily: "Cinzel_700Bold" },
+  swipeHint: { position: "absolute", top: 48, left: 0, right: 0, alignItems: "center" },
+  swipeHintTxt: { color: "rgba(255,255,255,0.55)", fontSize: 11, backgroundColor: "rgba(0,0,0,0.35)", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
+  rewindTxt: { color: Colors.accent, fontSize: 12, fontWeight: "700" as const },
   empty: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10 },
-  emptyTitle: { color: "#FFF", fontSize: 18, fontFamily: "Cinzel_700Bold", marginTop: 10 },
+  emptyTitle: { color: "#FFF", fontSize: 18, fontWeight: "700" as const, marginTop: 10 },
   emptySub: { color: "rgba(255,255,255,0.6)", fontSize: 13, textAlign: "center" as const, paddingHorizontal: 40 },
   modal: { flex: 1, backgroundColor: "rgba(0,0,0,0.75)", justifyContent: "center", alignItems: "center", padding: 28 },
   modalCard: { backgroundColor: "#16060c", borderRadius: 22, padding: 26, alignItems: "center", width: "100%", borderWidth: 1, borderColor: "rgba(212,168,67,0.3)" },
-  modalTitle: { color: "#FFF", fontSize: 20, fontFamily: "Cinzel_700Bold", marginTop: 12, textAlign: "center" as const },
+  modalTitle: { color: "#FFF", fontSize: 20, fontWeight: "700" as const, marginTop: 12, textAlign: "center" as const },
   modalSub: { color: "rgba(255,255,255,0.7)", fontSize: 13, textAlign: "center" as const, marginTop: 8, lineHeight: 19 },
   cta: { backgroundColor: Colors.accent, paddingHorizontal: 32, paddingVertical: 14, borderRadius: 999, marginTop: 18 },
-  ctaTxt: { color: "#1a1404", fontSize: 14, fontFamily: "Cinzel_700Bold" },
+  ctaTxt: { color: "#1a1404", fontSize: 14, fontWeight: "700" as const },
   later: { color: "rgba(255,255,255,0.5)", marginTop: 14, fontSize: 13 },
 });

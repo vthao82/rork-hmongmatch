@@ -19,7 +19,7 @@ export default function HmongDateTabLayout() {
           shadowOpacity: 0,
           ...(Platform.OS === "web" ? { height: 64, paddingBottom: 10 } : {}),
         },
-        tabBarLabelStyle: { fontSize: 10, fontFamily: "Cinzel_600SemiBold", letterSpacing: 0.5, marginTop: -2 },
+        tabBarLabelStyle: { fontSize: 10, fontWeight: "600" as const, letterSpacing: 0.5, marginTop: -2 },
       }}
     >
       <Tabs.Screen name="discover" options={{ title: "Browse", tabBarIcon: ({ color, size }) => <Home size={size} color={color} /> }} />

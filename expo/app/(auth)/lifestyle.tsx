@@ -42,10 +42,6 @@ export default function LifestyleScreen() {
     router.push("/(auth)/extras");
   };
 
-  const onSkip = () => {
-    router.push("/(auth)/extras");
-  };
-
   const petsList = showMorePets ? [...PETS_BASE, ...PETS_MORE] : PETS_BASE;
   const name = data.name ?? "";
 
@@ -53,11 +49,6 @@ export default function LifestyleScreen() {
     <OnboardingScreen
       step={15}
       total={19}
-      topRight={
-        <Pressable onPress={onSkip} testID="lifestyle-skip">
-          <Text style={s.skip}>{t("skip")}</Text>
-        </Pressable>
-      }
       footer={<PillButton label={`${t("next")}  ${filled}/4`} onPress={onNext} disabled={filled === 0} variant="light" testID="lifestyle-next" />}
     >
       <Text style={s.head}>{t("lifestyleQ")}{name ? `, ${name}` : ""}</Text>
