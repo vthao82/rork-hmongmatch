@@ -16,9 +16,16 @@ export default function PhotoVerifyScreen() {
   const [selfie, setSelfie] = useState<string | undefined>(undefined);
 
   const advance = () => {
-    if (onboarding) router.replace("/(auth)/bio");
-    else if (router.canGoBack()) router.back();
-    else router.replace("/(tabs)/profile");
+    if (onboarding) {
+      router.replace("/(auth)/bio");
+      return;
+    }
+    try {
+      if (router.canGoBack()) router.back();
+      else router.replace("/(tabs)/profile");
+    } catch {
+      router.replace("/(tabs)/profile");
+    }
   };
 
   const takeSelfie = async () => {

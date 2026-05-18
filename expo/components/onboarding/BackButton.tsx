@@ -11,15 +11,23 @@ type Props = {
   testID?: string;
 };
 
+function safeCanGoBack(): boolean {
+  try {
+    return router.canGoBack();
+  } catch {
+    return true;
+  }
+}
+
 function BackButton({ onPress, tint = "dark", testID }: Props) {
-  const canGo = router.canGoBack();
+  const canGo = safeCanGoBack();
   if (!canGo && !onPress) return null;
   const handle = () => {
     if (Platform.OS !== "web") {
       Haptics.selectionAsync().catch(() => {});
     }
     if (onPress) onPress();
-    else if (router.canGoBack()) router.back();
+    else if (safeCanGoBack()) router.back();
   };
   const color = tint === "light" ? Colors.offwhite : Colors.dark.text;
   const bg = tint === "light" ? "rgba(255,255,255,0.14)" : "rgba(255,255,255,0.06)";
