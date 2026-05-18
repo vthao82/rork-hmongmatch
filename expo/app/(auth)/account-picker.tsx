@@ -57,7 +57,7 @@ export default function AccountPicker() {
           <X size={20} color={Colors.dark.textDim} />
         </Pressable>
         <View style={s.head}>
-          <HmongLogo size={48} />
+          <HmongLogo width={260} />
           <Text style={s.title}>Choose an account to continue</Text>
           <Text style={s.sub}>to Hmong Date</Text>
         </View>
