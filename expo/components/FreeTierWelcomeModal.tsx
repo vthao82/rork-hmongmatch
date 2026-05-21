@@ -41,7 +41,7 @@ export default function FreeTierWelcomeModal({ visible, onClose, onUpgrade }: Pr
           {onUpgrade && (
             <TouchableOpacity onPress={onUpgrade} style={s.upgrade} testID="free-tier-upgrade">
               <Crown size={14} color={Colors.accent} />
-              <Text style={s.upgradeTxt}>See Plus & Gold plans</Text>
+              <Text style={s.upgradeTxt}>{t("seePlans")}</Text>
             </TouchableOpacity>
           )}
         </View>

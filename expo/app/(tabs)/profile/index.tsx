@@ -9,6 +9,7 @@ import { currentUser } from "@/mocks/profiles";
 import HmongMatchHeader from "@/components/HmongMatchHeader";
 import RedBackground from "@/components/RedBackground";
 import { useOnboarding } from "@/providers/OnboardingProvider";
+import { useT } from "@/providers/LanguageProvider";
 
 function TaskCard({ icon, title, sub, pct, onPress, done, testID }: { icon: React.ReactNode; title: string; sub: string; pct: string; onPress: () => void; done?: boolean; testID?: string }) {
   return (
@@ -46,6 +47,7 @@ function StatCard({ icon, label, cta, color, onPress, testID }: { icon: React.Re
 export default function ProfileScreen() {
   const ins = useSafeAreaInsets();
   const router = useRouter();
+  const t = useT();
   const { data } = useOnboarding();
   const displayName = data.name?.trim() ? data.name : currentUser.name;
   const photo = data.photos && data.photos.length > 0 ? data.photos[0] : currentUser.photos[0];
@@ -68,7 +70,7 @@ export default function ProfileScreen() {
             </View>
             <TouchableOpacity style={s.editBtn} onPress={() => router.push("/edit-profile")} testID="edit-profile">
               <Edit3 size={14} color="#1a1a1f" />
-              <Text style={s.editText}>Edit profile</Text>
+              <Text style={s.editText}>{t("editProfile")}</Text>
             </TouchableOpacity>
           </View>
           <TouchableOpacity onPress={() => router.push("/settings")} testID="settings-btn">
@@ -83,19 +85,19 @@ export default function ProfileScreen() {
             </View>
           </View>
         </View>
-        <Text style={s.progressSub}>Complete your profile to be seen by more people!</Text>
+        <Text style={s.progressSub}>{t("completeProfile")}</Text>
 
         {photoCount < 4 && (
-          <TaskCard icon={<ImageIcon size={28} color={Colors.primary} />} title="Add at least 4 photos" sub={`${photoCount}/4 — tap to add more.`} pct="+28%" done={false} onPress={() => router.push({ pathname: "/edit-profile", params: { focus: "photos" } })} testID="task-photos" />
+          <TaskCard icon={<ImageIcon size={28} color={Colors.primary} />} title={t("addPhotosTitle")} sub={t("addPhotosSub", { n: photoCount })} pct="+28%" done={false} onPress={() => router.push({ pathname: "/edit-profile", params: { focus: "photos" } })} testID="task-photos" />
         )}
         {!hasBio && (
-          <TaskCard icon={<Type size={28} color={Colors.primary} />} title='Add "About Me"' sub="Get up to 25% more matches with an intro." pct="+30%" done={false} onPress={() => router.push({ pathname: "/edit-profile", params: { focus: "bio" } })} testID="task-bio" />
+          <TaskCard icon={<Type size={28} color={Colors.primary} />} title={t("addBioTitle")} sub={t("addBioSub")} pct="+30%" done={false} onPress={() => router.push({ pathname: "/edit-profile", params: { focus: "bio" } })} testID="task-bio" />
         )}
 
         <View style={s.statsRow}>
-          <StatCard icon={<Star size={26} color="#4A90D9" fill="#4A90D9" />} label="0 Super Likes" cta="GET MORE" color="#4A90D9" onPress={() => router.push({ pathname: "/subscription", params: { focus: "superlikes" } })} testID="stat-superlikes" />
-          <StatCard icon={<Zap size={26} color="#a66cff" fill="#a66cff" />} label="My Boosts" cta="GET MORE" color="#a66cff" onPress={() => router.push({ pathname: "/subscription", params: { focus: "boosts" } })} testID="stat-boosts" />
-          <StatCard icon={<Flame size={26} color={Colors.primary} fill={Colors.primary} />} label="Subscriptions" cta="MANAGE" color={Colors.primary} onPress={() => router.push("/subscription")} testID="stat-subs" />
+          <StatCard icon={<Star size={26} color="#4A90D9" fill="#4A90D9" />} label={t("superLikes")} cta={t("getMore")} color="#4A90D9" onPress={() => router.push({ pathname: "/subscription", params: { focus: "superlikes" } })} testID="stat-superlikes" />
+          <StatCard icon={<Zap size={26} color="#a66cff" fill="#a66cff" />} label={t("myBoosts")} cta={t("getMore")} color="#a66cff" onPress={() => router.push({ pathname: "/subscription", params: { focus: "boosts" } })} testID="stat-boosts" />
+          <StatCard icon={<Flame size={26} color={Colors.primary} fill={Colors.primary} />} label={t("subscriptions")} cta={t("manage").toUpperCase()} color={Colors.primary} onPress={() => router.push("/subscription")} testID="stat-subs" />
         </View>
 
         <TouchableOpacity style={s.goldCard} onPress={() => router.push("/subscription")} activeOpacity={0.9} testID="upgrade-card">
@@ -105,20 +107,20 @@ export default function ProfileScreen() {
               <Text style={s.goldWordmark}>Hmong Date</Text>
               <View style={s.goldChip}><Text style={s.goldChipText}>GOLD</Text></View>
             </View>
-            <View style={s.upgradeBtn}><Text style={s.upgradeText}>Upgrade</Text></View>
+            <View style={s.upgradeBtn}><Text style={s.upgradeText}>{t("upgrade")}</Text></View>
           </View>
           <View style={s.compareHeader}>
-            <Text style={s.compareTitle}>What&apos;s Included</Text>
+            <Text style={s.compareTitle}>{t("whatsIncluded")}</Text>
             <View style={s.compareCols}>
-              <Text style={s.compareColText}>Free</Text>
-              <Text style={s.compareColText}>Gold</Text>
+              <Text style={s.compareColText}>{t("free")}</Text>
+              <Text style={s.compareColText}>{t("gold")}</Text>
             </View>
           </View>
           {[
-            { label: "See Who Likes You", free: false },
-            { label: "Top Picks", free: false },
-            { label: "Unlimited Likes", free: false },
-            { label: "Profile Boosts", free: false },
+            { label: t("seeWhoLikesYouFeat"), free: false },
+            { label: t("topPicksFeat"), free: false },
+            { label: t("unlimitedLikesFeat"), free: false },
+            { label: t("profileBoosts"), free: false },
           ].map(r => (
             <View key={r.label} style={s.compareRow}>
               <Text style={s.compareRowText}>{r.label}</Text>
@@ -132,7 +134,7 @@ export default function ProfileScreen() {
 
         <TouchableOpacity style={s.reportRow} onPress={() => router.push("/report")} testID="report-row">
           <AlertTriangle size={18} color={Colors.crimsonLight} />
-          <Text style={s.reportText}>Report a problem or user</Text>
+          <Text style={s.reportText}>{t("reportRow")}</Text>
         </TouchableOpacity>
 
         <View style={{ height: 24 }} />

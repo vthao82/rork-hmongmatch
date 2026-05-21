@@ -12,6 +12,7 @@ import HmongMatchHeader from "@/components/HmongMatchHeader";
 import RedBackground from "@/components/RedBackground";
 import { useTier } from "@/providers/TierProvider";
 import { useLikes } from "@/providers/LikesProvider";
+import { useT } from "@/providers/LanguageProvider";
 
 const W = Dimensions.get("window");
 
@@ -41,6 +42,7 @@ function PhotoCarousel({ photos }: { photos: string[] }) {
 
 function ProfileCard({ profile, height }: { profile: Profile; height: number }) {
   const verified = profile.verified;
+  const t = useT();
   return (
     <View style={[st.card, { height }]} pointerEvents="box-none">
       <PhotoCarousel photos={profile.photos} />
@@ -62,7 +64,7 @@ function ProfileCard({ profile, height }: { profile: Profile; height: number }) 
         <Text style={st.clan}>{profile.clan} Clan</Text>
         {!!profile.bio && (
           <View style={st.aboutBox}>
-            <Text style={st.aboutLabel}>About me</Text>
+            <Text style={st.aboutLabel}>{t("aboutMe")}</Text>
             <Text style={st.aboutTxt} numberOfLines={3}>{profile.bio}</Text>
           </View>
         )}
@@ -74,6 +76,7 @@ function ProfileCard({ profile, height }: { profile: Profile; height: number }) 
 export default function BrowseScreen() {
   const ins = useSafeAreaInsets();
   const router = useRouter();
+  const t = useT();
   const { isPaid, remaining, consumeLike, consumeDislike, consumeRewind, startBoost, stopBoost, boostActive, showLimitModal, setShowLimitModal, show75Modal, setShow75Modal, usage, markSeen } = useTier();
   const { consume: addLike } = useLikes();
   const [idx, setIdx] = useState<number>(0);
@@ -143,22 +146,22 @@ export default function BrowseScreen() {
       <HmongMatchHeader right={
         <TouchableOpacity onPress={toggleBoost} style={[st.boost, boostActive && st.boostActive]} testID="boost-toggle">
           <Zap size={14} color={boostActive ? "#1a1404" : Colors.accent} fill={boostActive ? "#1a1404" : "transparent"} />
-          <Text style={[st.boostTxt, boostActive && { color: "#1a1404" }]}>{boostActive ? "Boost ON" : "Boost"}</Text>
+          <Text style={[st.boostTxt, boostActive && { color: "#1a1404" }]}>{boostActive ? t("boostOn") : t("boost")}</Text>
         </TouchableOpacity>
       } />
 
       <View style={st.topCounter}>
         <View style={st.counterPill}>
           <Heart size={12} color={Colors.like} fill={Colors.like} />
-          <Text style={st.counterPillTxt}>{isPaid ? "∞" : remaining.likes} likes</Text>
+          <Text style={st.counterPillTxt}>{isPaid ? "∞" : remaining.likes} {t("likes")}</Text>
         </View>
         <View style={st.counterPill}>
           <X size={12} color={Colors.nope} strokeWidth={3} />
-          <Text style={st.counterPillTxt}>{usage.dislikes} dislikes</Text>
+          <Text style={st.counterPillTxt}>{usage.dislikes} {t("dislikes")}</Text>
         </View>
         <View style={st.counterPill}>
           <RotateCcw size={12} color={Colors.accent} />
-          <Text style={st.counterPillTxt}>{isPaid ? "∞" : remaining.rewinds} rewinds</Text>
+          <Text style={st.counterPillTxt}>{isPaid ? "∞" : remaining.rewinds} {t("rewinds")}</Text>
         </View>
       </View>
 
@@ -166,8 +169,8 @@ export default function BrowseScreen() {
         {!current ? (
           <View style={st.empty}>
             <Heart size={48} color={Colors.dark.textFaint} />
-            <Text style={st.emptyTitle}>You&apos;ve seen everyone for now</Text>
-            <Text style={st.emptySub}>Check back later for new Hmong singles.</Text>
+            <Text style={st.emptyTitle}>{t("seenEveryoneTitle")}</Text>
+            <Text style={st.emptySub}>{t("seenEveryoneSub")}</Text>
           </View>
         ) : (
           <View style={{ flex: 1 }}>
@@ -190,7 +193,7 @@ export default function BrowseScreen() {
 
         <TouchableOpacity onPress={onRewind} disabled={history.length === 0 || idx === 0} style={[st.rewindBtn, (history.length === 0 || idx === 0) && { opacity: 0.4 }]} testID="rewind-button">
           <RotateCcw size={18} color={Colors.accent} />
-          <Text style={st.rewindTxt}>{isPaid ? "Rewind" : `Rewind (${remaining.rewinds})`}</Text>
+          <Text style={st.rewindTxt}>{isPaid ? t("rewind") : `${t("rewind")} (${remaining.rewinds})`}</Text>
         </TouchableOpacity>
       </View>
 
@@ -199,12 +202,12 @@ export default function BrowseScreen() {
         <View style={st.modal}>
           <View style={st.modalCard}>
             <Crown size={32} color={Colors.accent} />
-            <Text style={st.modalTitle}>You&apos;ve hit your daily usage</Text>
-            <Text style={st.modalSub}>Upgrade to Plus or Gold to keep matching with unlimited likes, swipes, rewinds and chats.</Text>
+            <Text style={st.modalTitle}>{t("hitDailyTitle")}</Text>
+            <Text style={st.modalSub}>{t("hitDailySub")}</Text>
             <TouchableOpacity style={st.cta} onPress={() => { setShowLimitModal(false); router.push("/subscription"); }} testID="upgrade-cta">
-              <Text style={st.ctaTxt}>Upgrade now</Text>
+              <Text style={st.ctaTxt}>{t("upgradeNow")}</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => setShowLimitModal(false)}><Text style={st.later}>Maybe later</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => setShowLimitModal(false)}><Text style={st.later}>{t("maybeLater")}</Text></TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -214,12 +217,12 @@ export default function BrowseScreen() {
         <View style={st.modal}>
           <View style={st.modalCard}>
             <Zap size={32} color={Colors.accent} />
-            <Text style={st.modalTitle}>You&apos;re running low</Text>
-            <Text style={st.modalSub}>You&apos;ve used 75% of your daily allowance. Upgrade for unlimited matching.</Text>
+            <Text style={st.modalTitle}>{t("runningLowTitle")}</Text>
+            <Text style={st.modalSub}>{t("runningLowSub")}</Text>
             <TouchableOpacity style={st.cta} onPress={() => { setShow75Modal(false); router.push("/subscription"); }}>
-              <Text style={st.ctaTxt}>See plans</Text>
+              <Text style={st.ctaTxt}>{t("seePlans")}</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => setShow75Modal(false)}><Text style={st.later}>Keep browsing</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => setShow75Modal(false)}><Text style={st.later}>{t("keepBrowsing")}</Text></TouchableOpacity>
           </View>
         </View>
       </Modal>

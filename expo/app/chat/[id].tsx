@@ -9,6 +9,7 @@ import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { conversations, profiles, Message } from "@/mocks/profiles";
 import { useTier } from "@/providers/TierProvider";
+import { useT } from "@/providers/LanguageProvider";
 
 const chatKey = (id: string) => `hmongdate.chat.${id}.v1`;
 
@@ -16,6 +17,7 @@ export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const ins = useSafeAreaInsets();
+  const t = useT();
   const { tier, consumeMessage } = useTier();
   const pr = profiles.find(x => x.id === id);
   const cv = conversations.find(c => c.profile.id === id);
@@ -47,7 +49,7 @@ export default function ChatScreen() {
 
   useEffect(() => { if (ms.length > 0) setTimeout(() => lr.current?.scrollToEnd({ animated: true }), 100); }, [ms]);
 
-  if (!pr) return <View style={s.cen}><Text style={s.err}>Conversation not found</Text></View>;
+  if (!pr) return <View style={s.cen}><Text style={s.err}>{t("convNotFound")}</Text></View>;
 
   const send = () => {
     if (!tx.trim()) return;
@@ -60,13 +62,13 @@ export default function ChatScreen() {
 
   const onVideo = () => {
     if (tier !== "gold") {
-      Alert.alert("Video messages — Gold only", "Upgrade to Hmong Date Gold to send video messages and start video chats.", [
-        { text: "Maybe later", style: "cancel" },
-        { text: "See plans", onPress: () => router.push("/subscription") },
+      Alert.alert(t("videoGoldTitle"), t("videoGoldSub"), [
+        { text: t("maybeLater"), style: "cancel" },
+        { text: t("seePlans"), onPress: () => router.push("/subscription") },
       ]);
       return;
     }
-    Alert.alert("Start video chat", `Start a video chat with ${pr.name}?`);
+    Alert.alert(t("startVideoChat"), t("startVideoChatWith", { name: pr.name }));
   };
 
   const renderMsg = ({ item }: { item: Message }) => {
@@ -102,7 +104,7 @@ export default function ChatScreen() {
             <Image source={{ uri: pr.photos[0] }} style={s.ea} contentFit="cover" />
             <Text style={s.en}>{pr.name}</Text>
             <Text style={s.ecl}>{pr.clan} Clan</Text>
-            <Text style={s.eh}>Say hello and start a conversation!</Text>
+            <Text style={s.eh}>{t("sayHello")}</Text>
           </View>
         ) : (
           <FlatList
@@ -124,7 +126,7 @@ export default function ChatScreen() {
           </TouchableOpacity>
           <TextInput
             style={s.ip}
-            placeholder="Type a message..."
+            placeholder={t("typeMessage")}
             placeholderTextColor={Colors.textTertiary}
             value={tx}
             onChangeText={setTx}

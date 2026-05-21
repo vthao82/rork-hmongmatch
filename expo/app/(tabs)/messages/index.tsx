@@ -8,10 +8,12 @@ import Colors from "@/constants/colors";
 import HmongMatchHeader from "@/components/HmongMatchHeader";
 import RedBackground from "@/components/RedBackground";
 import { conversations, matches, Conversation } from "@/mocks/profiles";
+import { useT } from "@/providers/LanguageProvider";
 
 export default function ChatTab() {
   const ins = useSafeAreaInsets();
   const router = useRouter();
+  const t = useT();
   const [q, setQ] = useState<string>("");
   const [newOpen, setNewOpen] = useState<boolean>(false);
 
@@ -38,7 +40,7 @@ export default function ChatTab() {
           style={s.search}
           value={q}
           onChangeText={setQ}
-          placeholder={`Search ${conversations.length} Matches`}
+          placeholder={t("searchMatches", { n: conversations.length })}
           placeholderTextColor="rgba(255,255,255,0.45)"
           testID="chat-search"
         />
@@ -54,8 +56,8 @@ export default function ChatTab() {
               </View>
             </View>
           </View>
-          <Text style={s.title}>Get Swiping</Text>
-          <Text style={s.sub}>When you match with other users they&apos;ll appear here where you can send them a message</Text>
+          <Text style={s.title}>{t("getSwiping")}</Text>
+          <Text style={s.sub}>{t("getSwipingSub")}</Text>
         </View>
       ) : (
         <FlatList
@@ -87,10 +89,10 @@ export default function ChatTab() {
         <View style={s.modal}>
           <View style={s.modalHead}>
             <TouchableOpacity onPress={() => setNewOpen(false)} testID="close-new"><XIcon size={24} color="#FFF" /></TouchableOpacity>
-            <Text style={s.modalTitle}>New Message</Text>
+            <Text style={s.modalTitle}>{t("newMessage")}</Text>
             <View style={{ width: 24 }} />
           </View>
-          <Text style={s.modalSub}>Choose a match to start chatting</Text>
+          <Text style={s.modalSub}>{t("chooseMatch")}</Text>
           <FlatList
             data={matches}
             keyExtractor={i => i.id}
@@ -100,11 +102,11 @@ export default function ChatTab() {
                 <Image source={{ uri: item.profile.photos[0] }} style={s.avatar} contentFit="cover" />
                 <View style={{ flex: 1 }}>
                   <Text style={s.name}>{item.profile.name}, {item.profile.age}</Text>
-                  <Text style={s.matchedAt}>Matched {item.matchedAt}</Text>
+                  <Text style={s.matchedAt}>{t("matched", { when: item.matchedAt })}</Text>
                 </View>
               </TouchableOpacity>
             )}
-            ListEmptyComponent={<Text style={s.noMatches}>You don&apos;t have any matches yet.</Text>}
+            ListEmptyComponent={<Text style={s.noMatches}>{t("noMatchesYet")}</Text>}
           />
         </View>
       </Modal>

@@ -11,6 +11,7 @@ import RedBackground from "@/components/RedBackground";
 import { profiles } from "@/mocks/profiles";
 import { useLikes, DAILY_LIMIT } from "@/providers/LikesProvider";
 import { useTier } from "@/providers/TierProvider";
+import { useT } from "@/providers/LanguageProvider";
 
 const SW = Dimensions.get("window").width;
 const CW = (SW - 32 - 12) / 2;
@@ -18,6 +19,7 @@ const CW = (SW - 32 - 12) / 2;
 export default function LikesScreen() {
   const ins = useSafeAreaInsets();
   const router = useRouter();
+  const t = useT();
   const { used, premium, likedIds } = useLikes();
   const { isPaid } = useTier();
   const [tab, setTab] = useState<"likes" | "liked" | "top">("liked");
@@ -26,14 +28,14 @@ export default function LikesScreen() {
   const myLiked = profiles.filter(p => likedIds.includes(p.id) && !blocked.includes(p.id));
 
   const blockUser = (id: string, name: string) => {
-    Alert.alert("Block " + name + "?", "You won't see this person again and they won't see you.", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Block", style: "destructive", onPress: () => setBlocked(b => [...b, id]) },
+    Alert.alert(t("blockTitle", { name }), t("blockBody"), [
+      { text: t("cancel"), style: "cancel" },
+      { text: t("block"), style: "destructive", onPress: () => setBlocked(b => [...b, id]) },
     ]);
   };
 
   const likesCount = premium ? used : used;
-  const shownRemaining = premium ? "Unlimited" : `${Math.max(0, DAILY_LIMIT - used)} left today`;
+  const shownRemaining = premium ? t("unlimitedLikesText") : t("leftOutOf", { n: Math.max(0, DAILY_LIMIT - used) });
 
   return (
     <View style={[s.ct, { paddingTop: ins.top }]}>
@@ -41,31 +43,31 @@ export default function LikesScreen() {
       <HmongMatchHeader />
       <View style={s.tabs}>
         <TouchableOpacity style={s.tab} onPress={() => setTab("likes")} testID="tab-likes">
-          <Text style={[s.tabText, tab === "likes" && s.tabTextActive]}>Likes You</Text>
+          <Text style={[s.tabText, tab === "likes" && s.tabTextActive]}>{t("likesYou")}</Text>
           {tab === "likes" && <View style={s.tabBar} />}
         </TouchableOpacity>
         <View style={s.tabDivider} />
         <TouchableOpacity style={s.tab} onPress={() => setTab("liked")} testID="tab-liked">
-          <Text style={[s.tabText, tab === "liked" && s.tabTextActive]}>You Liked</Text>
+          <Text style={[s.tabText, tab === "liked" && s.tabTextActive]}>{t("youLiked")}</Text>
           {tab === "liked" && <View style={s.tabBar} />}
         </TouchableOpacity>
         <View style={s.tabDivider} />
         <TouchableOpacity style={s.tab} onPress={() => setTab("top")} testID="tab-top">
-          <View style={s.tabRow}><Text style={[s.tabText, tab === "top" && s.tabTextActive]}>Top Picks</Text><View style={s.redDot} /></View>
+          <View style={s.tabRow}><Text style={[s.tabText, tab === "top" && s.tabTextActive]}>{t("topPicks")}</Text><View style={s.redDot} /></View>
           {tab === "top" && <View style={s.tabBar} />}
         </TouchableOpacity>
       </View>
 
       {tab === "liked" ? (
         <ScrollView contentContainerStyle={s.likesScroll} showsVerticalScrollIndicator={false}>
-          <Text style={s.sectionHead}>People you liked ({myLiked.length})</Text>
+          <Text style={s.sectionHead}>{t("peopleYouLiked", { n: myLiked.length })}</Text>
           {myLiked.length === 0 ? (
             <View style={s.emptyLiked}>
               <Heart size={36} color={Colors.dark.textFaint} />
-              <Text style={s.emptyTitle}>You haven&apos;t liked anyone yet</Text>
-              <Text style={s.emptySub}>Start swiping to find your match.</Text>
+              <Text style={s.emptyTitle}>{t("noLikedYetTitle")}</Text>
+              <Text style={s.emptySub}>{t("noLikedYetSub")}</Text>
               <TouchableOpacity onPress={() => router.push("/(tabs)/discover" as never)} style={s.startBtn} testID="start-swiping-likes">
-                <Text style={s.startBtnText}>Start swiping</Text>
+                <Text style={s.startBtnText}>{t("startSwiping")}</Text>
                 <ArrowRight size={16} color="#FFF" />
               </TouchableOpacity>
             </View>
@@ -95,19 +97,19 @@ export default function LikesScreen() {
           <View style={s.counterCard}>
             <View style={s.counterRow}>
               <Zap size={20} color={Colors.accent} fill={Colors.accent} />
-              <Text style={s.counterTitle}>Daily Likes</Text>
+              <Text style={s.counterTitle}>{t("dailyLikes")}</Text>
             </View>
             <Text style={s.counterBig}>{premium ? "∞" : `${Math.max(0, DAILY_LIMIT - used)}`}</Text>
-            <Text style={s.counterSub}>{premium ? "You have unlimited likes" : `${shownRemaining} out of ${DAILY_LIMIT}`}</Text>
+            <Text style={s.counterSub}>{premium ? t("unlimitedLikesText") : `${shownRemaining} / ${DAILY_LIMIT}`}</Text>
             <View style={s.counterBar}>
               <View style={[s.counterFill, { width: premium ? "100%" : `${(used / DAILY_LIMIT) * 100}%` }]} />
             </View>
             {!premium && used >= DAILY_LIMIT && (
-              <Text style={s.counterLimit}>You&apos;ve used all your daily likes. Upgrade for unlimited.</Text>
+              <Text style={s.counterLimit}>{t("outOfLikesNote")}</Text>
             )}
           </View>
 
-          <Text style={s.sectionHead}>Who liked you</Text>
+          <Text style={s.sectionHead}>{t("whoLikedYou")}</Text>
           <View style={s.grid}>
             {profiles.slice(0, 4).map(p => (
               <TouchableOpacity key={p.id} style={[s.pick, { width: CW }]} activeOpacity={0.85} onPress={() => { if (!premium && !isPaid) setUpgradeOpen(true); else router.push(`/user/${p.id}`); }} testID={`liked-by-${p.id}`}>
@@ -127,13 +129,13 @@ export default function LikesScreen() {
 
           {!premium && (
             <TouchableOpacity style={s.goldBtn} onPress={() => router.push("/subscription")} testID="see-who-likes">
-              <Text style={s.goldBtnText}>See Who Likes You</Text>
+              <Text style={s.goldBtnText}>{t("seeWhoLikesYou")}</Text>
             </TouchableOpacity>
           )}
         </ScrollView>
       ) : (
         <ScrollView contentContainerStyle={s.topGrid} showsVerticalScrollIndicator={false}>
-          <Text style={s.topPrompt}>Upgrade to Hmong Date Gold™ for more Top Picks!</Text>
+          <Text style={s.topPrompt}>{t("upgradeTopPicks")}</Text>
           <View style={s.grid}>
             {profiles.slice(0, 4).map(p => (
               <TouchableOpacity key={p.id} style={[s.pick, { width: CW }]} activeOpacity={0.85} onPress={() => { if (!isPaid) setUpgradeOpen(true); else router.push(`/user/${p.id}`); }} testID={`top-${p.id}`}>
@@ -149,7 +151,7 @@ export default function LikesScreen() {
           </View>
           <View style={s.unlockWrap}>
             <TouchableOpacity style={s.goldBtn} onPress={() => router.push("/subscription")} testID="unlock-top">
-              <Text style={s.goldBtnText}>Unlock all Top Picks</Text>
+              <Text style={s.goldBtnText}>{t("unlockTopPicks")}</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -159,12 +161,12 @@ export default function LikesScreen() {
         <View style={s.mdl}>
           <View style={s.mdlCard}>
             <Crown size={36} color={Colors.accent} />
-            <Text style={s.mdlTitle}>Upgrade to see who likes you</Text>
-            <Text style={s.mdlSub}>Plus & Gold members can see everyone who likes them and unlock all Top Picks.</Text>
+            <Text style={s.mdlTitle}>{t("upgradeLikesTitle")}</Text>
+            <Text style={s.mdlSub}>{t("upgradeLikesSub")}</Text>
             <TouchableOpacity style={s.mdlCta} onPress={() => { setUpgradeOpen(false); router.push("/subscription"); }} testID="upgrade-likes">
-              <Text style={s.mdlCtaTxt}>See plans</Text>
+              <Text style={s.mdlCtaTxt}>{t("seePlans")}</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => setUpgradeOpen(false)}><Text style={s.mdlLater}>Maybe later</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => setUpgradeOpen(false)}><Text style={s.mdlLater}>{t("maybeLater")}</Text></TouchableOpacity>
           </View>
         </View>
       </Modal>

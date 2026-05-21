@@ -7,6 +7,7 @@ import { ArrowLeft, BadgeCheck, MapPin, Users, Plus, Check } from "lucide-react-
 import Colors from "@/constants/colors";
 import { profiles, currentUser, Profile } from "@/mocks/profiles";
 import { useOnboarding } from "@/providers/OnboardingProvider";
+import { useT } from "@/providers/LanguageProvider";
 
 const SW = Dimensions.get("window").width;
 const CW = (SW - 16 * 2 - 12) / 2;
@@ -30,6 +31,7 @@ export default function CategoryScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const ins = useSafeAreaInsets();
   const router = useRouter();
+  const t = useT();
   const title = decodeURIComponent(id ?? "");
   const { data, update } = useOnboarding();
   const inCategory = (data.interests ?? []).includes(title);
@@ -37,7 +39,7 @@ export default function CategoryScreen() {
   const { filtered, subtitle } = useMemo(() => {
     const entry = CATEGORY_MAP[title];
     const base = entry ? profiles.filter(entry.match) : profiles;
-    const sub = entry?.subtitle ?? "People interested in this";
+    const sub = entry?.subtitle ?? t("peopleInterested");
     if (inCategory) {
       const me: Profile = {
         ...currentUser,
@@ -62,7 +64,7 @@ export default function CategoryScreen() {
           <Text style={s.title}>{title}</Text>
           <View style={s.metaRow}>
             <Users size={13} color={Colors.accent} />
-            <Text style={s.meta}>{filtered.length} {filtered.length === 1 ? "person" : "people"}</Text>
+            <Text style={s.meta}>{filtered.length} {filtered.length === 1 ? t("person") : t("people")}</Text>
           </View>
         </View>
       </View>
@@ -78,14 +80,14 @@ export default function CategoryScreen() {
         testID="add-self-category"
       >
         {inCategory ? <Check size={16} color="#FFF" /> : <Plus size={16} color="#FFF" />}
-        <Text style={s.addSelfText}>{inCategory ? "You're in this category" : "Add yourself to this category"}</Text>
+        <Text style={s.addSelfText}>{inCategory ? t("youreInCategory") : t("addSelfCategory")}</Text>
       </TouchableOpacity>
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
         {filtered.length === 0 ? (
           <View style={s.empty}>
-            <Text style={s.emptyTitle}>No one here yet</Text>
-            <Text style={s.emptySub}>Be the first — add this interest to your profile.</Text>
+            <Text style={s.emptyTitle}>{t("noOneHere")}</Text>
+            <Text style={s.emptySub}>{t("noOneHereSub")}</Text>
           </View>
         ) : (
           <View style={s.grid}>

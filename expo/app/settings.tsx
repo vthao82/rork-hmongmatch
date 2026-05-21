@@ -6,7 +6,7 @@ import { Stack, useRouter } from "expo-router";
 import { ArrowLeft, MapPin, ChevronRight, Check, X as XIcon, Crown } from "lucide-react-native";
 import Colors from "@/constants/colors";
 import { useTier } from "@/providers/TierProvider";
-import { useLanguage } from "@/providers/LanguageProvider";
+import { useLanguage, useT } from "@/providers/LanguageProvider";
 
 const ADV_KEY = "hmongdate.adv-filters.v1";
 const PREF_KEY = "hmongdate.discovery.v1";
@@ -121,7 +121,7 @@ function PickerModal({ visible, config, selected, onClose, onSave }: { visible: 
           <TouchableOpacity onPress={onClose}><XIcon size={24} color="#FFF" /></TouchableOpacity>
           <Text style={s.modalTitle}>{config.title}</Text>
           <TouchableOpacity onPress={() => { onSave(local); onClose(); }} testID="picker-save">
-            <Text style={s.modalSave}>Save</Text>
+            <Text style={s.modalSave}>{t("save")}</Text>
           </TouchableOpacity>
         </View>
         <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
@@ -145,6 +145,7 @@ export default function SettingsScreen() {
   const router = useRouter();
   const { tier, isPaid, upgrade } = useTier();
   const { lang, setLang } = useLanguage();
+  const t = useT();
 
   const [worldwide, setWorldwide] = useState<boolean>(false);
   const [usOnly, setUsOnly] = useState<boolean>(false);
@@ -213,7 +214,7 @@ export default function SettingsScreen() {
   const displayValue = (k: string): string => {
     const cfg = PICKERS[k];
     const vs = values[k] ?? [];
-    if (!cfg || vs.length === 0) return "Select";
+    if (!cfg || vs.length === 0) return t("select");
     const labels = vs.map(v => cfg.options.find(o => o.value === v)?.label ?? v);
     return labels.length === 1 ? labels[0] : `${labels[0]} +${labels.length - 1}`;
   };
@@ -229,6 +230,7 @@ export default function SettingsScreen() {
     const msg = next === "en" ? "The app will refresh in English." : "Lub app yuav rov pib dua ua lus Hmoob.";
     const cancel = next === "en" ? "Cancel" : "Tsis Yog";
     const confirm = next === "en" ? "Yes, change" : "Yog, Hloov";
+    void t;
     Alert.alert(title, msg, [
       { text: cancel, style: "cancel" },
       { text: confirm, onPress: async () => {
@@ -246,26 +248,26 @@ export default function SettingsScreen() {
         <TouchableOpacity onPress={() => router.back()} testID="back-settings">
           <ArrowLeft size={24} color={Colors.primary} />
         </TouchableOpacity>
-        <Text style={s.headerTitle}>Settings</Text>
+        <Text style={s.headerTitle}>{t("settings")}</Text>
         <View style={{ width: 24 }} />
       </View>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
-        <Section title="Your Plan">
+        <Section title={t("yourPlan")}>
           <TouchableOpacity style={s.planCard} onPress={() => router.push("/subscription")} activeOpacity={0.85} testID="plan-card">
             <Crown size={22} color={Colors.accent} />
             <View style={{ flex: 1 }}>
-              <Text style={s.planTitle}>{tier === "gold" ? "Hmong Date Gold" : tier === "plus" ? "Hmong Date Plus" : "Free Plan"}</Text>
-              <Text style={s.planSub}>{tier === "gold" ? "All features unlocked" : tier === "plus" ? "Tap to upgrade to Gold" : "Upgrade to Plus or Gold for unlimited access"}</Text>
+              <Text style={s.planTitle}>{tier === "gold" ? t("hmongDateGold") : tier === "plus" ? t("hmongDatePlus") : t("freePlan")}</Text>
+              <Text style={s.planSub}>{tier === "gold" ? t("allFeaturesUnlocked") : tier === "plus" ? t("tapUpgradeGold") : t("upgradeForUnlimited")}</Text>
             </View>
-            <Text style={s.upgradeLink}>{isPaid ? "Manage" : "Upgrade"}</Text>
+            <Text style={s.upgradeLink}>{isPaid ? t("manage") : t("upgrade")}</Text>
           </TouchableOpacity>
         </Section>
 
-        <Section title="Language">
+        <Section title={t("language")}>
           <View style={s.card}>
-            <Text style={s.rowLabel}>App Language</Text>
-            <Text style={s.rowSub}>Your language preference</Text>
+            <Text style={s.rowLabel}>{t("appLanguage")}</Text>
+            <Text style={s.rowSub}>{t("languagePref")}</Text>
             <View style={s.langRow}>
               <TouchableOpacity onPress={() => confirmLangChange("en")} style={[s.langChip, lang === "en" && s.langChipOn]} testID="lang-en" activeOpacity={0.85}>
                 <Text style={s.langFlag}>🇺🇸</Text>
@@ -279,78 +281,78 @@ export default function SettingsScreen() {
           </View>
         </Section>
 
-        <Section title="Discovery Settings">
+        <Section title={t("discoverySettings")}>
           <View style={s.card}>
-            <Text style={s.rowLabel}>Location</Text>
+            <Text style={s.rowLabel}>{t("location")}</Text>
             <View style={s.locRow}>
               <MapPin size={18} color={Colors.primary} />
               <Text style={s.locText}>{location}</Text>
             </View>
             <TouchableOpacity onPress={() => { setLocInput(location); setLocOpen(true); }} testID="add-location">
-              <Text style={s.link}>Change location</Text>
+              <Text style={s.link}>{t("changeLocation")}</Text>
             </TouchableOpacity>
           </View>
 
           <View style={s.card}>
             <View style={s.rowTop}>
-              <Text style={s.rowLabel}>Maximum Distance</Text>
-              <Text style={s.rowValue}>{worldwide ? "Worldwide" : usOnly ? "US only" : `${distance}mi.`}</Text>
+              <Text style={s.rowLabel}>{t("maximumDistance")}</Text>
+              <Text style={s.rowValue}>{worldwide ? t("worldwide") : usOnly ? t("usOnly") : `${distance}mi.`}</Text>
             </View>
             {!worldwide && !usOnly && <Slider value={distance} onChange={(v) => { setDistance(v); persistPref({ distance: v }); }} max={100} />}
             <View style={[s.rowToggle, { marginTop: 14 }]}>
               <View style={{ flex: 1, paddingRight: 8 }}>
-                <Text style={s.rowLabel}>Search Worldwide</Text>
-                <Text style={s.rowSub}>Find people from any country across the globe.</Text>
+                <Text style={s.rowLabel}>{t("searchWorldwide")}</Text>
+                <Text style={s.rowSub}>{t("searchWorldwideSub")}</Text>
               </View>
               <Toggle value={worldwide} onChange={onWorldwide} testID="worldwide-toggle" />
             </View>
             <View style={[s.rowToggle, { marginTop: 12 }]}>
               <View style={{ flex: 1, paddingRight: 8 }}>
-                <Text style={s.rowLabel}>US Only</Text>
-                <Text style={s.rowSub}>Limit matches to people across the United States.</Text>
+                <Text style={s.rowLabel}>{t("usOnlyTitle")}</Text>
+                <Text style={s.rowSub}>{t("usOnlySub")}</Text>
               </View>
               <Toggle value={usOnly} onChange={onUSOnly} testID="us-only-toggle" />
             </View>
             {!worldwide && !usOnly && (
               <View style={[s.rowToggle, { marginTop: 12 }]}>
-                <Text style={[s.rowLabel, { flex: 1, paddingRight: 8 }]}>Show further away if I run out</Text>
+                <Text style={[s.rowLabel, { flex: 1, paddingRight: 8 }]}>{t("showFurther")}</Text>
                 <Toggle value={showFurther} onChange={setShowFurther} />
               </View>
             )}
           </View>
 
-          <Row label="Interested In" value={interestedInLabel} onPress={() => openPicker(PICKERS.interestedIn)} testID="interested-in" />
+          <Row label={t("interestedIn")} value={interestedInLabel} onPress={() => openPicker(PICKERS.interestedIn)} testID="interested-in" />
 
           <View style={s.card}>
             <View style={s.rowTop}>
-              <Text style={s.rowLabel}>Age Range</Text>
+              <Text style={s.rowLabel}>{t("ageRange")}</Text>
               <Text style={s.rowValue}>{ageLow} - {ageHigh}</Text>
             </View>
             <RangeSlider low={ageLow} high={ageHigh} onChange={(l, h) => { setAgeLow(l); setAgeHigh(h); persistPref({ ageLow: l, ageHigh: h }); }} />
           </View>
         </Section>
 
-        <Section title="Advanced Filters">
-          {savedToast && <View style={s.toast}><Check size={14} color="#FFF" /><Text style={s.toastTxt}>Saved</Text></View>}
+        <Section title={t("advancedFilters")}>
+          {savedToast && <View style={s.toast}><Check size={14} color="#FFF" /><Text style={s.toastTxt}>{t("saved")}</Text></View>}
           {[
-            { label: "Looking for", k: "lookingFor" },
-            { label: "Languages", k: "languages" },
-            { label: "Education", k: "education" },
-            { label: "Family Plans", k: "family" },
-            { label: "Religion", k: "religion" },
-            { label: "Dialect", k: "dialect" },
-            { label: "Pets", k: "pets" },
-            { label: "Drinking", k: "drinking" },
-            { label: "Smoking", k: "smoking" },
+            { label: t("lookingFor"), k: "lookingFor" },
+            { label: t("languages"), k: "languages" },
+            { label: t("education"), k: "education" },
+            { label: t("familyPlans"), k: "family" },
+            { label: t("religion"), k: "religion" },
+            { label: t("dialect"), k: "dialect" },
+            { label: t("pets"), k: "pets" },
+            { label: t("drinking"), k: "drinking" },
+            { label: t("smoking"), k: "smoking" },
           ].map(r => <Row key={r.k} label={r.label} value={displayValue(r.k)} onPress={() => openPicker(PICKERS[r.k])} testID={`filter-${r.k}`} />)}
         </Section>
 
-        <Section title="Visibility">
+        <Section title={t("visibility")}>
           <View style={s.card}>
             <View style={s.rowToggle}>
               <View style={{ flex: 1, paddingRight: 8 }}>
-                <Text style={s.rowLabel}>Enable Discovery</Text>
-                <Text style={s.rowSub}>Show your profile in the Browse stack.</Text>
+                <Text style={s.rowLabel}>{t("enableDiscovery")}</Text>
+                <Text style={s.rowSub}>{t("enableDiscoverySub")}</Text>
               </View>
               <Toggle value={discovery} onChange={setDiscovery} testID="discovery-toggle" />
             </View>
@@ -358,16 +360,16 @@ export default function SettingsScreen() {
           <View style={s.card}>
             <View style={s.rowToggle}>
               <View style={{ flex: 1, paddingRight: 8 }}>
-                <Text style={s.rowLabel}>Priority Profile Visibility</Text>
-                <Text style={s.rowSub}>{tier === "gold" ? "Get shown first to potential matches." : "Available with Gold."}</Text>
+                <Text style={s.rowLabel}>{t("priorityVisibility")}</Text>
+                <Text style={s.rowSub}>{tier === "gold" ? t("priorityVisibilityOn") : t("priorityVisibilityOff")}</Text>
               </View>
               <Toggle
                 value={priorityVisibility}
                 onChange={(v) => {
                   if (tier !== "gold" && v) {
-                    Alert.alert("Gold required", "Priority visibility is a Gold-only feature.", [
-                      { text: "Cancel", style: "cancel" },
-                      { text: "Upgrade", onPress: () => router.push("/subscription") },
+                    Alert.alert(t("goldRequired"), t("goldRequiredMsg"), [
+                      { text: t("cancel"), style: "cancel" },
+                      { text: t("upgrade"), onPress: () => router.push("/subscription") },
                     ]);
                     return;
                   }
@@ -380,27 +382,27 @@ export default function SettingsScreen() {
           </View>
         </Section>
 
-        <Section title="Photo Verification">
+        <Section title={t("photoVerification")}>
           <View style={s.card}>
             <View style={s.rowToggle}>
               <View style={{ flex: 1, paddingRight: 10 }}>
-                <Text style={s.rowLabel}>Photo Verified Chat</Text>
-                <Text style={s.rowSub}>Take a quick selfie to verify your photos. Verified members can enable this to only chat with verified profiles.</Text>
+                <Text style={s.rowLabel}>{t("photoVerifiedChat")}</Text>
+                <Text style={s.rowSub}>{t("photoVerifiedChatSub")}</Text>
               </View>
               <Toggle value={photoVerifiedChat} onChange={(v) => { if (v) router.push("/photo-verify"); setPhotoVerifiedChat(v); }} />
             </View>
             <TouchableOpacity onPress={() => router.push("/photo-verify")} style={{ marginTop: 10 }}>
-              <Text style={s.link}>Take selfie verification</Text>
+              <Text style={s.link}>{t("takeSelfieVerify")}</Text>
             </TouchableOpacity>
           </View>
         </Section>
 
-        <Section title="Notifications">
+        <Section title={t("notifications")}>
           {[
-            { k: "matches", label: "New Matches" },
-            { k: "likes", label: "New Likes" },
-            { k: "messages", label: "New Messages" },
-            { k: "push", label: "Push Notifications" },
+            { k: "matches", label: t("newMatches") },
+            { k: "likes", label: t("newLikes") },
+            { k: "messages", label: t("newMessages") },
+            { k: "push", label: t("pushNotifications") },
           ].map(r => (
             <View key={r.k} style={s.card}>
               <View style={s.rowToggle}>
@@ -411,15 +413,15 @@ export default function SettingsScreen() {
           ))}
         </Section>
 
-        <Section title="Account">
-          <Row label="Edit Profile" onPress={() => router.push("/edit-profile")} testID="edit-profile-row" />
-          <Row label="Manage Subscription" onPress={() => router.push("/subscription")} testID="manage-sub-row" />
-          <Row label="Report a Problem" onPress={() => router.push("/report")} testID="report-row" />
-          <TouchableOpacity style={s.row} onPress={() => Alert.alert("Log out", "Are you sure?", [
-            { text: "Cancel", style: "cancel" },
-            { text: "Log out", style: "destructive", onPress: () => router.replace("/(auth)/language" as never) },
+        <Section title={t("account")}>
+          <Row label={t("editProfile")} onPress={() => router.push("/edit-profile")} testID="edit-profile-row" />
+          <Row label={t("manageSubscription")} onPress={() => router.push("/subscription")} testID="manage-sub-row" />
+          <Row label={t("reportProblem")} onPress={() => router.push("/report")} testID="report-row" />
+          <TouchableOpacity style={s.row} onPress={() => Alert.alert(t("logout"), t("logoutConfirm"), [
+            { text: t("cancel"), style: "cancel" },
+            { text: t("logout"), style: "destructive", onPress: () => router.replace("/(auth)/language" as never) },
           ])} testID="logout-row">
-            <Text style={[s.rowLabel, { color: Colors.primary }]}>Log out</Text>
+            <Text style={[s.rowLabel, { color: Colors.primary }]}>{t("logout")}</Text>
           </TouchableOpacity>
         </Section>
       </ScrollView>
@@ -430,13 +432,13 @@ export default function SettingsScreen() {
         <View style={s.modal}>
           <View style={s.modalHeader}>
             <TouchableOpacity onPress={() => setLocOpen(false)}><XIcon size={24} color="#FFF" /></TouchableOpacity>
-            <Text style={s.modalTitle}>Change Location</Text>
+            <Text style={s.modalTitle}>{t("changeLocationTitle")}</Text>
             <TouchableOpacity onPress={() => { if (locInput.trim()) { setLocation(locInput.trim()); persistPref({ location: locInput.trim() }); } setLocOpen(false); }}>
-              <Text style={s.modalSave}>Save</Text>
+              <Text style={s.modalSave}>{t("save")}</Text>
             </TouchableOpacity>
           </View>
           <View style={{ padding: 16 }}>
-            <TextInput value={locInput} onChangeText={setLocInput} placeholder="City, State" placeholderTextColor="rgba(255,255,255,0.4)" style={s.input} autoFocus />
+            <TextInput value={locInput} onChangeText={setLocInput} placeholder={t("cityState")} placeholderTextColor="rgba(255,255,255,0.4)" style={s.input} autoFocus />
           </View>
         </View>
       </Modal>

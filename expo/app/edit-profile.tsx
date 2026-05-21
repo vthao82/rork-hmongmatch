@@ -9,6 +9,7 @@ import Colors from "@/constants/colors";
 import { useOnboarding } from "@/providers/OnboardingProvider";
 import { currentUser } from "@/mocks/profiles";
 import { INTEREST_GROUPS } from "@/constants/interests";
+import { useT } from "@/providers/LanguageProvider";
 
 const SW = Dimensions.get("window").width;
 const GAP = 10;
@@ -18,6 +19,7 @@ const MAX_INTERESTS = 10;
 export default function EditProfileScreen() {
   const ins = useSafeAreaInsets();
   const router = useRouter();
+  const t = useT();
   const { data, update } = useOnboarding();
 
   const [mainPhotoIndex, setMainPhotoIndex] = useState<number>(data.mainPhotoIndex ?? 0);
@@ -46,7 +48,7 @@ export default function EditProfileScreen() {
       if (Platform.OS !== "web") {
         const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (!perm.granted) {
-          Alert.alert("Permission needed", "Enable photo access to update pictures.");
+          Alert.alert(t("permissionNeeded"), t("permissionPhotos"));
           return;
         }
       }
@@ -95,16 +97,16 @@ export default function EditProfileScreen() {
         <TouchableOpacity onPress={() => router.back()} testID="close-edit">
           <X size={24} color="#FFF" />
         </TouchableOpacity>
-        <Text style={s.headerTitle}>Edit Profile</Text>
+        <Text style={s.headerTitle}>{t("editProfile")}</Text>
         <TouchableOpacity onPress={save} testID="save-profile">
-          <Text style={s.done}>Done</Text>
+          <Text style={s.done}>{t("done")}</Text>
         </TouchableOpacity>
       </View>
 
       <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }} keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}>
       <ScrollView ref={scrollRef} contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" {...(Platform.OS === "ios" ? { automaticallyAdjustKeyboardInsets: true } : {})}>
-        <Text style={s.sectionLabel} onLayout={e => { yPhotos.current = e.nativeEvent.layout.y; }}>Photos</Text>
-        <Text style={s.sectionSub}>Tap to add or change. Long-press a photo to make it your main photo.</Text>
+        <Text style={s.sectionLabel} onLayout={e => { yPhotos.current = e.nativeEvent.layout.y; }}>{t("photos")}</Text>
+        <Text style={s.sectionSub}>{t("photosTapHint")}</Text>
         <View style={s.grid}>
           {slots.map((uri, i) => (
             <TouchableOpacity key={i} style={[s.slot, uri && s.slotFilled, mainPhotoIndex === i && uri && s.slotMain]} onPress={() => pickPhoto(photos.length > i ? i : photos.length)} onLongPress={() => uri && setMainPhotoIndex(i)} testID={`edit-slot-${i}`}>
@@ -130,32 +132,32 @@ export default function EditProfileScreen() {
             {data.photoVerified ? <BadgeCheck size={20} color="#FFF" fill="#FFF" /> : <Camera size={20} color="#FFF" />}
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={s.verifyTitle}>{data.photoVerified ? "Photo Verified" : "Get Photo Verified"}</Text>
-            <Text style={s.verifySub}>{data.photoVerified ? "You have the blue badge on your profile." : "Take a quick selfie to earn the blue badge."}</Text>
+            <Text style={s.verifyTitle}>{data.photoVerified ? t("photoVerified") : t("getPhotoVerified")}</Text>
+            <Text style={s.verifySub}>{data.photoVerified ? t("photoVerifiedSub") : t("getPhotoVerifiedSub")}</Text>
           </View>
           <ChevronRight size={18} color="rgba(255,255,255,0.5)" />
         </TouchableOpacity>
 
-        <Text style={s.sectionLabel}>Name</Text>
+        <Text style={s.sectionLabel}>{t("name")}</Text>
         <View style={s.inputBox}>
           <TextInput
             style={s.input}
             value={name}
             onChangeText={setName}
-            placeholder="Your first name"
+            placeholder={t("yourFirstName")}
             placeholderTextColor="rgba(255,255,255,0.3)"
             maxLength={30}
             testID="edit-name"
           />
         </View>
 
-        <Text style={s.sectionLabel} onLayout={e => { yBio.current = e.nativeEvent.layout.y; }}>About Me</Text>
+        <Text style={s.sectionLabel} onLayout={e => { yBio.current = e.nativeEvent.layout.y; }}>{t("aboutMe")}</Text>
         <View style={s.inputBox}>
           <TextInput
             style={[s.input, { minHeight: 90, textAlignVertical: "top" }]}
             value={bio}
             onChangeText={setBio}
-            placeholder="Tell potential matches about yourself…"
+            placeholder={t("tellAboutYou")}
             placeholderTextColor="rgba(255,255,255,0.3)"
             multiline
             maxLength={300}
@@ -165,17 +167,17 @@ export default function EditProfileScreen() {
         </View>
 
         <View style={s.sectionRow}>
-          <Text style={s.sectionLabel}>Interests</Text>
+          <Text style={s.sectionLabel}>{t("interests")}</Text>
           <TouchableOpacity onPress={() => setEditingInterests(v => !v)} testID="toggle-interests">
-            <Text style={s.editLink}>{editingInterests ? "Done" : "Edit"}</Text>
+            <Text style={s.editLink}>{editingInterests ? t("done") : t("edit")}</Text>
           </TouchableOpacity>
         </View>
-        <Text style={s.sectionSub}>{interests.length}/{MAX_INTERESTS} selected</Text>
+        <Text style={s.sectionSub}>{t("selected", { n: interests.length, max: MAX_INTERESTS })}</Text>
 
         {!editingInterests ? (
           <View style={s.pillWrap}>
             {interests.length === 0 ? (
-              <Text style={s.muted}>No interests yet — tap Edit to add.</Text>
+              <Text style={s.muted}>{t("noInterestsYet")}</Text>
             ) : interests.map(i => (
               <View key={i} style={[s.pill, s.pillActive]}>
                 <Text style={s.pillTextActive}>{i}</Text>
@@ -204,7 +206,7 @@ export default function EditProfileScreen() {
         )}
 
         <TouchableOpacity style={s.saveBtn} onPress={save} testID="save-profile-bottom">
-          <Text style={s.saveBtnText}>Save Changes</Text>
+          <Text style={s.saveBtnText}>{t("saveChanges")}</Text>
         </TouchableOpacity>
         <View style={{ height: 120 }} />
       </ScrollView>

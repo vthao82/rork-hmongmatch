@@ -10,6 +10,7 @@ import RedBackground from "@/components/RedBackground";
 import { CATEGORY_GROUPS } from "@/constants/categories";
 import { useTier } from "@/providers/TierProvider";
 import { useOnboarding } from "@/providers/OnboardingProvider";
+import { useT } from "@/providers/LanguageProvider";
 
 const SW = Dimensions.get("window").width;
 const GAP = 12;
@@ -18,6 +19,7 @@ const HALF = (SW - 32 - GAP) / 2;
 export default function InterestsTab() {
   const ins = useSafeAreaInsets();
   const router = useRouter();
+  const t = useT();
   const { tier, isPaid } = useTier();
   const { data } = useOnboarding();
   const [lockOpen, setLockOpen] = useState<boolean>(false);
@@ -48,8 +50,8 @@ export default function InterestsTab() {
       <RedBackground />
       <HmongMatchHeader />
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={s.heroTitle}>Explore what brings us together</Text>
-        <Text style={s.heroSub}>Find people through your interests, culture and goals.</Text>
+        <Text style={s.heroTitle}>{t("exploreTitle")}</Text>
+        <Text style={s.heroSub}>{t("exploreSub")}</Text>
 
         {CATEGORY_GROUPS.map(group => {
           const visibleCards = seeAll === group.id ? group.cards : group.cards.slice(0, 4);
@@ -62,14 +64,14 @@ export default function InterestsTab() {
                     {!group.freeAccess && !isPaid && (
                       <View style={s.proPill}>
                         <Crown size={10} color={Colors.accent} />
-                        <Text style={s.proPillTxt}>Plus</Text>
+                        <Text style={s.proPillTxt}>{t("plus")}</Text>
                       </View>
                     )}
                   </View>
                 </View>
                 {group.cards.length > 4 && (
                   <TouchableOpacity onPress={() => setSeeAll(seeAll === group.id ? null : group.id)} testID={`seeall-${group.id}`}>
-                    <Text style={s.seeAll}>{seeAll === group.id ? "Show less" : "See all"}</Text>
+                    <Text style={s.seeAll}>{seeAll === group.id ? t("showLess") : t("seeAll")}</Text>
                   </TouchableOpacity>
                 )}
               </View>
@@ -111,12 +113,12 @@ export default function InterestsTab() {
         <View style={s.modal}>
           <View style={s.modalCard}>
             <Crown size={36} color={Colors.accent} />
-            <Text style={s.modalTitle}>Upgrade to see this group</Text>
-            <Text style={s.modalSub}>This interest group is available to Plus and Gold members. Unlock all categories and find more meaningful matches.</Text>
+            <Text style={s.modalTitle}>{t("upgradeGroupTitle")}</Text>
+            <Text style={s.modalSub}>{t("upgradeGroupSub")}</Text>
             <TouchableOpacity style={s.cta} onPress={() => { setLockOpen(false); router.push("/subscription"); }} testID="upgrade-cta-interest">
-              <Text style={s.ctaTxt}>See plans</Text>
+              <Text style={s.ctaTxt}>{t("seePlans")}</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => setLockOpen(false)}><Text style={s.later}>Maybe later</Text></TouchableOpacity>
+            <TouchableOpacity onPress={() => setLockOpen(false)}><Text style={s.later}>{t("maybeLater")}</Text></TouchableOpacity>
           </View>
         </View>
       </Modal>
