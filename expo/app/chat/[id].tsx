@@ -70,7 +70,7 @@ export default function ChatScreen() {
           </View>
         )
       }} />
-      <KeyboardAvoidingView style={s.ct} behavior={Platform.OS === "ios" ? "padding" : "height"} keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 24}>
+      <KeyboardAvoidingView style={s.ct} behavior={Platform.OS === "ios" ? "padding" : "height"} keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}>
         {ms.length === 0 ? (
           <View style={s.ec}>
             <Image source={{ uri: pr.photos[0] }} style={s.ea} contentFit="cover" />
@@ -91,7 +91,7 @@ export default function ChatScreen() {
             onContentSizeChange={() => lr.current?.scrollToEnd({ animated: false })}
           />
         )}
-        <View style={[s.ir, { paddingBottom: Math.max(ins.bottom, 12) + 8 }]}>
+        <View style={[s.ir, { paddingBottom: Math.max(ins.bottom, 12) + 24 }]}>
           <TouchableOpacity style={s.videoBtn} onPress={onVideo} testID="video-btn">
             <Video size={20} color={tier === "gold" ? Colors.accent : Colors.textTertiary} />
             {tier !== "gold" && <Lock size={10} color={Colors.textTertiary} style={s.lockOverlay} />}

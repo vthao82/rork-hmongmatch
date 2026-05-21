@@ -142,6 +142,21 @@ export default function BrowseScreen() {
         </TouchableOpacity>
       } />
 
+      <View style={st.topCounter}>
+        <View style={st.counterPill}>
+          <Heart size={12} color={Colors.like} fill={Colors.like} />
+          <Text style={st.counterPillTxt}>{isPaid ? "∞" : remaining.likes} likes</Text>
+        </View>
+        <View style={st.counterPill}>
+          <X size={12} color={Colors.nope} strokeWidth={3} />
+          <Text style={st.counterPillTxt}>{usage.dislikes} dislikes</Text>
+        </View>
+        <View style={st.counterPill}>
+          <RotateCcw size={12} color={Colors.accent} />
+          <Text style={st.counterPillTxt}>{isPaid ? "∞" : remaining.rewinds} rewinds</Text>
+        </View>
+      </View>
+
       <View style={st.cardArea}>
         {!current ? (
           <View style={st.empty}>
@@ -164,9 +179,6 @@ export default function BrowseScreen() {
               <TouchableOpacity onPress={onLike} style={[st.actBtn, { borderColor: Colors.like }]} testID={`like-${current.id}`} activeOpacity={0.75} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                 <Heart size={26} color={Colors.like} strokeWidth={3} />
               </TouchableOpacity>
-            </View>
-            <View style={st.counterRow}>
-              <Text style={st.counterTxt}>{isPaid ? `Unlimited · ${usage.dislikes} dislikes today` : `${remaining.likes} likes · ${usage.dislikes} dislikes · ${remaining.rewinds} rewinds`}</Text>
             </View>
           </View>
         )}
@@ -217,6 +229,9 @@ const st = StyleSheet.create({
   boostTxt: { color: Colors.accent, fontWeight: "700" as const, fontSize: 12 },
   counterRow: { paddingTop: 8, alignItems: "center" },
   counterTxt: { color: "rgba(255,255,255,0.55)", fontSize: 11 },
+  topCounter: { flexDirection: "row", justifyContent: "center", gap: 8, paddingHorizontal: 12, paddingTop: 4, paddingBottom: 6 },
+  counterPill: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, backgroundColor: "rgba(0,0,0,0.45)", borderWidth: 1, borderColor: "rgba(255,255,255,0.12)" },
+  counterPillTxt: { color: "#FFF", fontSize: 11, fontWeight: "700" as const },
   cardArea: { flex: 1, paddingHorizontal: 12, paddingTop: 4, paddingBottom: 10 },
   card: { borderRadius: 22, overflow: "hidden", backgroundColor: "#111", borderWidth: 1, borderColor: "rgba(212,168,67,0.18)" },
   carouselWrap: { flex: 1 },
@@ -235,7 +250,7 @@ const st = StyleSheet.create({
   actions: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 22, paddingTop: 14, paddingBottom: 6 },
   actBtn: { width: 60, height: 60, borderRadius: 30, backgroundColor: "rgba(0,0,0,0.65)", borderWidth: 2, justifyContent: "center", alignItems: "center" },
   rewindBtn: { position: "absolute", top: 12, right: 16, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1, borderColor: Colors.accent, backgroundColor: "rgba(0,0,0,0.4)" },
-  aboutBox: { marginTop: 10, backgroundColor: "rgba(0,0,0,0.45)", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", borderRadius: 12, padding: 10 },
+  aboutBox: { marginTop: 10, backgroundColor: "transparent", borderWidth: 0, borderColor: "transparent", borderRadius: 12, paddingHorizontal: 0, paddingVertical: 4 },
   aboutLabel: { color: Colors.accentLight, fontSize: 10, fontWeight: "800" as const, letterSpacing: 1, textTransform: "uppercase" as const, marginBottom: 4 },
   aboutTxt: { color: "rgba(255,255,255,0.92)", fontSize: 13, lineHeight: 18 },
   rewindTxt: { color: Colors.accent, fontSize: 12, fontWeight: "700" as const },

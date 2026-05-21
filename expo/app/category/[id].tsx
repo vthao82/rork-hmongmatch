@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import { ArrowLeft, BadgeCheck, MapPin, Users, Plus, Check } from "lucide-react-native";
 import Colors from "@/constants/colors";
-import { profiles, Profile } from "@/mocks/profiles";
+import { profiles, currentUser, Profile } from "@/mocks/profiles";
 import { useOnboarding } from "@/providers/OnboardingProvider";
 
 const SW = Dimensions.get("window").width;
@@ -36,9 +36,20 @@ export default function CategoryScreen() {
 
   const { filtered, subtitle } = useMemo(() => {
     const entry = CATEGORY_MAP[title];
-    if (entry) return { filtered: profiles.filter(entry.match), subtitle: entry.subtitle };
-    return { filtered: profiles, subtitle: "People interested in this" };
-  }, [title]);
+    const base = entry ? profiles.filter(entry.match) : profiles;
+    const sub = entry?.subtitle ?? "People interested in this";
+    if (inCategory) {
+      const me: Profile = {
+        ...currentUser,
+        name: (data.name?.trim() || currentUser.name) + " (You)",
+        photos: (data.photos && data.photos.length > 0) ? data.photos : currentUser.photos,
+        bio: data.bio ?? currentUser.bio,
+      };
+      const without = base.filter(p => p.id !== currentUser.id);
+      return { filtered: [me, ...without], subtitle: sub };
+    }
+    return { filtered: base, subtitle: sub };
+  }, [title, inCategory, data]);
 
   return (
     <View style={[s.ct, { paddingTop: ins.top }]}>

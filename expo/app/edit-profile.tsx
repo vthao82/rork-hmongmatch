@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Dimensions, Platform, Alert } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Dimensions, Platform, Alert, KeyboardAvoidingView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import { useRouter, Stack, useLocalSearchParams } from "expo-router";
@@ -101,7 +101,8 @@ export default function EditProfileScreen() {
         </TouchableOpacity>
       </View>
 
-      <ScrollView ref={scrollRef} contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }} keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}>
+      <ScrollView ref={scrollRef} contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" {...(Platform.OS === "ios" ? { automaticallyAdjustKeyboardInsets: true } : {})}>
         <Text style={s.sectionLabel} onLayout={e => { yPhotos.current = e.nativeEvent.layout.y; }}>Photos</Text>
         <Text style={s.sectionSub}>Tap to add or change. Long-press a photo to make it your main photo.</Text>
         <View style={s.grid}>
@@ -205,8 +206,9 @@ export default function EditProfileScreen() {
         <TouchableOpacity style={s.saveBtn} onPress={save} testID="save-profile-bottom">
           <Text style={s.saveBtnText}>Save Changes</Text>
         </TouchableOpacity>
-        <View style={{ height: 32 }} />
+        <View style={{ height: 120 }} />
       </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
