@@ -5,8 +5,8 @@ type Props = { size?: number; width?: number; fullWidth?: boolean };
 
 function HmongLogo({ size = 96, width, fullWidth }: Props) {
   const screenW = Dimensions.get("window").width;
-  const w = fullWidth ? screenW - 24 : (width ?? size * 2.4);
-  const h = w / 2.4;
+  const w = fullWidth ? screenW - 16 : (width ?? size * 2.4);
+  const h = fullWidth ? w / 1.2 : w / 2.4;
   return (
     <Image
       source={require("@/assets/images/hmongdate-logo.png")}

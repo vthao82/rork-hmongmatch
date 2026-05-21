@@ -140,7 +140,7 @@ const s = StyleSheet.create({
   card: { borderRadius: 16, overflow: "hidden", backgroundColor: "#111", borderWidth: 1, borderColor: "transparent" },
   cardHighlight: { borderColor: Colors.accent },
   cardImg: { ...StyleSheet.absoluteFillObject },
-  cardTint: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(20,4,8,0.55)" },
+  cardTint: { ...StyleSheet.absoluteFillObject, backgroundColor: "transparent" },
   badge: { position: "absolute", top: 10, right: 10, flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(0,0,0,0.65)", borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3 },
   badgeTxt: { color: "#FFF", fontSize: 11, fontWeight: "700" as const },
   lockBadge: { position: "absolute", top: 10, left: 10, width: 22, height: 22, borderRadius: 11, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "center", alignItems: "center" },

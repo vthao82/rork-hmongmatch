@@ -126,24 +126,28 @@ export default function BrowseScreen() {
   }, [history, idx, consumeRewind]);
 
   const panResponder = useMemo(() => PanResponder.create({
-    onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dy) > 12 && Math.abs(g.dy) > Math.abs(g.dx),
+    onStartShouldSetPanResponder: () => false,
+    onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dy) > 8 && Math.abs(g.dy) > Math.abs(g.dx) * 1.2,
+    onMoveShouldSetPanResponderCapture: (_, g) => Math.abs(g.dy) > 8 && Math.abs(g.dy) > Math.abs(g.dx) * 1.2,
     onPanResponderMove: (_, g) => {
-      translateY.setValue(g.dy * 0.4);
+      translateY.setValue(g.dy);
     },
+    onPanResponderTerminationRequest: () => false,
     onPanResponderRelease: (_, g) => {
-      const THRESH = 90;
-      if (g.dy < -THRESH) {
-        Animated.timing(translateY, { toValue: -cardHeight, duration: 180, useNativeDriver: true }).start(() => {
+      const THRESH = 80;
+      const VTHRESH = 0.5;
+      if (g.dy < -THRESH || g.vy < -VTHRESH) {
+        Animated.timing(translateY, { toValue: -cardHeight, duration: 220, useNativeDriver: true }).start(() => {
           translateY.setValue(0);
           swipeNext();
         });
-      } else if (g.dy > THRESH) {
-        Animated.timing(translateY, { toValue: cardHeight, duration: 180, useNativeDriver: true }).start(() => {
+      } else if (g.dy > THRESH || g.vy > VTHRESH) {
+        Animated.timing(translateY, { toValue: cardHeight, duration: 220, useNativeDriver: true }).start(() => {
           translateY.setValue(0);
           onRewind();
         });
       } else {
-        Animated.spring(translateY, { toValue: 0, useNativeDriver: true }).start();
+        Animated.spring(translateY, { toValue: 0, useNativeDriver: true, friction: 8, tension: 80 }).start();
       }
     },
   }), [translateY, cardHeight, swipeNext, onRewind]);
