@@ -10,6 +10,7 @@ import { OnboardingProvider } from "@/providers/OnboardingProvider";
 import { LikesProvider } from "@/providers/LikesProvider";
 import { LanguageProvider } from "@/providers/LanguageProvider";
 import { TierProvider } from "@/providers/TierProvider";
+import { AuthProvider } from "@/providers/AuthProvider";
 
 SplashScreen.preventAutoHideAsync();
 const qc = new QueryClient();
@@ -39,6 +40,7 @@ export default function RootLayout() {
     <QueryClientProvider client={qc}>
       <SafeAreaProvider>
         <LanguageProvider>
+          <AuthProvider>
           <OnboardingProvider>
             <TierProvider>
               <LikesProvider>
@@ -49,6 +51,7 @@ export default function RootLayout() {
               </LikesProvider>
             </TierProvider>
           </OnboardingProvider>
+          </AuthProvider>
         </LanguageProvider>
       </SafeAreaProvider>
     </QueryClientProvider>

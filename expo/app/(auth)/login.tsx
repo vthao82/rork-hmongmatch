@@ -1,5 +1,5 @@
-import React, { useEffect, useRef } from "react";
-import { View, Text, StyleSheet, Animated, Easing, Platform, Linking } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { View, Text, StyleSheet, Animated, Easing, Platform, Linking, Alert, ActivityIndicator } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
@@ -11,6 +11,7 @@ import HmongLogo from "@/components/onboarding/HmongLogo";
 import BackButton from "@/components/onboarding/BackButton";
 import { useOnboarding } from "@/providers/OnboardingProvider";
 import { useT } from "@/providers/LanguageProvider";
+import { useAuth } from "@/providers/AuthProvider";
 
 function GoogleG() {
   return (
@@ -25,7 +26,9 @@ function GoogleG() {
 
 export default function LoginScreen() {
   const { update } = useOnboarding();
+  const { signInWithGoogle } = useAuth();
   const t = useT();
+  const [busy, setBusy] = useState<boolean>(false);
   const fade = useRef(new Animated.Value(0)).current;
   const rise = useRef(new Animated.Value(20)).current;
 
@@ -37,20 +40,23 @@ export default function LoginScreen() {
   }, [fade, rise]);
 
   const onGoogle = async () => {
+    if (busy) return;
+    setBusy(true);
     update({ method: "google" });
-    if (Platform.OS === "web") {
-      router.push("/(auth)/account-picker");
-      return;
-    }
     try {
-      const supported = await Linking.canOpenURL("https://accounts.google.com");
-      if (supported) {
-        await Linking.openURL("https://accounts.google.com/signin");
+      const res = await signInWithGoogle();
+      if (!res.ok) {
+        if (res.error && res.error !== "Sign-in canceled") {
+          Alert.alert("Sign-in failed", res.error);
+        }
+        return;
       }
       router.push("/(auth)/terms");
     } catch (e) {
       console.log("google login error", e);
-      router.push("/(auth)/terms");
+      Alert.alert("Sign-in failed", "Please try again.");
+    } finally {
+      setBusy(false);
     }
   };
 
@@ -71,10 +77,10 @@ export default function LoginScreen() {
 
         <Animated.View style={[s.bottom, { opacity: fade }]}>
           <PillButton
-            label={t("continueWithGoogle")}
+            label={busy ? "Signing in…" : t("continueWithGoogle")}
             onPress={onGoogle}
             variant="light"
-            left={<GoogleG />}
+            left={busy ? <ActivityIndicator size="small" color="#444" /> : <GoogleG />}
             testID="continue-google"
           />
           <Text style={s.fine}>
