@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Dimensions, Platform, Alert, Modal } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Dimensions, Platform, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import { useRouter, Stack, useLocalSearchParams } from "expo-router";
@@ -8,7 +8,7 @@ import * as ImagePicker from "expo-image-picker";
 import Colors from "@/constants/colors";
 import { useOnboarding } from "@/providers/OnboardingProvider";
 import { currentUser } from "@/mocks/profiles";
-import { INTEREST_GROUPS, PROMPTS } from "@/constants/interests";
+import { INTEREST_GROUPS } from "@/constants/interests";
 
 const SW = Dimensions.get("window").width;
 const GAP = 10;
@@ -26,20 +26,16 @@ export default function EditProfileScreen() {
   const [photos, setPhotos] = useState<string[]>(data.photos && data.photos.length > 0 ? data.photos : currentUser.photos);
   const [interests, setInterests] = useState<string[]>(data.interests && data.interests.length > 0 ? data.interests : currentUser.interests);
   const [editingInterests, setEditingInterests] = useState<boolean>(false);
-  const [promptQ, setPromptQ] = useState<string>(data.prompt?.q ?? "");
-  const [promptA, setPromptA] = useState<string>(data.prompt?.a ?? "");
-  const [pickPromptOpen, setPickPromptOpen] = useState<boolean>(false);
 
   const { focus } = useLocalSearchParams<{ focus?: string }>();
   const scrollRef = useRef<ScrollView>(null);
   const yPhotos = useRef<number>(0);
   const yBio = useRef<number>(0);
-  const yPrompt = useRef<number>(0);
 
   useEffect(() => {
     if (!focus) return;
     const t = setTimeout(() => {
-      const y = focus === "bio" ? yBio.current : focus === "prompt" ? yPrompt.current : yPhotos.current;
+      const y = focus === "bio" ? yBio.current : yPhotos.current;
       scrollRef.current?.scrollTo({ y: Math.max(0, y - 12), animated: true });
     }, 250);
     return () => clearTimeout(t);
@@ -85,11 +81,10 @@ export default function EditProfileScreen() {
   }, []);
 
   const save = useCallback(() => {
-    const prompt = promptQ && promptA.trim() ? { q: promptQ, a: promptA.trim() } : undefined;
-    update({ name: name.trim(), bio, photos, interests, prompt, mainPhotoIndex });
-    console.log("profile saved", { name, bio, photoCount: photos.length, interestCount: interests.length, prompt });
+    update({ name: name.trim(), bio, photos, interests, mainPhotoIndex });
+    console.log("profile saved", { name, bio, photoCount: photos.length, interestCount: interests.length });
     router.back();
-  }, [name, bio, photos, interests, promptQ, promptA, router, update, mainPhotoIndex]);
+  }, [name, bio, photos, interests, router, update, mainPhotoIndex]);
 
   const slots = Array.from({ length: 6 }, (_, i) => photos[i] ?? null);
 
@@ -168,28 +163,6 @@ export default function EditProfileScreen() {
           <Text style={s.count}>{bio.length}/300</Text>
         </View>
 
-        <Text style={s.sectionLabel} onLayout={e => { yPrompt.current = e.nativeEvent.layout.y; }}>Prompt</Text>
-        <Text style={s.sectionSub}>Pick a question and share something about you.</Text>
-        <TouchableOpacity style={s.promptPicker} onPress={() => setPickPromptOpen(true)} testID="pick-prompt">
-          <Text style={promptQ ? s.promptQ : s.promptQMuted}>{promptQ || "Choose a prompt…"}</Text>
-          <ChevronRight size={18} color="rgba(255,255,255,0.5)" />
-        </TouchableOpacity>
-        {!!promptQ && (
-          <View style={s.inputBox}>
-            <TextInput
-              style={[s.input, { minHeight: 70, textAlignVertical: "top" }]}
-              value={promptA}
-              onChangeText={setPromptA}
-              placeholder="Your answer…"
-              placeholderTextColor="rgba(255,255,255,0.3)"
-              multiline
-              maxLength={160}
-              testID="edit-prompt-answer"
-            />
-            <Text style={s.count}>{promptA.length}/160</Text>
-          </View>
-        )}
-
         <View style={s.sectionRow}>
           <Text style={s.sectionLabel}>Interests</Text>
           <TouchableOpacity onPress={() => setEditingInterests(v => !v)} testID="toggle-interests">
@@ -228,27 +201,6 @@ export default function EditProfileScreen() {
             ))}
           </View>
         )}
-
-        <Modal visible={pickPromptOpen} animationType="slide" transparent onRequestClose={() => setPickPromptOpen(false)}>
-          <View style={s.modalBack}>
-            <View style={s.modalSheet}>
-              <View style={s.modalHeader}>
-                <Text style={s.modalTitle}>Choose a prompt</Text>
-                <TouchableOpacity onPress={() => setPickPromptOpen(false)} testID="close-prompt-modal">
-                  <X size={22} color="#FFF" />
-                </TouchableOpacity>
-              </View>
-              <ScrollView>
-                {PROMPTS.map(p => (
-                  <TouchableOpacity key={p} style={s.promptRow} onPress={() => { setPromptQ(p); setPickPromptOpen(false); }} testID={`prompt-${p}`}>
-                    <Text style={s.promptRowText}>{p}</Text>
-                    {promptQ === p && <Check size={18} color={Colors.crimsonLight} />}
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          </View>
-        </Modal>
 
         <TouchableOpacity style={s.saveBtn} onPress={save} testID="save-profile-bottom">
           <Text style={s.saveBtnText}>Save Changes</Text>

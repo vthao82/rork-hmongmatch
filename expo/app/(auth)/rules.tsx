@@ -44,17 +44,16 @@ export default function RulesScreen() {
         <Text style={s.sub}>{t("houseRulesSub")}</Text>
       </View>
 
-      <View style={{ height: 16 }} />
       {RULE_KEYS.map((r, i) => <Rule key={r.t} title={t(r.t)} body={t(r.b)} i={i} />)}
     </OnboardingScreen>
   );
 }
 
 const s = StyleSheet.create({
-  head: { paddingTop: 10, gap: 14 },
-  title: { fontSize: 30, fontWeight: "800" as const, color: Colors.dark.text, letterSpacing: -0.5, lineHeight: 36 },
+  head: { paddingTop: 0, gap: 8, marginTop: -8 },
+  title: { fontSize: 28, fontWeight: "800" as const, color: Colors.dark.text, letterSpacing: -0.5, lineHeight: 34, marginTop: 4 },
   sub: { fontSize: 15, color: Colors.dark.textDim },
-  rule: { marginTop: 22 },
+  rule: { marginTop: 14 },
   rTitle: { fontSize: 18, fontWeight: "800" as const, color: Colors.dark.text, marginBottom: 4 },
   rBody: { fontSize: 14, color: Colors.dark.textDim, lineHeight: 20 },
 });

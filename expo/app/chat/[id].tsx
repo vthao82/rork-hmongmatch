@@ -70,7 +70,7 @@ export default function ChatScreen() {
           </View>
         )
       }} />
-      <KeyboardAvoidingView style={s.ct} behavior={Platform.OS === "ios" ? "padding" : "height"} keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}>
+      <KeyboardAvoidingView style={s.ct} behavior={Platform.OS === "ios" ? "padding" : "height"} keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 24}>
         {ms.length === 0 ? (
           <View style={s.ec}>
             <Image source={{ uri: pr.photos[0] }} style={s.ea} contentFit="cover" />
@@ -86,6 +86,8 @@ export default function ChatScreen() {
             keyExtractor={i => i.id}
             contentContainerStyle={s.ml}
             showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="interactive"
             onContentSizeChange={() => lr.current?.scrollToEnd({ animated: false })}
           />
         )}

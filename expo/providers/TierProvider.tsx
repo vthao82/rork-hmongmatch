@@ -112,6 +112,14 @@ export const [TierProvider, useTier] = createContextHook(() => {
     return true;
   }, [isPaid, usage, persistUsage, checkAndPrompt]);
 
+  const markSeen = useCallback((profileId: string) => {
+    if (!profileId) return;
+    const seen = Array.from(new Set([...usage.seenIds, profileId])).slice(-500);
+    const next: Usage = { ...usage, seenIds: seen };
+    setUsage(next);
+    persistUsage(next);
+  }, [usage, persistUsage]);
+
   const consumeDislike = useCallback((): boolean => {
     const next: Usage = { ...usage, dislikes: usage.dislikes + 1 };
     setUsage(next);
@@ -181,6 +189,7 @@ export const [TierProvider, useTier] = createContextHook(() => {
     consumeLike,
     consumeDislike,
     consumeSwipe,
+    markSeen,
     consumeRewind,
     consumeMessage,
     startBoost,

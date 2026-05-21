@@ -5,7 +5,7 @@ import { useEffect, useState, useCallback } from "react";
 export type GenderId = "man" | "woman" | "beyond";
 export type SeekingId = "men" | "women" | "beyond" | "everyone";
 export type LookingForId = "long" | "long-open" | "short-open" | "short" | "friends" | "unsure";
-export type DialectId = "green" | "white";
+export type DialectId = "green" | "white" | "other";
 export type WorkId = "wfh" | "full-time" | "part-time" | "school" | "government" | "labor" | "other";
 
 export type Lifestyle = {
@@ -41,6 +41,7 @@ export type OnboardingData = {
   searchByDistance?: boolean;
   clan?: string;
   dialect?: DialectId;
+  dialectOther?: string;
   hometownCountry?: string;
   hometownState?: string;
   hometownCity?: string;

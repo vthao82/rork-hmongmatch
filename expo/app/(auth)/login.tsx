@@ -97,7 +97,7 @@ const s = StyleSheet.create({
   backRow: { paddingTop: 4, marginLeft: -4 },
   top: { alignItems: "center", paddingTop: 20, gap: 14 },
   brand: { fontSize: 34, fontWeight: "800" as const, color: Colors.offwhite, letterSpacing: 0.5 },
-  tag: { fontSize: 16, color: "rgba(245,240,235,0.78)", fontStyle: "italic" as const, marginTop: -4 },
+  tag: { fontSize: 16, color: "rgba(245,240,235,0.78)", fontStyle: "italic" as const, marginTop: -4, textAlign: "center" as const, paddingHorizontal: 12 },
   middle: { flex: 1 },
   bottom: { paddingBottom: 20, gap: 10 },
   fine: { color: "rgba(245,240,235,0.62)", fontSize: 11.5, textAlign: "center", marginTop: 18, lineHeight: 17 },

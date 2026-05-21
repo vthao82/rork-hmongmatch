@@ -6,6 +6,7 @@ import { Stack, useRouter } from "expo-router";
 import { ArrowLeft, MapPin, ChevronRight, Check, X as XIcon, Crown } from "lucide-react-native";
 import Colors from "@/constants/colors";
 import { useTier } from "@/providers/TierProvider";
+import { useLanguage } from "@/providers/LanguageProvider";
 
 const ADV_KEY = "hmongdate.adv-filters.v1";
 const PREF_KEY = "hmongdate.discovery.v1";
@@ -143,6 +144,7 @@ export default function SettingsScreen() {
   const ins = useSafeAreaInsets();
   const router = useRouter();
   const { tier, isPaid, upgrade } = useTier();
+  const { lang, setLang } = useLanguage();
 
   const [worldwide, setWorldwide] = useState<boolean>(false);
   const [usOnly, setUsOnly] = useState<boolean>(false);
@@ -242,6 +244,23 @@ export default function SettingsScreen() {
             </View>
             <Text style={s.upgradeLink}>{isPaid ? "Manage" : "Upgrade"}</Text>
           </TouchableOpacity>
+        </Section>
+
+        <Section title="Language">
+          <View style={s.card}>
+            <Text style={s.rowLabel}>App Language</Text>
+            <Text style={s.rowSub}>Choose how Hmong Date displays text. You can change this anytime.</Text>
+            <View style={s.langRow}>
+              <TouchableOpacity onPress={() => setLang("en")} style={[s.langChip, lang === "en" && s.langChipOn]} testID="lang-en" activeOpacity={0.85}>
+                <Text style={s.langFlag}>🇺🇸</Text>
+                <Text style={[s.langTxt, lang === "en" && s.langTxtOn]}>English</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setLang("hmn")} style={[s.langChip, lang === "hmn" && s.langChipOn]} testID="lang-hmn" activeOpacity={0.85}>
+                <Text style={s.langFlag}>🌿</Text>
+                <Text style={[s.langTxt, lang === "hmn" && s.langTxtOn]}>Hmoob</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
         </Section>
 
         <Section title="Discovery Settings">
@@ -446,4 +465,10 @@ const s = StyleSheet.create({
   upgradeLink: { color: Colors.accent, fontSize: 14, fontWeight: "700" as const },
   toast: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-end", backgroundColor: "rgba(47,192,113,0.2)", borderColor: Colors.like, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, marginBottom: 8 },
   toastTxt: { color: Colors.like, fontSize: 12, fontWeight: "700" as const },
+  langRow: { flexDirection: "row", gap: 10, marginTop: 12 },
+  langChip: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 12, borderRadius: 14, borderWidth: 1.5, borderColor: "rgba(255,255,255,0.15)", backgroundColor: "rgba(255,255,255,0.04)" },
+  langChipOn: { borderColor: Colors.primary, backgroundColor: "rgba(192,21,47,0.18)" },
+  langFlag: { fontSize: 18 },
+  langTxt: { color: "rgba(255,255,255,0.75)", fontSize: 14, fontWeight: "700" as const },
+  langTxtOn: { color: "#FFF" },
 });

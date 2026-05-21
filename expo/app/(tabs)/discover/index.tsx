@@ -1,5 +1,5 @@
-import React, { useCallback, useMemo, useRef, useState, useEffect } from "react";
-import { View, Text, StyleSheet, Dimensions, FlatList, TouchableOpacity, PanResponder, Animated, Modal, Platform } from "react-native";
+import React, { useCallback, useMemo, useState, useEffect } from "react";
+import { View, Text, StyleSheet, Dimensions, FlatList, TouchableOpacity, Modal, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import { MapPin, BadgeCheck, X, Heart, RotateCcw, MessageCircle, Zap, Crown } from "lucide-react-native";
@@ -39,12 +39,12 @@ function PhotoCarousel({ photos }: { photos: string[] }) {
   );
 }
 
-function ProfileCard({ profile, height, translateY }: { profile: Profile; height: number; translateY: Animated.Value }) {
+function ProfileCard({ profile, height }: { profile: Profile; height: number }) {
   const verified = profile.verified;
   return (
-    <Animated.View style={[st.card, { height, transform: [{ translateY }] }]} pointerEvents="box-none">
+    <View style={[st.card, { height }]} pointerEvents="box-none">
       <PhotoCarousel photos={profile.photos} />
-      <LinearGradient colors={["transparent", "rgba(0,0,0,0.85)"]} locations={[0.45, 1]} style={st.shade} pointerEvents="none" />
+      <LinearGradient colors={["transparent", "rgba(0,0,0,0.9)"]} locations={[0.35, 1]} style={st.shade} pointerEvents="none" />
       <View style={st.info} pointerEvents="none">
         <View style={st.nameRow}>
           <Text style={st.name}>{profile.name}</Text>
@@ -55,20 +55,25 @@ function ProfileCard({ profile, height, translateY }: { profile: Profile; height
         </View>
         <Text style={st.meta}>{profile.age} · <MapPin size={11} color="rgba(255,255,255,0.85)" /> {profile.location}</Text>
         <Text style={st.clan}>{profile.clan} Clan</Text>
+        {!!profile.bio && (
+          <View style={st.aboutBox}>
+            <Text style={st.aboutLabel}>About me</Text>
+            <Text style={st.aboutTxt} numberOfLines={3}>{profile.bio}</Text>
+          </View>
+        )}
       </View>
-    </Animated.View>
+    </View>
   );
 }
 
 export default function BrowseScreen() {
   const ins = useSafeAreaInsets();
   const router = useRouter();
-  const { isPaid, remaining, consumeLike, consumeDislike, consumeSwipe, consumeRewind, startBoost, stopBoost, boostActive, showLimitModal, setShowLimitModal, show75Modal, setShow75Modal, usage } = useTier();
-  const { likedIds, consume: addLike } = useLikes();
+  const { isPaid, remaining, consumeLike, consumeDislike, consumeRewind, startBoost, stopBoost, boostActive, showLimitModal, setShowLimitModal, show75Modal, setShow75Modal, usage, markSeen } = useTier();
+  const { consume: addLike } = useLikes();
   const [idx, setIdx] = useState<number>(0);
   const [history, setHistory] = useState<{ id: string; liked: boolean }[]>([]);
-  const cardHeight = W.height - ins.top - ins.bottom - 130;
-  const translateY = useRef(new Animated.Value(0)).current;
+  const cardHeight = W.height - ins.top - ins.bottom - 220;
 
   // Filter out already-seen users to avoid showing same person again
   const queue = useMemo(() => {
@@ -82,14 +87,12 @@ export default function BrowseScreen() {
 
   const current = queue[idx];
 
-  const swipeNext = useCallback(() => {
+  const advance = useCallback((liked: boolean) => {
     if (!current) return;
-    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    const ok = consumeSwipe(current.id);
-    if (!ok) return;
-    setHistory(h => [...h, { id: current.id, liked: false }]);
+    markSeen?.(current.id);
+    setHistory(h => [...h, { id: current.id, liked }]);
     setIdx(i => i + 1);
-  }, [current, consumeSwipe]);
+  }, [current, markSeen]);
 
   const onLike = useCallback(() => {
     if (!current) return;
@@ -97,19 +100,15 @@ export default function BrowseScreen() {
     const ok = consumeLike(current.id);
     if (!ok) return;
     addLike(current.id);
-    setHistory(h => [...h, { id: current.id, liked: true }]);
-    setIdx(i => i + 1);
-  }, [current, consumeLike, addLike]);
+    advance(true);
+  }, [current, consumeLike, addLike, advance]);
 
   const onDislike = useCallback(() => {
     if (!current) return;
     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     consumeDislike();
-    const ok = consumeSwipe(current.id);
-    if (!ok) return;
-    setHistory(h => [...h, { id: current.id, liked: false }]);
-    setIdx(i => i + 1);
-  }, [current, consumeDislike, consumeSwipe]);
+    advance(false);
+  }, [current, consumeDislike, advance]);
 
   const onMessage = useCallback(() => {
     if (!current) return;
@@ -124,33 +123,6 @@ export default function BrowseScreen() {
     setHistory(h => h.slice(0, -1));
     setIdx(i => Math.max(0, i - 1));
   }, [history, idx, consumeRewind]);
-
-  const panResponder = useMemo(() => PanResponder.create({
-    onStartShouldSetPanResponder: () => false,
-    onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dy) > 8 && Math.abs(g.dy) > Math.abs(g.dx) * 1.2,
-    onMoveShouldSetPanResponderCapture: (_, g) => Math.abs(g.dy) > 8 && Math.abs(g.dy) > Math.abs(g.dx) * 1.2,
-    onPanResponderMove: (_, g) => {
-      translateY.setValue(g.dy);
-    },
-    onPanResponderTerminationRequest: () => false,
-    onPanResponderRelease: (_, g) => {
-      const THRESH = 80;
-      const VTHRESH = 0.5;
-      if (g.dy < -THRESH || g.vy < -VTHRESH) {
-        Animated.timing(translateY, { toValue: -cardHeight, duration: 220, useNativeDriver: true }).start(() => {
-          translateY.setValue(0);
-          swipeNext();
-        });
-      } else if (g.dy > THRESH || g.vy > VTHRESH) {
-        Animated.timing(translateY, { toValue: cardHeight, duration: 220, useNativeDriver: true }).start(() => {
-          translateY.setValue(0);
-          onRewind();
-        });
-      } else {
-        Animated.spring(translateY, { toValue: 0, useNativeDriver: true, friction: 8, tension: 80 }).start();
-      }
-    },
-  }), [translateY, cardHeight, swipeNext, onRewind]);
 
   const toggleBoost = useCallback(() => {
     if (boostActive) stopBoost();
@@ -170,10 +142,6 @@ export default function BrowseScreen() {
         </TouchableOpacity>
       } />
 
-      <View style={st.statRow}>
-        <Text style={st.statTxt}>{isPaid ? `Unlimited · ${usage.dislikes} passes today` : `${remaining.likes} likes · ${usage.dislikes} passes · ${remaining.swipes} swipes · ${remaining.rewinds} rewinds`}</Text>
-      </View>
-
       <View style={st.cardArea}>
         {!current ? (
           <View style={st.empty}>
@@ -183,11 +151,8 @@ export default function BrowseScreen() {
           </View>
         ) : (
           <View style={{ flex: 1 }}>
-            <View {...panResponder.panHandlers} style={{ height: cardHeight }}>
-              <ProfileCard profile={current} height={cardHeight} translateY={translateY} />
-              <View style={st.swipeHint} pointerEvents="none">
-                <Text style={st.swipeHintTxt}>Swipe up for next · Swipe down to rewind</Text>
-              </View>
+            <View style={{ height: cardHeight }}>
+              <ProfileCard profile={current} height={cardHeight} />
             </View>
             <View style={st.actions}>
               <TouchableOpacity onPress={onDislike} style={[st.actBtn, { borderColor: Colors.nope }]} testID={`dislike-${current.id}`} activeOpacity={0.75} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
@@ -199,6 +164,9 @@ export default function BrowseScreen() {
               <TouchableOpacity onPress={onLike} style={[st.actBtn, { borderColor: Colors.like }]} testID={`like-${current.id}`} activeOpacity={0.75} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
                 <Heart size={26} color={Colors.like} strokeWidth={3} />
               </TouchableOpacity>
+            </View>
+            <View style={st.counterRow}>
+              <Text style={st.counterTxt}>{isPaid ? `Unlimited · ${usage.dislikes} dislikes today` : `${remaining.likes} likes · ${usage.dislikes} dislikes · ${remaining.rewinds} rewinds`}</Text>
             </View>
           </View>
         )}
@@ -247,9 +215,9 @@ const st = StyleSheet.create({
   boost: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: Colors.accent },
   boostActive: { backgroundColor: Colors.accent },
   boostTxt: { color: Colors.accent, fontWeight: "700" as const, fontSize: 12 },
-  statRow: { paddingHorizontal: 16, paddingBottom: 6 },
-  statTxt: { color: "rgba(255,255,255,0.6)", fontSize: 11, textAlign: "center" as const },
-  cardArea: { flex: 1, paddingHorizontal: 12, paddingTop: 4 },
+  counterRow: { paddingTop: 8, alignItems: "center" },
+  counterTxt: { color: "rgba(255,255,255,0.55)", fontSize: 11 },
+  cardArea: { flex: 1, paddingHorizontal: 12, paddingTop: 4, paddingBottom: 10 },
   card: { borderRadius: 22, overflow: "hidden", backgroundColor: "#111", borderWidth: 1, borderColor: "rgba(212,168,67,0.18)" },
   carouselWrap: { flex: 1 },
   photo: { width: W.width - 24, height: "100%" },
@@ -264,11 +232,12 @@ const st = StyleSheet.create({
   badgeTxt: { color: "#FFF", fontSize: 10, fontWeight: "700" as const, letterSpacing: 0.4 },
   meta: { color: "rgba(255,255,255,0.92)", fontSize: 14, marginTop: 4 },
   clan: { color: Colors.accentLight, fontSize: 14, fontWeight: "600" as const, marginTop: 4 },
-  actions: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 22, paddingTop: 14 },
+  actions: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 22, paddingTop: 14, paddingBottom: 6 },
   actBtn: { width: 60, height: 60, borderRadius: 30, backgroundColor: "rgba(0,0,0,0.65)", borderWidth: 2, justifyContent: "center", alignItems: "center" },
   rewindBtn: { position: "absolute", top: 12, right: 16, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1, borderColor: Colors.accent, backgroundColor: "rgba(0,0,0,0.4)" },
-  swipeHint: { position: "absolute", top: 48, left: 0, right: 0, alignItems: "center" },
-  swipeHintTxt: { color: "rgba(255,255,255,0.55)", fontSize: 11, backgroundColor: "rgba(0,0,0,0.35)", paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
+  aboutBox: { marginTop: 10, backgroundColor: "rgba(0,0,0,0.45)", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", borderRadius: 12, padding: 10 },
+  aboutLabel: { color: Colors.accentLight, fontSize: 10, fontWeight: "800" as const, letterSpacing: 1, textTransform: "uppercase" as const, marginBottom: 4 },
+  aboutTxt: { color: "rgba(255,255,255,0.92)", fontSize: 13, lineHeight: 18 },
   rewindTxt: { color: Colors.accent, fontSize: 12, fontWeight: "700" as const },
   empty: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10 },
   emptyTitle: { color: "#FFF", fontSize: 18, fontWeight: "700" as const, marginTop: 10 },
