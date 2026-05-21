@@ -223,6 +223,22 @@ export default function SettingsScreen() {
   const onWorldwide = (v: boolean) => { setWorldwide(v); if (v) setUsOnly(false); persistPref({ worldwide: v, usOnly: v ? false : usOnly }); };
   const onUSOnly = (v: boolean) => { setUsOnly(v); if (v) setWorldwide(false); persistPref({ usOnly: v, worldwide: v ? false : worldwide }); };
 
+  const confirmLangChange = useCallback((next: "en" | "hmn") => {
+    if (next === lang) return;
+    const title = next === "en" ? "Change language to English?" : "Hloov hom lus mus rau Hmoob?";
+    const msg = next === "en" ? "The app will refresh in English." : "Lub app yuav rov pib dua ua lus Hmoob.";
+    const cancel = next === "en" ? "Cancel" : "Tsis Yog";
+    const confirm = next === "en" ? "Yes, change" : "Yog, Hloov";
+    Alert.alert(title, msg, [
+      { text: cancel, style: "cancel" },
+      { text: confirm, onPress: async () => {
+        await setLang(next);
+        // refresh app by re-routing to root
+        setTimeout(() => router.replace("/(tabs)/discover" as never), 50);
+      } },
+    ]);
+  }, [lang, setLang, router]);
+
   return (
     <View style={[s.ct, { paddingTop: ins.top }]}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -251,11 +267,11 @@ export default function SettingsScreen() {
             <Text style={s.rowLabel}>App Language</Text>
             <Text style={s.rowSub}>Your language preference</Text>
             <View style={s.langRow}>
-              <TouchableOpacity onPress={() => setLang("en")} style={[s.langChip, lang === "en" && s.langChipOn]} testID="lang-en" activeOpacity={0.85}>
+              <TouchableOpacity onPress={() => confirmLangChange("en")} style={[s.langChip, lang === "en" && s.langChipOn]} testID="lang-en" activeOpacity={0.85}>
                 <Text style={s.langFlag}>🇺🇸</Text>
                 <Text style={[s.langTxt, lang === "en" && s.langTxtOn]}>English</Text>
               </TouchableOpacity>
-              <TouchableOpacity onPress={() => setLang("hmn")} style={[s.langChip, lang === "hmn" && s.langChipOn]} testID="lang-hmn" activeOpacity={0.85}>
+              <TouchableOpacity onPress={() => confirmLangChange("hmn")} style={[s.langChip, lang === "hmn" && s.langChipOn]} testID="lang-hmn" activeOpacity={0.85}>
                 <Text style={s.langFlag}>🌿</Text>
                 <Text style={[s.langTxt, lang === "hmn" && s.langTxtOn]}>Hmoob</Text>
               </TouchableOpacity>
@@ -385,7 +401,6 @@ export default function SettingsScreen() {
             { k: "likes", label: "New Likes" },
             { k: "messages", label: "New Messages" },
             { k: "push", label: "Push Notifications" },
-            { k: "promos", label: "Promotions & Tips" },
           ].map(r => (
             <View key={r.k} style={s.card}>
               <View style={s.rowToggle}>

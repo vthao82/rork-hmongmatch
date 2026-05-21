@@ -2,12 +2,15 @@ import React, { useState, useRef, useEffect } from "react";
 import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert } from "react-native";
 import { useLocalSearchParams, Stack, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Image } from "expo-image";
 import { Send, Video, Lock } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { conversations, profiles, Message } from "@/mocks/profiles";
 import { useTier } from "@/providers/TierProvider";
+
+const chatKey = (id: string) => `hmongdate.chat.${id}.v1`;
 
 export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -18,7 +21,30 @@ export default function ChatScreen() {
   const cv = conversations.find(c => c.profile.id === id);
   const [ms, setMs] = useState<Message[]>(cv?.messages ?? []);
   const [tx, setTx] = useState<string>("");
+  const [hydrated, setHydrated] = useState<boolean>(false);
   const lr = useRef<FlatList>(null);
+
+  // Hydrate persisted messages
+  useEffect(() => {
+    if (!id) return;
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(chatKey(id));
+        if (raw) {
+          const parsed = JSON.parse(raw) as Message[];
+          if (Array.isArray(parsed)) setMs(parsed);
+        }
+      } catch (e) { console.log("chat hydrate error", e); }
+      finally { setHydrated(true); }
+    })();
+  }, [id]);
+
+  // Persist on change
+  useEffect(() => {
+    if (!hydrated || !id) return;
+    AsyncStorage.setItem(chatKey(id), JSON.stringify(ms)).catch(e => console.log("chat save error", e));
+  }, [ms, id, hydrated]);
+
   useEffect(() => { if (ms.length > 0) setTimeout(() => lr.current?.scrollToEnd({ animated: true }), 100); }, [ms]);
 
   if (!pr) return <View style={s.cen}><Text style={s.err}>Conversation not found</Text></View>;
