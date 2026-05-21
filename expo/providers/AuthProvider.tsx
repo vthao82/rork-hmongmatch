@@ -18,15 +18,30 @@ export type AuthState = {
 
 function extractParams(url: string): Record<string, string> {
   const out: Record<string, string> = {};
+  if (!url) return out;
+  const parsePairs = (segment: string) => {
+    segment.split("&").forEach((pair) => {
+      if (!pair) return;
+      const eq = pair.indexOf("=");
+      const k = eq >= 0 ? pair.slice(0, eq) : pair;
+      const v = eq >= 0 ? pair.slice(eq + 1) : "";
+      if (!k) return;
+      try {
+        out[decodeURIComponent(k)] = decodeURIComponent(v);
+      } catch {
+        out[k] = v;
+      }
+    });
+  };
   try {
-    const u = new URL(url);
-    u.searchParams.forEach((v, k) => { out[k] = v; });
-    const hash = u.hash?.startsWith("#") ? u.hash.slice(1) : u.hash ?? "";
-    if (hash) {
-      hash.split("&").forEach((pair) => {
-        const [k, v] = pair.split("=");
-        if (k) out[decodeURIComponent(k)] = decodeURIComponent(v ?? "");
-      });
+    const qIdx = url.indexOf("?");
+    const hIdx = url.indexOf("#");
+    if (qIdx >= 0) {
+      const end = hIdx > qIdx ? hIdx : url.length;
+      parsePairs(url.slice(qIdx + 1, end));
+    }
+    if (hIdx >= 0) {
+      parsePairs(url.slice(hIdx + 1));
     }
   } catch (e) {
     console.log("[auth] url parse error", e);
