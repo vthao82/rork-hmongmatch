@@ -249,7 +249,7 @@ export default function SettingsScreen() {
         <Section title="Language">
           <View style={s.card}>
             <Text style={s.rowLabel}>App Language</Text>
-            <Text style={s.rowSub}>Choose how Hmong Date displays text. You can change this anytime.</Text>
+            <Text style={s.rowSub}>Your language preference</Text>
             <View style={s.langRow}>
               <TouchableOpacity onPress={() => setLang("en")} style={[s.langChip, lang === "en" && s.langChipOn]} testID="lang-en" activeOpacity={0.85}>
                 <Text style={s.langFlag}>🇺🇸</Text>

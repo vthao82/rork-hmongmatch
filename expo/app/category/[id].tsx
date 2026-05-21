@@ -92,7 +92,6 @@ export default function CategoryScreen() {
             {filtered.map(p => (
               <TouchableOpacity key={p.id} style={[s.card, { width: CW }]} activeOpacity={0.85} onPress={() => router.push(`/user/${p.id}`)} testID={`cat-profile-${p.id}`}>
                 <Image source={{ uri: p.photos[0] }} style={s.img} contentFit="cover" />
-                <View style={s.ov} />
                 {p.isOnline && <View style={s.onlineDot} />}
                 <View style={s.info}>
                   <View style={s.nameRow}>
@@ -127,6 +126,7 @@ const s = StyleSheet.create({
   card: { height: CW * 1.4, borderRadius: 16, overflow: "hidden", backgroundColor: "#111" },
   img: { ...StyleSheet.absoluteFillObject },
   ov: { position: "absolute", left: 0, right: 0, bottom: 0, height: "55%", backgroundColor: "rgba(0,0,0,0.5)" },
+  gradOv: { position: "absolute", left: 0, right: 0, bottom: 0, height: "40%", backgroundColor: "rgba(0,0,0,0.55)" },
   onlineDot: { position: "absolute", top: 10, right: 10, width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.online, borderWidth: 2, borderColor: "#000" },
   info: { position: "absolute", left: 10, right: 10, bottom: 10 },
   nameRow: { flexDirection: "row", alignItems: "center", gap: 4 },

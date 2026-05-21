@@ -32,8 +32,10 @@ function today(): string {
   return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 }
 
+const DISLIKE_START = 10;
+
 function emptyUsage(): Usage {
-  return { date: today(), likes: 0, dislikes: 0, swipes: 0, rewinds: 0, messages: 0, seenIds: [] };
+  return { date: today(), likes: 0, dislikes: DISLIKE_START, swipes: 0, rewinds: 0, messages: 0, seenIds: [] };
 }
 
 export const [TierProvider, useTier] = createContextHook(() => {

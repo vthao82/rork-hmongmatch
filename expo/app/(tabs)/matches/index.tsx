@@ -2,13 +2,15 @@ import React, { useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ScrollView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
-import { Heart, Star, Zap, ArrowRight } from "lucide-react-native";
+import { Heart, Star, Zap, ArrowRight, Ban, Crown } from "lucide-react-native";
 import { useRouter } from "expo-router";
+import { Modal, Alert } from "react-native";
 import Colors from "@/constants/colors";
 import HmongMatchHeader from "@/components/HmongMatchHeader";
 import RedBackground from "@/components/RedBackground";
 import { profiles } from "@/mocks/profiles";
 import { useLikes, DAILY_LIMIT } from "@/providers/LikesProvider";
+import { useTier } from "@/providers/TierProvider";
 
 const SW = Dimensions.get("window").width;
 const CW = (SW - 32 - 12) / 2;
@@ -17,8 +19,18 @@ export default function LikesScreen() {
   const ins = useSafeAreaInsets();
   const router = useRouter();
   const { used, premium, likedIds } = useLikes();
+  const { isPaid } = useTier();
   const [tab, setTab] = useState<"likes" | "liked" | "top">("liked");
-  const myLiked = profiles.filter(p => likedIds.includes(p.id));
+  const [blocked, setBlocked] = useState<string[]>([]);
+  const [upgradeOpen, setUpgradeOpen] = useState<boolean>(false);
+  const myLiked = profiles.filter(p => likedIds.includes(p.id) && !blocked.includes(p.id));
+
+  const blockUser = (id: string, name: string) => {
+    Alert.alert("Block " + name + "?", "You won't see this person again and they won't see you.", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Block", style: "destructive", onPress: () => setBlocked(b => [...b, id]) },
+    ]);
+  };
 
   const likesCount = premium ? used : used;
   const shownRemaining = premium ? "Unlimited" : `${Math.max(0, DAILY_LIMIT - used)} left today`;
@@ -68,6 +80,11 @@ export default function LikesScreen() {
                     <Text style={s.pickTime}>{p.distance}</Text>
                   </View>
                   <View style={s.likedBadge}><Heart size={12} color="#FFF" fill="#FFF" /></View>
+                  {isPaid && (
+                    <TouchableOpacity onPress={() => blockUser(p.id, p.name)} style={s.blockBadge} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} testID={`block-${p.id}`}>
+                      <Ban size={12} color="#FFF" />
+                    </TouchableOpacity>
+                  )}
                 </TouchableOpacity>
               ))}
             </View>
@@ -93,7 +110,7 @@ export default function LikesScreen() {
           <Text style={s.sectionHead}>Who liked you</Text>
           <View style={s.grid}>
             {profiles.slice(0, 4).map(p => (
-              <View key={p.id} style={[s.pick, { width: CW }]}>
+              <TouchableOpacity key={p.id} style={[s.pick, { width: CW }]} activeOpacity={0.85} onPress={() => { if (!premium && !isPaid) setUpgradeOpen(true); else router.push(`/user/${p.id}`); }} testID={`liked-by-${p.id}`}>
                 <Image source={{ uri: p.photos[0] }} style={s.pickImg} contentFit="cover" blurRadius={premium ? 0 : 14} />
                 <View style={s.pickOverlay} />
                 <View style={s.pickInfo}>
@@ -104,7 +121,7 @@ export default function LikesScreen() {
                     <Heart size={28} color={Colors.accent} fill={Colors.accent} />
                   </View>
                 )}
-              </View>
+              </TouchableOpacity>
             ))}
           </View>
 
@@ -119,15 +136,15 @@ export default function LikesScreen() {
           <Text style={s.topPrompt}>Upgrade to Hmong Date Gold™ for more Top Picks!</Text>
           <View style={s.grid}>
             {profiles.slice(0, 4).map(p => (
-              <View key={p.id} style={[s.pick, { width: CW }]}>
-                <Image source={{ uri: p.photos[0] }} style={s.pickImg} contentFit="cover" blurRadius={8} />
+              <TouchableOpacity key={p.id} style={[s.pick, { width: CW }]} activeOpacity={0.85} onPress={() => { if (!isPaid) setUpgradeOpen(true); else router.push(`/user/${p.id}`); }} testID={`top-${p.id}`}>
+                <Image source={{ uri: p.photos[0] }} style={s.pickImg} contentFit="cover" blurRadius={isPaid ? 0 : 8} />
                 <View style={s.pickOverlay} />
                 <View style={s.pickInfo}>
-                  <Text style={s.pickName}>{p.name}, {p.age}</Text>
+                  <Text style={s.pickName}>{isPaid ? `${p.name}, ${p.age}` : "???"}</Text>
                   <Text style={s.pickTime}>14h left</Text>
                 </View>
                 <View style={s.pickStar}><Star size={14} color="#4A90D9" fill="#4A90D9" /></View>
-              </View>
+              </TouchableOpacity>
             ))}
           </View>
           <View style={s.unlockWrap}>
@@ -137,6 +154,20 @@ export default function LikesScreen() {
           </View>
         </ScrollView>
       )}
+
+      <Modal visible={upgradeOpen} transparent animationType="fade" onRequestClose={() => setUpgradeOpen(false)}>
+        <View style={s.mdl}>
+          <View style={s.mdlCard}>
+            <Crown size={36} color={Colors.accent} />
+            <Text style={s.mdlTitle}>Upgrade to see who likes you</Text>
+            <Text style={s.mdlSub}>Plus & Gold members can see everyone who likes them and unlock all Top Picks.</Text>
+            <TouchableOpacity style={s.mdlCta} onPress={() => { setUpgradeOpen(false); router.push("/subscription"); }} testID="upgrade-likes">
+              <Text style={s.mdlCtaTxt}>See plans</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setUpgradeOpen(false)}><Text style={s.mdlLater}>Maybe later</Text></TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -181,4 +212,12 @@ const s = StyleSheet.create({
   startBtn: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: Colors.primary, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 999, marginTop: 14 },
   startBtnText: { color: "#FFF", fontWeight: "800" as const, fontSize: 14 },
   likedBadge: { position: "absolute", top: 10, right: 10, width: 26, height: 26, borderRadius: 13, backgroundColor: Colors.crimson, alignItems: "center", justifyContent: "center" },
+  blockBadge: { position: "absolute", top: 10, left: 10, width: 26, height: 26, borderRadius: 13, backgroundColor: "rgba(0,0,0,0.7)", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.3)" },
+  mdl: { flex: 1, backgroundColor: "rgba(0,0,0,0.75)", justifyContent: "center", alignItems: "center", padding: 28 },
+  mdlCard: { backgroundColor: "#16060c", borderRadius: 22, padding: 26, alignItems: "center", width: "100%", borderWidth: 1, borderColor: "rgba(212,168,67,0.3)" },
+  mdlTitle: { color: "#FFF", fontSize: 19, fontWeight: "700" as const, marginTop: 12, textAlign: "center" as const },
+  mdlSub: { color: "rgba(255,255,255,0.7)", fontSize: 13, textAlign: "center" as const, marginTop: 8, lineHeight: 19 },
+  mdlCta: { backgroundColor: Colors.accent, paddingHorizontal: 32, paddingVertical: 14, borderRadius: 999, marginTop: 18 },
+  mdlCtaTxt: { color: "#1a1404", fontSize: 14, fontWeight: "700" as const },
+  mdlLater: { color: "rgba(255,255,255,0.5)", marginTop: 14, fontSize: 13 },
 });

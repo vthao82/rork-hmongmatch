@@ -85,8 +85,12 @@ export default function ProfileScreen() {
         </View>
         <Text style={s.progressSub}>Complete your profile to be seen by more people!</Text>
 
-        <TaskCard icon={<ImageIcon size={28} color={Colors.primary} />} title="Add at least 4 photos" sub={photoCount >= 4 ? `${photoCount} photos added` : `${photoCount}/4 — tap to add more.`} pct="+28%" done={photoCount >= 4} onPress={() => router.push({ pathname: "/edit-profile", params: { focus: "photos" } })} testID="task-photos" />
-        <TaskCard icon={<Type size={28} color={Colors.primary} />} title='Add "About Me"' sub={hasBio ? "Looking good — tap to edit." : "Get up to 25% more matches with an intro."} pct="+30%" done={hasBio} onPress={() => router.push({ pathname: "/edit-profile", params: { focus: "bio" } })} testID="task-bio" />
+        {photoCount < 4 && (
+          <TaskCard icon={<ImageIcon size={28} color={Colors.primary} />} title="Add at least 4 photos" sub={`${photoCount}/4 — tap to add more.`} pct="+28%" done={false} onPress={() => router.push({ pathname: "/edit-profile", params: { focus: "photos" } })} testID="task-photos" />
+        )}
+        {!hasBio && (
+          <TaskCard icon={<Type size={28} color={Colors.primary} />} title='Add "About Me"' sub="Get up to 25% more matches with an intro." pct="+30%" done={false} onPress={() => router.push({ pathname: "/edit-profile", params: { focus: "bio" } })} testID="task-bio" />
+        )}
 
         <View style={s.statsRow}>
           <StatCard icon={<Star size={26} color="#4A90D9" fill="#4A90D9" />} label="0 Super Likes" cta="GET MORE" color="#4A90D9" onPress={() => router.push({ pathname: "/subscription", params: { focus: "superlikes" } })} testID="stat-superlikes" />

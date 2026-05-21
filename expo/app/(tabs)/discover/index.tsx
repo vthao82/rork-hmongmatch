@@ -48,10 +48,15 @@ function ProfileCard({ profile, height }: { profile: Profile; height: number }) 
       <View style={st.info} pointerEvents="none">
         <View style={st.nameRow}>
           <Text style={st.name}>{profile.name}</Text>
-          <View style={[st.badge, { backgroundColor: verified ? "#2a8ae0" : "#e89216" }]}>
-            <BadgeCheck size={12} color="#FFF" fill="#FFF" />
-            <Text style={st.badgeTxt}>{verified ? "Photo Verified" : "Not Verified"}</Text>
-          </View>
+          {verified ? (
+            <View style={st.badgeDot}>
+              <BadgeCheck size={18} color="#FFF" fill="#2a8ae0" />
+            </View>
+          ) : (
+            <View style={st.badgeDot}>
+              <BadgeCheck size={18} color="#FFF" fill="#e89216" />
+            </View>
+          )}
         </View>
         <Text style={st.meta}>{profile.age} · <MapPin size={11} color="rgba(255,255,255,0.85)" /> {profile.location}</Text>
         <Text style={st.clan}>{profile.clan} Clan</Text>
@@ -245,6 +250,7 @@ const st = StyleSheet.create({
   name: { color: "#FFF", fontSize: 30, fontWeight: "700" as const },
   badge: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999 },
   badgeTxt: { color: "#FFF", fontSize: 10, fontWeight: "700" as const, letterSpacing: 0.4 },
+  badgeDot: { width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center" },
   meta: { color: "rgba(255,255,255,0.92)", fontSize: 14, marginTop: 4 },
   clan: { color: Colors.accentLight, fontSize: 14, fontWeight: "600" as const, marginTop: 4 },
   actions: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 22, paddingTop: 14, paddingBottom: 6 },
