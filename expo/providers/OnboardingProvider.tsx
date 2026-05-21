@@ -1,6 +1,8 @@
 import createContextHook from "@nkzw/create-context-hook";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useState, useCallback } from "react";
+import { supabase } from "@/lib/supabase";
+import { syncProfile } from "@/lib/profileSync";
 
 export type GenderId = "man" | "woman" | "beyond";
 export type SeekingId = "men" | "women" | "beyond" | "everyone";
@@ -112,7 +114,16 @@ export const [OnboardingProvider, useOnboarding] = createContextHook(() => {
   const finish = useCallback(async () => {
     await AsyncStorage.setItem(DONE, "1");
     setCompleted(true);
-  }, []);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user?.id) {
+        const res = await syncProfile(user.id, data);
+        if (!res.ok) console.log("[onboarding] profile sync failed", res.error);
+      }
+    } catch (e) {
+      console.log("[onboarding] finish sync error", e);
+    }
+  }, [data]);
 
   const reset = useCallback(async () => {
     await AsyncStorage.multiRemove([KEY, DONE]);
