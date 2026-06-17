@@ -115,10 +115,13 @@ export const [OnboardingProvider, useOnboarding] = createContextHook(() => {
     await AsyncStorage.setItem(DONE, "1");
     setCompleted(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user?.id) {
-        const res = await syncProfile(user.id, data);
+      const userResp = await supabase.auth.getUser();
+      const userId = userResp?.data?.user?.id;
+      if (userId) {
+        const res = await syncProfile(userId, data);
         if (!res.ok) console.log("[onboarding] profile sync failed", res.error);
+      } else {
+        console.log("[onboarding] no authenticated user, skipping profile sync");
       }
     } catch (e) {
       console.log("[onboarding] finish sync error", e);

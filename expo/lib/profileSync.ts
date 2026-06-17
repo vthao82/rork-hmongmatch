@@ -61,9 +61,13 @@ export async function syncProfile(userId: string, data: OnboardingData): Promise
       extras: data.extras ?? {},
       updated_at: new Date().toISOString(),
     };
-    const { error } = await supabase.from("profiles").upsert(row, { onConflict: "id" });
+    const { error, status } = await supabase.from("profiles").upsert(row, { onConflict: "id" });
     if (error) {
-      console.log("[profileSync] upsert error", error.message);
+      console.log("[profileSync] upsert error", error.message, "status", status);
+      // RLS / permission errors are non-fatal during development
+      if (status === 403 || error.code === "42501" || error.message.includes("policy")) {
+        console.log("[profileSync] RLS may be blocking — run the RLS policy SQL in Supabase Dashboard");
+      }
       return { ok: false, error: error.message };
     }
     return { ok: true };
