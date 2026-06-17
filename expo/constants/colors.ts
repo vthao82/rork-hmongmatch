@@ -20,6 +20,7 @@ const Colors = {
 
   background: "#FFFFFF",
   surface: "#FFFFFF",
+  surfaceAlt: "#fafafa",
   card: "#FFFFFF",
   text: "#1a1a1f",
   textSecondary: "#6b6b75",

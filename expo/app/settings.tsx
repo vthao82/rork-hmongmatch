@@ -106,7 +106,7 @@ function RangeSlider({ low, high, onChange, min = 18, max = 80 }: { low: number;
   );
 }
 
-function PickerModal({ visible, config, selected, onClose, onSave }: { visible: boolean; config: PickerConfig | null; selected: string[]; onClose: () => void; onSave: (vals: string[]) => void }) {
+function PickerModal({ visible, config, selected, onClose, onSave, t }: { visible: boolean; config: PickerConfig | null; selected: string[]; onClose: () => void; onSave: (vals: string[]) => void; t: (k: any, vars?: any) => string }) {
   const [local, setLocal] = useState<string[]>(selected);
   useEffect(() => { setLocal(selected); }, [selected, visible]);
   if (!config) return null;
@@ -426,7 +426,7 @@ export default function SettingsScreen() {
         </Section>
       </ScrollView>
 
-      <PickerModal visible={picker !== null} config={picker} selected={picker ? values[picker.key] ?? [] : []} onClose={() => setPicker(null)} onSave={savePicker} />
+      <PickerModal visible={picker !== null} config={picker} selected={picker ? values[picker.key] ?? [] : []} onClose={() => setPicker(null)} onSave={savePicker} t={t} />
 
       <Modal visible={locOpen} animationType="slide" presentationStyle="pageSheet" onRequestClose={() => setLocOpen(false)}>
         <View style={s.modal}>

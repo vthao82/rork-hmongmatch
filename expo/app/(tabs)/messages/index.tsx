@@ -1,27 +1,99 @@
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useState, useEffect } from "react";
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, Modal } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Image } from "expo-image";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { MessageSquarePlus, Search, X as XIcon } from "lucide-react-native";
 import Colors from "@/constants/colors";
 import HmongMatchHeader from "@/components/HmongMatchHeader";
 import RedBackground from "@/components/RedBackground";
-import { conversations, matches, Conversation } from "@/mocks/profiles";
+import { conversations as mockConversations, matches, Conversation, profiles } from "@/mocks/profiles";
+import { useLikes } from "@/providers/LikesProvider";
 import { useT } from "@/providers/LanguageProvider";
+
+const CONVOS_KEY = "hmongdate.convos.v1";
+
+function buildConvo(profileId: string): Conversation | null {
+  const p = profiles.find(x => x.id === profileId);
+  if (!p) return null;
+  return {
+    id: `conv_${p.id}`,
+    profile: p,
+    lastMessage: "You matched! Say hello 👋",
+    lastMessageTime: "Just now",
+    unreadCount: 0,
+    messages: [],
+  };
+}
 
 export default function ChatTab() {
   const ins = useSafeAreaInsets();
   const router = useRouter();
   const t = useT();
+  const { likedIds } = useLikes();
   const [q, setQ] = useState<string>("");
   const [newOpen, setNewOpen] = useState<boolean>(false);
+  const [persistedConvos, setPersistedConvos] = useState<Conversation[]>([]);
 
-  const filtered = useMemo<Conversation[]>(() => {
-    if (!q.trim()) return conversations;
+  useEffect(() => {
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(CONVOS_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw) as Conversation[];
+          if (Array.isArray(parsed)) setPersistedConvos(parsed);
+        }
+      } catch (e) { console.log("convos hydrate", e); }
+    })();
+  }, []);
+
+  // Generate conversations from liked profiles that aren't already in mock or persisted
+  useEffect(() => {
+    if (likedIds.length === 0) return;
+    (async () => {
+      try {
+        const existing = new Set([
+          ...mockConversations.map(c => c.profile.id),
+          ...persistedConvos.map(c => c.profile.id),
+        ]);
+        const newIds = likedIds.filter(id => !existing.has(id));
+        if (newIds.length === 0) return;
+        const newConvos = newIds.map(id => buildConvo(id)).filter(Boolean) as Conversation[];
+        if (newConvos.length === 0) return;
+        const merged = [...persistedConvos, ...newConvos];
+        setPersistedConvos(merged);
+        await AsyncStorage.setItem(CONVOS_KEY, JSON.stringify(merged)).catch(() => {});
+      } catch (e) { console.log("convos sync", e); }
+    })();
+  }, [likedIds]);
+
+  // Merge mock + persisted conversations, deduplicate by profile id
+  const allConvos = useMemo<Conversation[]>(() => {
+    const seen = new Set<string>();
+    const merged: Conversation[] = [];
+    // Persisted first (user-created)
+    for (const c of persistedConvos) {
+      if (!seen.has(c.profile.id)) {
+        seen.add(c.profile.id);
+        merged.push(c);
+      }
+    }
+    // Then mock (fallback)
+    for (const c of mockConversations) {
+      if (!seen.has(c.profile.id)) {
+        seen.add(c.profile.id);
+        merged.push(c);
+      }
+    }
+    return merged;
+  }, [persistedConvos]);
+
+  const filtered: Conversation[] = useMemo(() => {
+    if (!q.trim()) return allConvos;
     const needle = q.trim().toLowerCase();
-    return conversations.filter(c => c.profile.name.toLowerCase().includes(needle));
-  }, [q]);
+    return allConvos.filter(c => c.profile.name.toLowerCase().includes(needle));
+  }, [q, allConvos]);
 
   return (
     <View style={[s.ct, { paddingTop: ins.top }]}>
@@ -40,7 +112,7 @@ export default function ChatTab() {
           style={s.search}
           value={q}
           onChangeText={setQ}
-          placeholder={t("searchMatches", { n: conversations.length })}
+          placeholder={t("searchMatches", { n: allConvos.length })}
           placeholderTextColor="rgba(255,255,255,0.45)"
           testID="chat-search"
         />

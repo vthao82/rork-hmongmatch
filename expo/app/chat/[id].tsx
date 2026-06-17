@@ -21,12 +21,12 @@ export default function ChatScreen() {
   const { tier, consumeMessage } = useTier();
   const pr = profiles.find(x => x.id === id);
   const cv = conversations.find(c => c.profile.id === id);
-  const [ms, setMs] = useState<Message[]>(cv?.messages ?? []);
+  const [ms, setMs] = useState<Message[]>([]);
   const [tx, setTx] = useState<string>("");
   const [hydrated, setHydrated] = useState<boolean>(false);
   const lr = useRef<FlatList>(null);
 
-  // Hydrate persisted messages
+  // Hydrate persisted messages, fall back to mock messages
   useEffect(() => {
     if (!id) return;
     (async () => {
@@ -34,14 +34,22 @@ export default function ChatScreen() {
         const raw = await AsyncStorage.getItem(chatKey(id));
         if (raw) {
           const parsed = JSON.parse(raw) as Message[];
-          if (Array.isArray(parsed)) setMs(parsed);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setMs(parsed);
+            setHydrated(true);
+            return;
+          }
+        }
+        // Fall back to mock messages if available
+        if (cv?.messages && cv.messages.length > 0) {
+          setMs(cv.messages);
         }
       } catch (e) { console.log("chat hydrate error", e); }
       finally { setHydrated(true); }
     })();
   }, [id]);
 
-  // Persist on change
+  // Persist on change (only after hydration to avoid overwriting persisted data)
   useEffect(() => {
     if (!hydrated || !id) return;
     AsyncStorage.setItem(chatKey(id), JSON.stringify(ms)).catch(e => console.log("chat save error", e));
@@ -49,7 +57,14 @@ export default function ChatScreen() {
 
   useEffect(() => { if (ms.length > 0) setTimeout(() => lr.current?.scrollToEnd({ animated: true }), 100); }, [ms]);
 
-  if (!pr) return <View style={s.cen}><Text style={s.err}>{t("convNotFound")}</Text></View>;
+  if (!pr) return (
+    <View style={s.cen}>
+      <Text style={s.err}>{t("convNotFound")}</Text>
+      <TouchableOpacity style={{marginTop:16}} onPress={() => router.back()}>
+        <Text style={{color:Colors.primary,fontSize:14,fontWeight:"700" as const}}>{t("back")}</Text>
+      </TouchableOpacity>
+    </View>
+  );
 
   const send = () => {
     if (!tx.trim()) return;
