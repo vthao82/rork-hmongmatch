@@ -32,21 +32,15 @@ export const [LikesProvider, useLikes] = createContextHook(() => {
           AsyncStorage.getItem(LIKED),
           AsyncStorage.getItem(REWIND),
         ]);
-        if (s) {
-          const parsed = JSON.parse(s) as Stored;
-          if (parsed.date === today()) setUsed(parsed.used);
-          else setUsed(0);
+        if (s && s !== "null") {
+          try { const parsed = JSON.parse(s) as Stored; if (parsed?.date === today()) setUsed(parsed.used); else setUsed(0); } catch (_e) { setUsed(0); }
         }
         if (p === "1") setPremium(true);
-        if (l) {
+        if (l && l !== "null") {
           try { setLikedIds(JSON.parse(l) as string[]); } catch (_e) { setLikedIds([]); }
         }
-        if (r) {
-          try {
-            const parsed = JSON.parse(r) as Stored;
-            if (parsed.date === today()) setRewindUsed(parsed.used);
-            else setRewindUsed(0);
-          } catch (_e) { setRewindUsed(0); }
+        if (r && r !== "null") {
+          try { const parsed = JSON.parse(r) as Stored; if (parsed?.date === today()) setRewindUsed(parsed.used); else setRewindUsed(0); } catch (_e) { setRewindUsed(0); }
         }
       } catch (e) {
         console.log("likes hydrate error", e);

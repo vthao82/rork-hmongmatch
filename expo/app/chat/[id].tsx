@@ -32,13 +32,15 @@ export default function ChatScreen() {
     (async () => {
       try {
         const raw = await AsyncStorage.getItem(chatKey(id));
-        if (raw) {
-          const parsed = JSON.parse(raw) as Message[];
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            setMs(parsed);
-            setHydrated(true);
-            return;
-          }
+        if (raw && raw !== "null") {
+          try {
+            const parsed = JSON.parse(raw) as Message[];
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              setMs(parsed);
+              setHydrated(true);
+              return;
+            }
+          } catch (_e) { console.log("chat parse", _e); }
         }
         // Fall back to mock messages if available
         if (cv?.messages && cv.messages.length > 0) {

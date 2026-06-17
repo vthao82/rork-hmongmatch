@@ -40,9 +40,8 @@ export default function ChatTab() {
     (async () => {
       try {
         const raw = await AsyncStorage.getItem(CONVOS_KEY);
-        if (raw) {
-          const parsed = JSON.parse(raw) as Conversation[];
-          if (Array.isArray(parsed)) setPersistedConvos(parsed);
+        if (raw && raw !== "null") {
+          try { const parsed = JSON.parse(raw) as Conversation[]; if (Array.isArray(parsed)) setPersistedConvos(parsed); } catch (_e) { console.log("convos parse", _e); }
         }
       } catch (e) { console.log("convos hydrate", e); }
     })();

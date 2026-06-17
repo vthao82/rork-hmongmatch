@@ -177,8 +177,8 @@ export default function SettingsScreen() {
     (async () => {
       try {
         const [adv, pref] = await Promise.all([AsyncStorage.getItem(ADV_KEY), AsyncStorage.getItem(PREF_KEY)]);
-        if (adv) setValues(prev => ({ ...prev, ...JSON.parse(adv) }));
-        if (pref) {
+        if (adv && adv !== "null") { try { setValues(prev => ({ ...prev, ...JSON.parse(adv) })); } catch (_e) {} }
+        if (pref && pref !== "null") { try {
           const p = JSON.parse(pref);
           if (p.worldwide !== undefined) setWorldwide(p.worldwide);
           if (p.usOnly !== undefined) setUsOnly(p.usOnly);
@@ -187,7 +187,7 @@ export default function SettingsScreen() {
           if (p.location) setLocation(p.location);
           if (p.ageLow !== undefined) setAgeLow(p.ageLow);
           if (p.ageHigh !== undefined) setAgeHigh(p.ageHigh);
-        }
+        } catch (_e) {} }
       } catch (e) { console.log("settings hydrate", e); }
     })();
   }, []);
@@ -195,7 +195,7 @@ export default function SettingsScreen() {
   const persistPref = useCallback(async (patch: object) => {
     try {
       const cur = await AsyncStorage.getItem(PREF_KEY);
-      const merged = { ...(cur ? JSON.parse(cur) : {}), ...patch };
+      const merged = { ...(cur && cur !== "null" ? (() => { try { return JSON.parse(cur); } catch (_e) { return {}; } })() : {}), ...patch };
       await AsyncStorage.setItem(PREF_KEY, JSON.stringify(merged));
     } catch (e) { console.log("settings persist", e); }
   }, []);

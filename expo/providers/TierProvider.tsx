@@ -50,10 +50,8 @@ export const [TierProvider, useTier] = createContextHook(() => {
       try {
         const [t, u] = await Promise.all([AsyncStorage.getItem(KEY), AsyncStorage.getItem(USAGE_KEY)]);
         if (t === "plus" || t === "gold") setTier(t);
-        if (u) {
-          const parsed = JSON.parse(u) as Usage;
-          if (parsed.date === today()) setUsage({ ...emptyUsage(), ...parsed });
-          else setUsage(emptyUsage());
+        if (u && u !== "null") {
+          try { const parsed = JSON.parse(u) as Usage; if (parsed?.date === today()) setUsage({ ...emptyUsage(), ...parsed }); else setUsage(emptyUsage()); } catch (_e) { setUsage(emptyUsage()); }
         }
       } catch (e) { console.log("tier hydrate", e); }
       finally { setHydrated(true); }

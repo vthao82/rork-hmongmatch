@@ -93,7 +93,7 @@ export const [OnboardingProvider, useOnboarding] = createContextHook(() => {
     (async () => {
       try {
         const [d, c] = await Promise.all([AsyncStorage.getItem(KEY), AsyncStorage.getItem(DONE)]);
-        if (d) setData({ ...defaults, ...JSON.parse(d) });
+        if (d && d !== "null") { try { setData({ ...defaults, ...JSON.parse(d) }); } catch (_e) { console.log("onboarding parse", _e); } }
         if (c === "1") setCompleted(true);
       } catch (e) {
         console.log("onboarding hydrate error", e);
