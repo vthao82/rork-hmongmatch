@@ -63,10 +63,16 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
       console.log("[auth] getSession error", e);
       if (mounted) setLoading(false);
     });
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, s) => {
-      try { setSession(s); } catch (e) { console.log("[auth] onAuthStateChange error", e); }
-    });
-    return () => { try { mounted = false; sub.subscription.unsubscribe(); } catch (_e) {} };
+    let sub: { subscription: { unsubscribe: () => void } } | null = null;
+    try {
+      const result = supabase.auth.onAuthStateChange((_event, s) => {
+        try { setSession(s); } catch (e) { console.log("[auth] onAuthStateChange error", e); }
+      });
+      sub = result?.data ?? null;
+    } catch (e) {
+      console.log("[auth] onAuthStateChange setup error", e);
+    }
+    return () => { try { mounted = false; sub?.subscription?.unsubscribe(); } catch (_e) {} };
   }, []);
 
   const signInWithGoogle = useCallback(async (): Promise<{ ok: boolean; error?: string }> => {
