@@ -1,6 +1,7 @@
 import createContextHook from "@nkzw/create-context-hook";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useState, useCallback } from "react";
+import { upsertProfile } from "@/lib/database";
 
 export type GenderId = "man" | "woman" | "beyond";
 export type SeekingId = "men" | "women" | "beyond" | "everyone";
@@ -108,6 +109,12 @@ export const [OnboardingProvider, useOnboarding] = createContextHook(() => {
   const finish = useCallback(async () => {
     await AsyncStorage.setItem(DONE, "1");
     setCompleted(true);
+    setData(current => {
+      upsertProfile(current).then(({ error }) => {
+        if (error) console.warn("[OnboardingProvider] profile sync error", error);
+      });
+      return current;
+    });
   }, []);
 
   const reset = useCallback(async () => {

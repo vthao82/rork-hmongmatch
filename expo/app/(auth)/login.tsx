@@ -7,6 +7,8 @@ import Svg, { Path } from "react-native-svg";
 import * as AuthSession from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
 import Colors from "@/constants/colors";
+
+WebBrowser.maybeCompleteAuthSession();
 import PajNtaubPattern from "@/components/onboarding/PajNtaubPattern";
 import PillButton from "@/components/onboarding/PillButton";
 import HmongLogo from "@/components/onboarding/HmongLogo";
@@ -47,21 +49,36 @@ export default function LoginScreen() {
     setError(null);
 
     try {
-      const redirectUrl = AuthSession.makeRedirectUri({ scheme: "rork-app" });
+      const redirectUrl = AuthSession.makeRedirectUri({
+        scheme: "rork-app",
+        useProxy: Platform.OS !== "web",
+      });
       const { data, error: signInError } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo: redirectUrl },
+        options: {
+          redirectTo: redirectUrl,
+          queryParams: { prompt: "select_account" },
+        },
       });
 
       if (signInError) throw signInError;
       if (!data?.url) throw new Error("Unable to start Google sign in.");
 
-      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
+      const result = await Promise.race([
+        WebBrowser.openAuthSessionAsync(data.url, redirectUrl),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("Sign-in timed out. Make sure Google is enabled in your Supabase project.")), 60000)
+        ),
+      ]);
+      if (result.type === "cancel" || result.type === "dismiss") {
+        setLoading(false);
+        return;
+      }
       if (result.type !== "success" || !result.url) {
         throw new Error("Google sign in was canceled.");
       }
 
-      const { error: sessionError } = await supabase.auth.getSessionFromUrl({ storeSession: true, url: result.url });
+      const { error: sessionError } = await supabase.auth.exchangeCodeForSession(result.url);
       if (sessionError) throw sessionError;
 
       update({ method: "google" });

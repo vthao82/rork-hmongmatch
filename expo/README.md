@@ -72,7 +72,9 @@ This project is built with the most popular native mobile cross-platform technic
 
 1. **iOS**: Download the [Rork app from the App Store](https://apps.apple.com/app/rork) or [Expo Go](https://apps.apple.com/app/expo-go/id982107779)
 2. **Android**: Download the [Expo Go app from Google Play](https://play.google.com/store/apps/details?id=host.exp.exponent)
-3. Run `bun run start` and scan the QR code from your development server
+3. Run `bun run start` and scan the QR code from your development server.
+   - If the terminal QR code does not show, open the Expo dev tools page at `http://localhost:19002` and scan the QR from the browser.
+   - This app already starts with `--tunnel`, so you can scan from your phone even if it is not on the same Wi-Fi network.
 
 ### **In your browser**
 
