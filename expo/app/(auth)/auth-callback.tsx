@@ -10,13 +10,33 @@ export default function AuthCallbackScreen() {
   useEffect(() => {
     let cancelled = false;
 
-    // If this page loaded in a popup window (web OAuth via WebBrowser.openAuthSessionAsync),
-    // don't exchange the code here. The main window opened us and will exchange the code
-    // when openAuthSessionAsync resolves with this URL. Exchanging here would consume the
-    // one-time code and prevent the main window from completing sign-in.
+    // When opened as a popup (web OAuth flow), exchange the auth code directly
+    // in this window. Supabase stores the session in localStorage which is shared
+    // with the main window on the same origin. After exchanging, close the popup;
+    // the main window detects the session via polling.
     if (Platform.OS === "web" && typeof window !== "undefined" && window.opener) {
-      if (!cancelled) setStatus("Completing sign-in…");
-      // The popup will be closed automatically by WebBrowser.openAuthSessionAsync.
+      const handlePopup = async () => {
+        try {
+          const code = typeof params.code === "string" ? params.code : undefined;
+          const accessToken = typeof params.access_token === "string" ? params.access_token : undefined;
+          const refreshToken = typeof params.refresh_token === "string" ? params.refresh_token : undefined;
+          const error = typeof params.error === "string" ? params.error : undefined;
+
+          if (!error) {
+            if (code) {
+              await supabase.auth.exchangeCodeForSession(code);
+            } else if (accessToken && refreshToken) {
+              await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+            }
+          } else {
+            console.log("[auth-callback] popup received error:", error, typeof params.error_description === "string" ? params.error_description : "");
+          }
+        } catch (e) {
+          console.log("[auth-callback] popup exchange error", e);
+        }
+        try { window.close(); } catch (_e) { /* ignore */ }
+      };
+      handlePopup();
       return () => { cancelled = true; };
     }
 

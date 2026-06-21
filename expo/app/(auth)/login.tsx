@@ -35,6 +35,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState<string>("");
   const [emailSent, setEmailSent] = useState<string | null>(null);
   const [resending, setResending] = useState<boolean>(false);
+  const [mfaPending, setMfaPending] = useState<boolean>(false);
   const fade = useRef(new Animated.Value(0)).current;
   const rise = useRef(new Animated.Value(20)).current;
 
@@ -92,11 +93,20 @@ export default function LoginScreen() {
     }
     setBusy(true);
     update({ method: "email" });
+    let keepBusy = false;
     try {
       if (mode === "signin") {
         const res = await signInWithEmail(trimmed, password);
         if (!res.ok) {
           Alert.alert("Sign-in failed", res.error ?? "Please try again.");
+          return;
+        }
+        if (res.mfaRequired) {
+          // MFA (two-factor) is required. The Supabase UI in the browser
+          // will prompt for the verification code. Once verified, the session
+          // appears and the useEffect above navigates to terms automatically.
+          setMfaPending(true);
+          keepBusy = true;
           return;
         }
         router.push("/(auth)/terms");
@@ -116,7 +126,7 @@ export default function LoginScreen() {
       console.log("email auth error", e);
       Alert.alert("Something went wrong", "Please try again.");
     } finally {
-      setBusy(false);
+      if (!keepBusy) setBusy(false);
     }
   };
 
@@ -225,18 +235,29 @@ export default function LoginScreen() {
               editable={!busy}
               testID="password-input"
             />
-            <PillButton
-              label={busy ? "Please wait…" : mode === "signin" ? t("continueWithEmail") : t("signUpWithEmail")}
-              onPress={onEmail}
-              variant="primary"
-              left={busy ? <ActivityIndicator size="small" color="#FFF" /> : <Mail size={18} color="#FFF" />}
-              testID="continue-email"
-            />
-            <PressableText
-              label={mode === "signin" ? t("noAccount") : t("haveAccount")}
-              onPress={toggleMode}
-              disabled={busy}
-            />
+            {mfaPending ? (
+              <View style={{ alignItems: "center", gap: 12 }}>
+                <ActivityIndicator size="small" color={Colors.gold} />
+                <Text style={{ color: "rgba(245,240,235,0.8)", fontSize: 15, textAlign: "center" }}>
+                  Complete two-factor verification in your browser, then return here.
+                </Text>
+              </View>
+            ) : (
+              <>
+                <PillButton
+                  label={busy ? "Please wait…" : mode === "signin" ? t("continueWithEmail") : t("signUpWithEmail")}
+                  onPress={onEmail}
+                  variant="primary"
+                  left={busy ? <ActivityIndicator size="small" color="#FFF" /> : <Mail size={18} color="#FFF" />}
+                  testID="continue-email"
+                />
+                <PressableText
+                  label={mode === "signin" ? t("noAccount") : t("haveAccount")}
+                  onPress={toggleMode}
+                  disabled={busy}
+                />
+              </>
+            )}
           </Animated.View>
         </View>
 

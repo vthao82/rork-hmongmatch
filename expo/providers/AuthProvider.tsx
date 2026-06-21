@@ -8,6 +8,12 @@ import type { Session, User } from "@supabase/supabase-js";
 
 WebBrowser.maybeCompleteAuthSession();
 
+export type EmailSignInResult = {
+  ok: boolean;
+  error?: string;
+  mfaRequired?: boolean;
+};
+
 export type EmailSignUpResult = {
   ok: boolean;
   error?: string;
@@ -19,7 +25,7 @@ export type AuthState = {
   user: User | null;
   loading: boolean;
   signInWithGoogle: () => Promise<{ ok: boolean; error?: string }>;
-  signInWithEmail: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
+  signInWithEmail: (email: string, password: string) => Promise<EmailSignInResult>;
   signUpWithEmail: (email: string, password: string) => Promise<EmailSignUpResult>;
   resendVerificationEmail: (email: string) => Promise<{ ok: boolean; error?: string }>;
   signOut: () => Promise<void>;
@@ -157,53 +163,47 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
         return { ok: false, error: error?.message ?? "Failed to start sign-in" };
       }
 
-      // Unified approach for all platforms: WebBrowser.openAuthSessionAsync.
-      // - Web: opens a popup that follows the OAuth redirect chain. When the
-      //   popup reaches redirectTo, it closes and we get the callback URL.
-      // - iOS: uses ASWebAuthenticationSession.
-      // - Android: uses Chrome Custom Tabs.
-      //
-      // In cloud simulators these native APIs may be unavailable, so we fall
-      // back to Linking.openURL (system browser) and poll for the session.
       try {
         const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
 
         if (result.type === "success" && result.url) {
-          // Exchange the auth code for a session
           const handled = await handleAuthRedirectUrl(result.url);
           if (handled) return { ok: true };
-
-          // On web the popup may have already stored the session via
-          // detectSessionInUrl before closing; check local storage.
-          const { data: sessData } = await supabase.auth.getSession();
-          if (sessData.session) return { ok: true };
-
-          return { ok: false, error: "Sign-in could not be completed. Please try again." };
         }
-
-        // User cancelled the browser dialog
-        return { ok: false, error: "Sign-in canceled" };
       } catch (wbErr) {
-        // WebBrowser failed (e.g. no Chrome on Android emulator).
-        // Fall back to the system browser and poll for the session.
-        console.log("[auth] WebBrowser failed, falling back to Linking.openURL:", wbErr);
+        console.log("[auth] WebBrowser failed, falling back:", wbErr);
+      }
+
+      // After the popup closes (for any reason — success, cancel, dismiss,
+      // or error), poll for the session. The popup's auth-callback page may
+      // have exchanged the code directly, writing the session to localStorage
+      // (shared with this main window on web) or established it via deep link
+      // on native. This covers all the ways the session could have been
+      // established without our openAuthSessionAsync promise capturing it.
+      for (let i = 0; i < 30; i++) {
+        await new Promise<void>((r) => setTimeout(r, 1000));
+        const { data: sessData } = await supabase.auth.getSession();
+        if (sessData.session) return { ok: true };
+      }
+
+      // If polling didn't find a session, try opening the system browser
+      // as a last resort (native platforms with deep-link support).
+      if (Platform.OS !== "web") {
         try {
           await Linking.openURL(data.url);
         } catch (linkErr) {
-          console.log("[auth] Linking.openURL also failed:", linkErr);
+          console.log("[auth] Linking.openURL failed:", linkErr);
           return { ok: false, error: "Could not open browser. Please make sure a browser is installed." };
         }
-
-        // Poll for the session to appear. The deep-link handler (native)
-        // or the auth-callback route will exchange the code.
         for (let i = 0; i < 30; i++) {
           await new Promise<void>((r) => setTimeout(r, 1000));
           const { data: sessData } = await supabase.auth.getSession();
           if (sessData.session) return { ok: true };
         }
-
         return { ok: false, error: "Sign-in timed out. Please close the browser and try again." };
       }
+
+      return { ok: false, error: "Sign-in could not be completed. Please try again." };
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Unknown sign-in error";
       console.log("[auth] signInWithGoogle error", msg);
@@ -211,15 +211,22 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
     }
   }, []);
 
-  const signInWithEmail = useCallback(async (email: string, password: string): Promise<{ ok: boolean; error?: string }> => {
+  const signInWithEmail = useCallback(async (email: string, password: string): Promise<EmailSignInResult> => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+      const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
       if (error) {
         const msg = error.message;
         if (msg.includes("Invalid login credentials")) {
           return { ok: false, error: "Wrong email or password. Try again or sign up." };
         }
         return { ok: false, error: msg };
+      }
+      // MFA (multi-factor authentication) is required when signInWithPassword
+      // succeeds (no error) but returns a null session. The session will be
+      // established once the user completes the MFA challenge. The
+      // onAuthStateChange listener will fire when that happens.
+      if (!data.session) {
+        return { ok: true, mfaRequired: true };
       }
       return { ok: true };
     } catch (e) {
