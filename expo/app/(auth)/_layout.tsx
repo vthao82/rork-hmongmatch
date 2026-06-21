@@ -35,6 +35,7 @@ export default function AuthLayout() {
       <Stack.Screen name="bio" />
       <Stack.Screen name="location" />
       <Stack.Screen name="complete" />
+      <Stack.Screen name="auth-callback" />
       <Stack.Screen name="account-picker" options={{ presentation: "transparentModal", animation: "fade" }} />
     </Stack>
   );

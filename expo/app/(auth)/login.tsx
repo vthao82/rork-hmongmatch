@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, Text, StyleSheet, Animated, Easing, Platform, Linking, Alert, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, StyleSheet, Animated, Easing, Platform, Linking, Alert, ActivityIndicator } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import Svg, { Path } from "react-native-svg";
+import { Mail } from "lucide-react-native";
 import Colors from "@/constants/colors";
 import PajNtaubPattern from "@/components/onboarding/PajNtaubPattern";
 import PillButton from "@/components/onboarding/PillButton";
@@ -26,9 +27,12 @@ function GoogleG() {
 
 export default function LoginScreen() {
   const { update } = useOnboarding();
-  const { signInWithGoogle } = useAuth();
+  const { signInWithGoogle, signInWithEmail, signUpWithEmail } = useAuth();
   const t = useT();
   const [busy, setBusy] = useState<boolean>(false);
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [email, setEmail] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
   const fade = useRef(new Animated.Value(0)).current;
   const rise = useRef(new Animated.Value(20)).current;
 
@@ -60,6 +64,44 @@ export default function LoginScreen() {
     }
   };
 
+  const onEmail = async () => {
+    if (busy) return;
+    const trimmed = email.trim();
+    if (!trimmed || !password) {
+      Alert.alert("Required", "Please enter your email and password.");
+      return;
+    }
+    if (!trimmed.includes("@") || !trimmed.includes(".")) {
+      Alert.alert("Invalid email", "Please enter a valid email address.");
+      return;
+    }
+    if (password.length < 6) {
+      Alert.alert("Password too short", "Password must be at least 6 characters.");
+      return;
+    }
+    setBusy(true);
+    update({ method: "email" });
+    try {
+      const res = mode === "signin"
+        ? await signInWithEmail(trimmed, password)
+        : await signUpWithEmail(trimmed, password);
+      if (!res.ok) {
+        Alert.alert(mode === "signin" ? "Sign-in failed" : "Sign-up failed", res.error ?? "Please try again.");
+        return;
+      }
+      router.push("/(auth)/terms");
+    } catch (e) {
+      console.log("email auth error", e);
+      Alert.alert("Something went wrong", "Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const toggleMode = () => {
+    setMode((p) => (p === "signin" ? "signup" : "signin"));
+  };
+
   return (
     <View style={s.root} testID="login-screen">
       <LinearGradient colors={[Colors.indigo, "#3c0a24", Colors.crimson]} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
@@ -73,14 +115,61 @@ export default function LoginScreen() {
           <Text style={s.tag}>Where Hmong Hearts Meet and Real Connections Begin</Text>
         </Animated.View>
 
-        <View style={s.middle} />
+        <View style={s.middle}>
+          <Animated.View style={[s.emailBox, { opacity: fade }]}>
+            <TextInput
+              style={s.input}
+              placeholder={t("emailPlaceholder")}
+              placeholderTextColor="rgba(245,240,235,0.35)"
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+              textContentType="emailAddress"
+              autoComplete="email"
+              editable={!busy}
+              testID="email-input"
+            />
+            <TextInput
+              style={s.input}
+              placeholder={t("passwordPlaceholder")}
+              placeholderTextColor="rgba(245,240,235,0.35)"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              autoCapitalize="none"
+              textContentType="password"
+              autoComplete="password"
+              editable={!busy}
+              testID="password-input"
+            />
+            <PillButton
+              label={busy ? "Please wait…" : mode === "signin" ? t("continueWithEmail") : t("signUpWithEmail")}
+              onPress={onEmail}
+              variant="primary"
+              left={busy ? <ActivityIndicator size="small" color="#FFF" /> : <Mail size={18} color="#FFF" />}
+              testID="continue-email"
+            />
+            <PressableText
+              label={mode === "signin" ? t("noAccount") : t("haveAccount")}
+              onPress={toggleMode}
+              disabled={busy}
+            />
+          </Animated.View>
+        </View>
 
         <Animated.View style={[s.bottom, { opacity: fade }]}>
+          <View style={s.dividerRow}>
+            <View style={s.dividerLine} />
+            <Text style={s.dividerText}>or</Text>
+            <View style={s.dividerLine} />
+          </View>
           <PillButton
             label={busy ? "Signing in…" : t("continueWithGoogle")}
             onPress={onGoogle}
-            variant="light"
-            left={busy ? <ActivityIndicator size="small" color="#444" /> : <GoogleG />}
+            variant="dark"
+            left={busy ? <ActivityIndicator size="small" color={Colors.offwhite} /> : <GoogleG />}
             testID="continue-google"
           />
           <Text style={s.fine}>
@@ -97,14 +186,65 @@ export default function LoginScreen() {
   );
 }
 
+function PressableText({ label, onPress, disabled }: { label: string; onPress: () => void; disabled?: boolean }) {
+  const [pressed, setPressed] = useState(false);
+  return (
+    <Text
+      style={[s.toggle, pressed && { opacity: 0.6 }]}
+      onPress={disabled ? undefined : onPress}
+      onPressIn={disabled ? undefined : () => setPressed(true)}
+      onPressOut={disabled ? undefined : () => setPressed(false)}
+      suppressHighlighting
+    >
+      {label}
+    </Text>
+  );
+}
+
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.indigo },
   safe: { flex: 1, paddingHorizontal: 24 },
   backRow: { paddingTop: 4, marginLeft: -4 },
   top: { alignItems: "center", paddingTop: 20, gap: 0 },
-  brand: { fontSize: 34, fontWeight: "800" as const, color: Colors.offwhite, letterSpacing: 0.5 },
   tag: { fontSize: 16, color: "rgba(245,240,235,0.85)", fontStyle: "italic" as const, marginTop: -40, textAlign: "center" as const, paddingHorizontal: 16 },
-  middle: { flex: 1 },
+  middle: { flex: 1, justifyContent: "center", paddingBottom: 20 },
+  emailBox: {
+    gap: 12,
+  },
+  input: {
+    backgroundColor: "rgba(255,255,255,0.09)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.16)",
+    borderRadius: 16,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: Colors.offwhite,
+    fontWeight: "500" as const,
+  },
+  toggle: {
+    color: Colors.gold,
+    fontSize: 13.5,
+    fontWeight: "600" as const,
+    textAlign: "center",
+    paddingVertical: 6,
+  },
+  dividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 8,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.15)",
+  },
+  dividerText: {
+    color: "rgba(245,240,235,0.4)",
+    fontSize: 13,
+    fontWeight: "600" as const,
+  },
   bottom: { paddingBottom: 20, gap: 10 },
   fine: { color: "rgba(245,240,235,0.62)", fontSize: 11.5, textAlign: "center", marginTop: 18, lineHeight: 17 },
   link: { color: Colors.gold, fontWeight: "600" as const },
