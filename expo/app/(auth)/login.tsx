@@ -4,7 +4,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import Svg, { Path } from "react-native-svg";
-import { Mail } from "lucide-react-native";
+import { Mail, CheckCircle } from "lucide-react-native";
 import Colors from "@/constants/colors";
 import PajNtaubPattern from "@/components/onboarding/PajNtaubPattern";
 import PillButton from "@/components/onboarding/PillButton";
@@ -27,12 +27,14 @@ function GoogleG() {
 
 export default function LoginScreen() {
   const { update } = useOnboarding();
-  const { signInWithGoogle, signInWithEmail, signUpWithEmail } = useAuth();
+  const { signInWithGoogle, signInWithEmail, signUpWithEmail, resendVerificationEmail, session } = useAuth();
   const t = useT();
   const [busy, setBusy] = useState<boolean>(false);
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
+  const [emailSent, setEmailSent] = useState<string | null>(null);
+  const [resending, setResending] = useState<boolean>(false);
   const fade = useRef(new Animated.Value(0)).current;
   const rise = useRef(new Animated.Value(20)).current;
 
@@ -42,6 +44,13 @@ export default function LoginScreen() {
       Animated.timing(rise, { toValue: 0, duration: 700, useNativeDriver: true, easing: Easing.out(Easing.cubic) }),
     ]).start();
   }, [fade, rise]);
+
+  // When the user verifies their email and the session appears, navigate forward
+  useEffect(() => {
+    if (session && emailSent) {
+      router.push("/(auth)/terms");
+    }
+  }, [session, emailSent]);
 
   const onGoogle = async () => {
     if (busy) return;
@@ -82,14 +91,25 @@ export default function LoginScreen() {
     setBusy(true);
     update({ method: "email" });
     try {
-      const res = mode === "signin"
-        ? await signInWithEmail(trimmed, password)
-        : await signUpWithEmail(trimmed, password);
-      if (!res.ok) {
-        Alert.alert(mode === "signin" ? "Sign-in failed" : "Sign-up failed", res.error ?? "Please try again.");
-        return;
+      if (mode === "signin") {
+        const res = await signInWithEmail(trimmed, password);
+        if (!res.ok) {
+          Alert.alert("Sign-in failed", res.error ?? "Please try again.");
+          return;
+        }
+        router.push("/(auth)/terms");
+      } else {
+        const res = await signUpWithEmail(trimmed, password);
+        if (!res.ok) {
+          Alert.alert("Sign-up failed", res.error ?? "Please try again.");
+          return;
+        }
+        if (res.emailConfirmationRequired) {
+          setEmailSent(trimmed);
+        } else {
+          router.push("/(auth)/terms");
+        }
       }
-      router.push("/(auth)/terms");
     } catch (e) {
       console.log("email auth error", e);
       Alert.alert("Something went wrong", "Please try again.");
@@ -98,9 +118,68 @@ export default function LoginScreen() {
     }
   };
 
+  const onResend = async () => {
+    if (resending || !emailSent) return;
+    setResending(true);
+    try {
+      const res = await resendVerificationEmail(emailSent);
+      if (!res.ok) {
+        Alert.alert("Couldn't resend", res.error ?? "Please try again.");
+      } else {
+        Alert.alert(t("emailSent"), t("checkEmailHint"));
+      }
+    } catch (e) {
+      console.log("resend error", e);
+    } finally {
+      setResending(false);
+    }
+  };
+
+  const onBackToSignIn = () => {
+    setEmailSent(null);
+    setMode("signin");
+  };
+
   const toggleMode = () => {
     setMode((p) => (p === "signin" ? "signup" : "signin"));
   };
+
+  if (emailSent) {
+    const subText = t("checkEmailSub").replace("{email}", emailSent);
+    return (
+      <View style={s.root} testID="verify-email-screen">
+        <LinearGradient colors={[Colors.indigo, "#3c0a24", Colors.crimson]} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+        <PajNtaubPattern opacity={0.08} color={Colors.gold} />
+        <SafeAreaView style={s.safe}>
+          <View style={s.backRow}>
+            <BackButton tint="light" />
+          </View>
+          <View style={s.verifyCenter}>
+            <View style={s.verifyIconWrap}>
+              <CheckCircle size={56} color={Colors.gold} />
+            </View>
+            <Text style={s.verifyTitle}>{t("checkEmailTitle")}</Text>
+            <Text style={s.verifySub}>{subText}</Text>
+            <Text style={s.verifyHint}>{t("checkEmailHint")}</Text>
+            <View style={s.verifyWaiting}>
+              <ActivityIndicator size="small" color={Colors.gold} />
+              <Text style={s.verifyWaitingText}>{t("checkingVerification")}</Text>
+            </View>
+            <PillButton
+              label={resending ? "Sending…" : t("resendEmail")}
+              onPress={onResend}
+              variant="dark"
+              testID="resend-email"
+            />
+            <PressableText
+              label={t("backToSignIn")}
+              onPress={onBackToSignIn}
+            />
+          </View>
+        </SafeAreaView>
+      </View>
+    );
+  }
 
   return (
     <View style={s.root} testID="login-screen">
@@ -248,4 +327,52 @@ const s = StyleSheet.create({
   bottom: { paddingBottom: 20, gap: 10 },
   fine: { color: "rgba(245,240,235,0.62)", fontSize: 11.5, textAlign: "center", marginTop: 18, lineHeight: 17 },
   link: { color: Colors.gold, fontWeight: "600" as const },
+  // Email verification screen
+  verifyCenter: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    gap: 12,
+  },
+  verifyIconWrap: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: "rgba(212,175,55,0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+  },
+  verifyTitle: {
+    fontSize: 26,
+    fontWeight: "700" as const,
+    color: Colors.offwhite,
+    textAlign: "center",
+  },
+  verifySub: {
+    fontSize: 16,
+    color: "rgba(245,240,235,0.85)",
+    textAlign: "center",
+    lineHeight: 22,
+  },
+  verifyHint: {
+    fontSize: 14,
+    color: "rgba(245,240,235,0.5)",
+    textAlign: "center",
+    lineHeight: 20,
+    paddingHorizontal: 8,
+  },
+  verifyWaiting: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  verifyWaitingText: {
+    fontSize: 14,
+    color: Colors.gold,
+    fontWeight: "500" as const,
+  },
 });

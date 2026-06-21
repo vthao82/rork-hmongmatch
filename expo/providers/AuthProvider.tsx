@@ -8,13 +8,20 @@ import type { Session, User } from "@supabase/supabase-js";
 
 WebBrowser.maybeCompleteAuthSession();
 
+export type EmailSignUpResult = {
+  ok: boolean;
+  error?: string;
+  emailConfirmationRequired?: boolean;
+};
+
 export type AuthState = {
   session: Session | null;
   user: User | null;
   loading: boolean;
   signInWithGoogle: () => Promise<{ ok: boolean; error?: string }>;
   signInWithEmail: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
-  signUpWithEmail: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
+  signUpWithEmail: (email: string, password: string) => Promise<EmailSignUpResult>;
+  resendVerificationEmail: (email: string) => Promise<{ ok: boolean; error?: string }>;
   signOut: () => Promise<void>;
 };
 
@@ -173,9 +180,15 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
     }
   }, []);
 
-  const signUpWithEmail = useCallback(async (email: string, password: string): Promise<{ ok: boolean; error?: string }> => {
+  const signUpWithEmail = useCallback(async (email: string, password: string): Promise<EmailSignUpResult> => {
     try {
-      const { error } = await supabase.auth.signUp({ email: email.trim(), password });
+      const trimmed = email.trim();
+      const emailRedirectTo = Linking.createURL("auth-callback");
+      const { data, error } = await supabase.auth.signUp({
+        email: trimmed,
+        password,
+        options: { emailRedirectTo },
+      });
       if (error) {
         const msg = error.message;
         if (msg.includes("already registered") || msg.includes("already exists")) {
@@ -183,10 +196,29 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
         }
         return { ok: false, error: msg };
       }
-      return { ok: true };
+      // If session is null, email confirmation is required
+      const emailConfirmationRequired = !data.session;
+      return { ok: true, emailConfirmationRequired };
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Unknown sign-up error";
       console.log("[auth] signUpWithEmail error", msg);
+      return { ok: false, error: msg };
+    }
+  }, []);
+
+  const resendVerificationEmail = useCallback(async (email: string): Promise<{ ok: boolean; error?: string }> => {
+    try {
+      const emailRedirectTo = Linking.createURL("auth-callback");
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: email.trim(),
+        options: { emailRedirectTo },
+      });
+      if (error) return { ok: false, error: error.message };
+      return { ok: true };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Unknown error";
+      console.log("[auth] resendVerificationEmail error", msg);
       return { ok: false, error: msg };
     }
   }, []);
@@ -202,6 +234,7 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
     signInWithGoogle,
     signInWithEmail,
     signUpWithEmail,
+    resendVerificationEmail,
     signOut,
   };
 });
