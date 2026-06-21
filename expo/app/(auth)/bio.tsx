@@ -1,11 +1,10 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, Pressable, TextInput, Modal, ScrollView } from "react-native";
+import { View, Text, StyleSheet, TextInput } from "react-native";
 import { router } from "expo-router";
-import { Sparkles, ChevronRight, X } from "lucide-react-native";
+import { Sparkles } from "lucide-react-native";
 import Colors from "@/constants/colors";
 import OnboardingScreen from "@/components/onboarding/OnboardingScreen";
 import PillButton from "@/components/onboarding/PillButton";
-import { PROMPTS } from "@/constants/interests";
 import { useOnboarding } from "@/providers/OnboardingProvider";
 import { useT } from "@/providers/LanguageProvider";
 
@@ -13,22 +12,16 @@ export default function BioScreen() {
   const { data, update } = useOnboarding();
   const t = useT();
   const [bio, setBio] = useState<string>(data.bio ?? "");
-  const [prompt, setPrompt] = useState<{ q: string; a: string } | undefined>(data.prompt);
-  const [pickOpen, setPickOpen] = useState<boolean>(false);
-  const [writingFor, setWritingFor] = useState<string | null>(null);
-  const [answer, setAnswer] = useState<string>("");
 
-  const onSkip = () => {
-    update({ bio, prompt });
+  const onNext = () => {
+    update({ bio });
     router.push("/(auth)/location");
   };
-  const onNext = onSkip;
 
   return (
     <OnboardingScreen
       step={18}
       total={19}
-      topRight={<Pressable onPress={onSkip} testID="bio-skip"><Text style={s.skip}>{t("skip")}</Text></Pressable>}
       footer={
         <View style={{ gap: 10 }}>
           <View style={s.bannerWrap}>
@@ -56,69 +49,6 @@ export default function BioScreen() {
         />
         <Text style={s.count}>{bio.length}/300</Text>
       </View>
-
-      <Pressable style={[s.card, prompt && s.cardFilled]} onPress={() => setPickOpen(true)} testID="prompt-card">
-        <Text style={s.cardLabel}>{t("selectPrompt")}</Text>
-        {prompt ? (
-          <>
-            <Text style={s.pQ}>{prompt.q}</Text>
-            <Text style={s.pA}>{prompt.a}</Text>
-          </>
-        ) : (
-          <View style={s.pRow}>
-            <Text style={s.pPlaceholder}>Answer a personality question</Text>
-            <ChevronRight size={18} color={Colors.dark.textDim} />
-          </View>
-        )}
-      </Pressable>
-
-      <Modal visible={pickOpen} transparent animationType="slide" onRequestClose={() => setPickOpen(false)}>
-        <View style={s.modalWrap}>
-          <View style={s.modal}>
-            <View style={s.modalHead}>
-              <Text style={s.modalTitle}>{writingFor ? "Your answer" : "Pick a prompt"}</Text>
-              <Pressable onPress={() => { setPickOpen(false); setWritingFor(null); setAnswer(""); }}>
-                <X size={22} color={Colors.dark.text} />
-              </Pressable>
-            </View>
-            {!writingFor ? (
-              <ScrollView style={{ maxHeight: 420 }}>
-                {PROMPTS.map(p => (
-                  <Pressable key={p} style={s.pItem} onPress={() => setWritingFor(p)}>
-                    <Text style={s.pItemTxt}>{p}</Text>
-                    <ChevronRight size={18} color={Colors.dark.textDim} />
-                  </Pressable>
-                ))}
-              </ScrollView>
-            ) : (
-              <View style={{ padding: 18, gap: 12 }}>
-                <Text style={s.pQ}>{writingFor}</Text>
-                <TextInput
-                  style={s.modalInput}
-                  multiline
-                  value={answer}
-                  onChangeText={setAnswer}
-                  placeholder="Write your answer…"
-                  placeholderTextColor="rgba(245,240,235,0.3)"
-                  maxLength={200}
-                  autoFocus
-                />
-                <PillButton
-                  label="Save"
-                  disabled={!answer.trim()}
-                  onPress={() => {
-                    setPrompt({ q: writingFor, a: answer.trim() });
-                    setPickOpen(false);
-                    setWritingFor(null);
-                    setAnswer("");
-                  }}
-                  variant="primary"
-                />
-              </View>
-            )}
-          </View>
-        </View>
-      </Modal>
     </OnboardingScreen>
   );
 }

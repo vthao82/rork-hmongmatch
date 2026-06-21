@@ -39,19 +39,19 @@ function OnboardingScreen({ children, step, total, showPattern = true, gradient,
         )}
         {typeof step === "number" && typeof total === "number" && (
           <View style={s.progressRow}>
-            <View style={s.progressFill}>
-              <ProgressBar step={step} total={total} />
-            </View>
-            {topRight && <View>{topRight}</View>}
+            <ProgressBar step={step} total={total} />
+            {topRight && <View style={s.topRight}>{topRight}</View>}
           </View>
         )}
         {!step && topRight && <View style={[s.topRight, { paddingHorizontal: 20, paddingTop: 6 }]}>{topRight}</View>}
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={s.kb}>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0} style={s.kb}>
           <Content
             contentContainerStyle={scroll ? s.scrollContent : undefined}
             style={scroll ? s.flex : s.flex}
             keyboardShouldPersistTaps="handled"
+            keyboardDismissMode="on-drag"
             showsVerticalScrollIndicator={false}
+            {...(scroll && Platform.OS === "ios" ? { automaticallyAdjustKeyboardInsets: true } : {})}
           >
             {children}
           </Content>
@@ -67,10 +67,9 @@ const s = StyleSheet.create({
   safe: { flex: 1 },
   flex: { flex: 1 },
   kb: { flex: 1 },
-  scrollContent: { paddingHorizontal: 24, paddingTop: 20, paddingBottom: 32 },
+  scrollContent: { paddingHorizontal: 24, paddingTop: 20, paddingBottom: 120 },
   backRow: { paddingHorizontal: 16, paddingTop: 6, paddingBottom: 4, flexDirection: "row", alignItems: "center" },
-  progressRow: { paddingHorizontal: 20, paddingTop: 4, paddingBottom: 8, flexDirection: "row", alignItems: "center", gap: 8 },
-  progressFill: { flex: 1 },
+  progressRow: { paddingHorizontal: 20, paddingTop: 4, paddingBottom: 8, position: "relative" },
   topRight: { position: "absolute", right: 20, top: 0 },
   footer: { paddingHorizontal: 24, paddingTop: 10, paddingBottom: 18 },
 });

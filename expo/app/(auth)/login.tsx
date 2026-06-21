@@ -1,21 +1,18 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, Text, StyleSheet, Animated, Easing, Platform, Linking } from "react-native";
+import { View, Text, TextInput, StyleSheet, Animated, Easing, Platform, Linking, Alert, ActivityIndicator } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import Svg, { Path } from "react-native-svg";
-import * as AuthSession from "expo-auth-session";
-import * as WebBrowser from "expo-web-browser";
+import { Mail, CheckCircle } from "lucide-react-native";
 import Colors from "@/constants/colors";
-
-WebBrowser.maybeCompleteAuthSession();
 import PajNtaubPattern from "@/components/onboarding/PajNtaubPattern";
 import PillButton from "@/components/onboarding/PillButton";
 import HmongLogo from "@/components/onboarding/HmongLogo";
 import BackButton from "@/components/onboarding/BackButton";
 import { useOnboarding } from "@/providers/OnboardingProvider";
 import { useT } from "@/providers/LanguageProvider";
-import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/providers/AuthProvider";
 
 function GoogleG() {
   return (
@@ -30,7 +27,15 @@ function GoogleG() {
 
 export default function LoginScreen() {
   const { update } = useOnboarding();
+  const { signInWithGoogle, signInWithEmail, signUpWithEmail, resendVerificationEmail, session } = useAuth();
   const t = useT();
+  const [busy, setBusy] = useState<boolean>(false);
+  const [mode, setMode] = useState<"signin" | "signup">("signin");
+  const [email, setEmail] = useState<string>("");
+  const [password, setPassword] = useState<string>("");
+  const [emailSent, setEmailSent] = useState<string | null>(null);
+  const [resending, setResending] = useState<boolean>(false);
+  const [mfaPending, setMfaPending] = useState<boolean>(false);
   const fade = useRef(new Animated.Value(0)).current;
   const rise = useRef(new Animated.Value(20)).current;
 
@@ -41,56 +46,152 @@ export default function LoginScreen() {
     ]).start();
   }, [fade, rise]);
 
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // Navigate forward whenever a session becomes available.
+  // This covers: Google OAuth on web (page redirect + reload), Google OAuth
+  // on native (deep link callback), email sign-in, and email verification.
+  useEffect(() => {
+    if (session) {
+      router.replace("/(auth)/terms");
+    }
+  }, [session]);
 
   const onGoogle = async () => {
-    setLoading(true);
-    setError(null);
-
+    if (busy) return;
+    setBusy(true);
+    update({ method: "google" });
     try {
-      const redirectUrl = AuthSession.makeRedirectUri({
-        scheme: "rork-app",
-        useProxy: Platform.OS !== "web",
-      });
-      const { data, error: signInError } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: redirectUrl,
-          queryParams: { prompt: "select_account" },
-        },
-      });
-
-      if (signInError) throw signInError;
-      if (!data?.url) throw new Error("Unable to start Google sign in.");
-
-      const result = await Promise.race([
-        WebBrowser.openAuthSessionAsync(data.url, redirectUrl),
-        new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error("Sign-in timed out. Make sure Google is enabled in your Supabase project.")), 60000)
-        ),
-      ]);
-      if (result.type === "cancel" || result.type === "dismiss") {
-        setLoading(false);
+      const res = await signInWithGoogle();
+      if (!res.ok) {
+        if (res.error && res.error !== "Sign-in canceled") {
+          Alert.alert("Sign-in failed", res.error);
+        }
         return;
       }
-      if (result.type !== "success" || !result.url) {
-        throw new Error("Google sign in was canceled.");
-      }
-
-      const { error: sessionError } = await supabase.auth.exchangeCodeForSession(result.url);
-      if (sessionError) throw sessionError;
-
-      update({ method: "google" });
-      router.replace("/(auth)/terms");
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to sign in with Google.";
-      setError(message);
-      console.warn("Google sign-in error", err);
+      router.push("/(auth)/terms");
+    } catch (e) {
+      console.log("google login error", e);
+      Alert.alert("Sign-in failed", "Please try again.");
     } finally {
-      setLoading(false);
+      setBusy(false);
     }
   };
+
+  const onEmail = async () => {
+    if (busy) return;
+    const trimmed = email.trim();
+    if (!trimmed || !password) {
+      Alert.alert("Required", "Please enter your email and password.");
+      return;
+    }
+    if (!trimmed.includes("@") || !trimmed.includes(".")) {
+      Alert.alert("Invalid email", "Please enter a valid email address.");
+      return;
+    }
+    if (password.length < 6) {
+      Alert.alert("Password too short", "Password must be at least 6 characters.");
+      return;
+    }
+    setBusy(true);
+    update({ method: "email" });
+    let keepBusy = false;
+    try {
+      if (mode === "signin") {
+        const res = await signInWithEmail(trimmed, password);
+        if (!res.ok) {
+          Alert.alert("Sign-in failed", res.error ?? "Please try again.");
+          return;
+        }
+        if (res.mfaRequired) {
+          // MFA (two-factor) is required. The Supabase UI in the browser
+          // will prompt for the verification code. Once verified, the session
+          // appears and the useEffect above navigates to terms automatically.
+          setMfaPending(true);
+          keepBusy = true;
+          return;
+        }
+        router.push("/(auth)/terms");
+      } else {
+        const res = await signUpWithEmail(trimmed, password);
+        if (!res.ok) {
+          Alert.alert("Sign-up failed", res.error ?? "Please try again.");
+          return;
+        }
+        if (res.emailConfirmationRequired) {
+          setEmailSent(trimmed);
+        } else {
+          router.push("/(auth)/terms");
+        }
+      }
+    } catch (e) {
+      console.log("email auth error", e);
+      Alert.alert("Something went wrong", "Please try again.");
+    } finally {
+      if (!keepBusy) setBusy(false);
+    }
+  };
+
+  const onResend = async () => {
+    if (resending || !emailSent) return;
+    setResending(true);
+    try {
+      const res = await resendVerificationEmail(emailSent);
+      if (!res.ok) {
+        Alert.alert("Couldn't resend", res.error ?? "Please try again.");
+      } else {
+        Alert.alert(t("emailSent"), t("checkEmailHint"));
+      }
+    } catch (e) {
+      console.log("resend error", e);
+    } finally {
+      setResending(false);
+    }
+  };
+
+  const onBackToSignIn = () => {
+    setEmailSent(null);
+    setMode("signin");
+  };
+
+  const toggleMode = () => {
+    setMode((p) => (p === "signin" ? "signup" : "signin"));
+  };
+
+  if (emailSent) {
+    const subText = t("checkEmailSub").replace("{email}", emailSent);
+    return (
+      <View style={s.root} testID="verify-email-screen">
+        <LinearGradient colors={[Colors.indigo, "#3c0a24", Colors.crimson]} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
+        <PajNtaubPattern opacity={0.08} color={Colors.gold} />
+        <SafeAreaView style={s.safe}>
+          <View style={s.backRow}>
+            <BackButton tint="light" />
+          </View>
+          <View style={s.verifyCenter}>
+            <View style={s.verifyIconWrap}>
+              <CheckCircle size={56} color={Colors.gold} />
+            </View>
+            <Text style={s.verifyTitle}>{t("checkEmailTitle")}</Text>
+            <Text style={s.verifySub}>{subText}</Text>
+            <Text style={s.verifyHint}>{t("checkEmailHint")}</Text>
+            <View style={s.verifyWaiting}>
+              <ActivityIndicator size="small" color={Colors.gold} />
+              <Text style={s.verifyWaitingText}>{t("checkingVerification")}</Text>
+            </View>
+            <PillButton
+              label={resending ? "Sending…" : t("resendEmail")}
+              onPress={onResend}
+              variant="dark"
+              testID="resend-email"
+            />
+            <PressableText
+              label={t("backToSignIn")}
+              onPress={onBackToSignIn}
+            />
+          </View>
+        </SafeAreaView>
+      </View>
+    );
+  }
 
   return (
     <View style={s.root} testID="login-screen">
@@ -101,23 +202,78 @@ export default function LoginScreen() {
           <BackButton tint="light" />
         </View>
         <Animated.View style={[s.top, { opacity: fade, transform: [{ translateY: rise }] }]}>
-          <HmongLogo size={96} />
-          <Text style={s.brand}>Hmong Date</Text>
-          <Text style={s.tag}>{t("itStartsWithAStory")}</Text>
+          <HmongLogo fullWidth />
+          <Text style={s.tag}>Where Hmong Hearts Meet and Real Connections Begin</Text>
         </Animated.View>
-        <View style={s.middle} />
+
+        <View style={s.middle}>
+          <Animated.View style={[s.emailBox, { opacity: fade }]}>
+            <TextInput
+              style={s.input}
+              placeholder={t("emailPlaceholder")}
+              placeholderTextColor="rgba(245,240,235,0.35)"
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="email-address"
+              textContentType="emailAddress"
+              autoComplete="email"
+              editable={!busy}
+              testID="email-input"
+            />
+            <TextInput
+              style={s.input}
+              placeholder={t("passwordPlaceholder")}
+              placeholderTextColor="rgba(245,240,235,0.35)"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              autoCapitalize="none"
+              textContentType="password"
+              autoComplete="password"
+              editable={!busy}
+              testID="password-input"
+            />
+            {mfaPending ? (
+              <View style={{ alignItems: "center", gap: 12 }}>
+                <ActivityIndicator size="small" color={Colors.gold} />
+                <Text style={{ color: "rgba(245,240,235,0.8)", fontSize: 15, textAlign: "center" }}>
+                  Complete two-factor verification in your browser, then return here.
+                </Text>
+              </View>
+            ) : (
+              <>
+                <PillButton
+                  label={busy ? "Please wait…" : mode === "signin" ? t("continueWithEmail") : t("signUpWithEmail")}
+                  onPress={onEmail}
+                  variant="primary"
+                  left={busy ? <ActivityIndicator size="small" color="#FFF" /> : <Mail size={18} color="#FFF" />}
+                  testID="continue-email"
+                />
+                <PressableText
+                  label={mode === "signin" ? t("noAccount") : t("haveAccount")}
+                  onPress={toggleMode}
+                  disabled={busy}
+                />
+              </>
+            )}
+          </Animated.View>
+        </View>
 
         <Animated.View style={[s.bottom, { opacity: fade }]}>
+          <View style={s.dividerRow}>
+            <View style={s.dividerLine} />
+            <Text style={s.dividerText}>or</Text>
+            <View style={s.dividerLine} />
+          </View>
           <PillButton
-            label={t("continueWithGoogle")}
+            label={busy ? "Signing in…" : t("continueWithGoogle")}
             onPress={onGoogle}
-            variant="light"
-            left={<GoogleG />}
-            loading={loading}
-            disabled={loading}
+            variant="dark"
+            left={busy ? <ActivityIndicator size="small" color={Colors.offwhite} /> : <GoogleG />}
             testID="continue-google"
           />
-          {error ? <Text style={s.error}>{error}</Text> : null}
           <Text style={s.fine}>
             By tapping Continue you agree to our{" "}
             <Text style={s.link} onPress={() => Platform.OS !== "web" && Linking.openURL("https://example.com/terms")}>Terms</Text>
@@ -132,16 +288,114 @@ export default function LoginScreen() {
   );
 }
 
+function PressableText({ label, onPress, disabled }: { label: string; onPress: () => void; disabled?: boolean }) {
+  const [pressed, setPressed] = useState(false);
+  return (
+    <Text
+      style={[s.toggle, pressed && { opacity: 0.6 }]}
+      onPress={disabled ? undefined : onPress}
+      onPressIn={disabled ? undefined : () => setPressed(true)}
+      onPressOut={disabled ? undefined : () => setPressed(false)}
+      suppressHighlighting
+    >
+      {label}
+    </Text>
+  );
+}
+
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.indigo },
   safe: { flex: 1, paddingHorizontal: 24 },
   backRow: { paddingTop: 4, marginLeft: -4 },
-  top: { alignItems: "center", paddingTop: 20, gap: 14 },
-  brand: { fontSize: 34, fontWeight: "800" as const, color: Colors.offwhite, letterSpacing: 0.5 },
-  tag: { fontSize: 16, color: "rgba(245,240,235,0.78)", fontStyle: "italic" as const, marginTop: -4 },
-  middle: { flex: 1 },
+  top: { alignItems: "center", paddingTop: 20, gap: 0 },
+  tag: { fontSize: 16, color: "rgba(245,240,235,0.85)", fontStyle: "italic" as const, marginTop: -40, textAlign: "center" as const, paddingHorizontal: 16 },
+  middle: { flex: 1, justifyContent: "center", paddingBottom: 20 },
+  emailBox: {
+    gap: 12,
+  },
+  input: {
+    backgroundColor: "rgba(255,255,255,0.09)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.16)",
+    borderRadius: 16,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
+    fontSize: 16,
+    color: Colors.offwhite,
+    fontWeight: "500" as const,
+  },
+  toggle: {
+    color: Colors.gold,
+    fontSize: 13.5,
+    fontWeight: "600" as const,
+    textAlign: "center",
+    paddingVertical: 6,
+  },
+  dividerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    marginBottom: 8,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: "rgba(255,255,255,0.15)",
+  },
+  dividerText: {
+    color: "rgba(245,240,235,0.4)",
+    fontSize: 13,
+    fontWeight: "600" as const,
+  },
   bottom: { paddingBottom: 20, gap: 10 },
   fine: { color: "rgba(245,240,235,0.62)", fontSize: 11.5, textAlign: "center", marginTop: 18, lineHeight: 17 },
   link: { color: Colors.gold, fontWeight: "600" as const },
-  error: { color: "#F8D7DA", backgroundColor: "rgba(255,255,255,0.12)", borderRadius: 12, padding: 10, textAlign: "center", marginTop: 12, fontSize: 13 },
+  // Email verification screen
+  verifyCenter: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    gap: 12,
+  },
+  verifyIconWrap: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    backgroundColor: "rgba(212,175,55,0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+  },
+  verifyTitle: {
+    fontSize: 26,
+    fontWeight: "700" as const,
+    color: Colors.offwhite,
+    textAlign: "center",
+  },
+  verifySub: {
+    fontSize: 16,
+    color: "rgba(245,240,235,0.85)",
+    textAlign: "center",
+    lineHeight: 22,
+  },
+  verifyHint: {
+    fontSize: 14,
+    color: "rgba(245,240,235,0.5)",
+    textAlign: "center",
+    lineHeight: 20,
+    paddingHorizontal: 8,
+  },
+  verifyWaiting: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  verifyWaitingText: {
+    fontSize: 14,
+    color: Colors.gold,
+    fontWeight: "500" as const,
+  },
 });

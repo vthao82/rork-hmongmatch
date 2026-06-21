@@ -5,6 +5,7 @@ import { useRouter } from "expo-router";
 import { X, Check, Lock, Flame } from "lucide-react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import Colors from "@/constants/colors";
+import { useT } from "@/providers/LanguageProvider";
 
 const SW = Dimensions.get("window").width;
 
@@ -18,37 +19,29 @@ const PLANS: Plan[] = [
 
 type Feature = { label: string; desc?: string; plus: boolean; gold: boolean; platinum: boolean };
 
-const SECTIONS: { title: string; features: Feature[] }[] = [
-  {
-    title: "Upgrade Your Likes",
-    features: [
-      { label: "Unlimited Likes", plus: true, gold: true, platinum: true },
-      { label: "See Who Likes You", plus: false, gold: true, platinum: true },
-      { label: "Priority Likes", desc: "Your Likes will be seen sooner with Priority Likes.", plus: false, gold: false, platinum: true },
-    ],
-  },
-  {
-    title: "Enhance Your Experience",
-    features: [
-      { label: "Unlimited Rewinds", plus: true, gold: true, platinum: true },
-      { label: "1 Free Boost per month", plus: false, gold: true, platinum: true },
-      { label: "2 Free Super Likes per week", plus: false, gold: true, platinum: true },
-      { label: "3 Free First Impressions per week", desc: "Stand out with a message before matching.", plus: false, gold: false, platinum: true },
-    ],
-  },
-  {
-    title: "Premium Discovery",
-    features: [
-      { label: "Unlimited Passport™ Mode", plus: true, gold: true, platinum: true },
-    ],
-  },
-];
-
 export default function SubscriptionScreen() {
   const ins = useSafeAreaInsets();
   const router = useRouter();
+  const t = useT();
   const [idx, setIdx] = useState<number>(0);
   const current = PLANS[idx];
+
+  const SECTIONS_I18N: { title: string; features: Feature[] }[] = [
+    { title: t("upgradeYourLikes"), features: [
+      { label: t("unlimitedLikes"), plus: true, gold: true, platinum: true },
+      { label: t("seeWhoLikesYouRow"), plus: false, gold: true, platinum: true },
+      { label: t("priorityLikes"), desc: t("priorityLikesDesc"), plus: false, gold: false, platinum: true },
+    ]},
+    { title: t("enhanceExperience"), features: [
+      { label: t("unlimitedRewinds"), plus: true, gold: true, platinum: true },
+      { label: t("freeBoostMonth"), plus: false, gold: true, platinum: true },
+      { label: t("freeSuperLikes"), plus: false, gold: true, platinum: true },
+      { label: t("freeFirstImpressions"), desc: t("freeFirstImpressionsDesc"), plus: false, gold: false, platinum: true },
+    ]},
+    { title: t("premiumDiscovery"), features: [
+      { label: t("unlimitedPassport"), plus: true, gold: true, platinum: true },
+    ]},
+  ];
 
   return (
     <View style={[s.ct, { paddingTop: ins.top }]}>
@@ -56,7 +49,7 @@ export default function SubscriptionScreen() {
         <TouchableOpacity onPress={() => router.back()} testID="close-sub">
           <X size={26} color="#FFF" />
         </TouchableOpacity>
-        <Text style={s.title}>My Subscription</Text>
+        <Text style={s.title}>{t("mySubscription")}</Text>
         <View style={{ width: 26 }} />
       </View>
 
@@ -84,7 +77,7 @@ export default function SubscriptionScreen() {
           ))}
         </View>
 
-        {SECTIONS.map(sec => {
+        {SECTIONS_I18N.map(sec => {
           const key = current.id === "plus" ? "plus" : current.id === "gold" ? "gold" : "platinum";
           return (
             <View key={sec.title} style={s.section}>

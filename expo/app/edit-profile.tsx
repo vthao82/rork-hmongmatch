@@ -1,14 +1,15 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Dimensions, Platform, Alert, Modal } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Dimensions, Platform, Alert, KeyboardAvoidingView } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import { useRouter, Stack, useLocalSearchParams } from "expo-router";
-import { X, Plus, Check, ChevronRight } from "lucide-react-native";
+import { X, Plus, Check, ChevronRight, Star, BadgeCheck, Camera } from "lucide-react-native";
 import * as ImagePicker from "expo-image-picker";
 import Colors from "@/constants/colors";
 import { useOnboarding } from "@/providers/OnboardingProvider";
 import { currentUser } from "@/mocks/profiles";
-import { INTEREST_GROUPS, PROMPTS } from "@/constants/interests";
+import { INTEREST_GROUPS } from "@/constants/interests";
+import { useT } from "@/providers/LanguageProvider";
 
 const SW = Dimensions.get("window").width;
 const GAP = 10;
@@ -18,27 +19,25 @@ const MAX_INTERESTS = 10;
 export default function EditProfileScreen() {
   const ins = useSafeAreaInsets();
   const router = useRouter();
+  const t = useT();
   const { data, update } = useOnboarding();
 
+  const [mainPhotoIndex, setMainPhotoIndex] = useState<number>(data.mainPhotoIndex ?? 0);
   const [name, setName] = useState<string>(data.name ?? currentUser.name);
   const [bio, setBio] = useState<string>(data.bio ?? currentUser.bio);
   const [photos, setPhotos] = useState<string[]>(data.photos && data.photos.length > 0 ? data.photos : currentUser.photos);
   const [interests, setInterests] = useState<string[]>(data.interests && data.interests.length > 0 ? data.interests : currentUser.interests);
   const [editingInterests, setEditingInterests] = useState<boolean>(false);
-  const [promptQ, setPromptQ] = useState<string>(data.prompt?.q ?? "");
-  const [promptA, setPromptA] = useState<string>(data.prompt?.a ?? "");
-  const [pickPromptOpen, setPickPromptOpen] = useState<boolean>(false);
 
   const { focus } = useLocalSearchParams<{ focus?: string }>();
   const scrollRef = useRef<ScrollView>(null);
   const yPhotos = useRef<number>(0);
   const yBio = useRef<number>(0);
-  const yPrompt = useRef<number>(0);
 
   useEffect(() => {
     if (!focus) return;
     const t = setTimeout(() => {
-      const y = focus === "bio" ? yBio.current : focus === "prompt" ? yPrompt.current : yPhotos.current;
+      const y = focus === "bio" ? yBio.current : yPhotos.current;
       scrollRef.current?.scrollTo({ y: Math.max(0, y - 12), animated: true });
     }, 250);
     return () => clearTimeout(t);
@@ -49,7 +48,7 @@ export default function EditProfileScreen() {
       if (Platform.OS !== "web") {
         const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (!perm.granted) {
-          Alert.alert("Permission needed", "Enable photo access to update pictures.");
+          Alert.alert(t("permissionNeeded"), t("permissionPhotos"));
           return;
         }
       }
@@ -84,11 +83,10 @@ export default function EditProfileScreen() {
   }, []);
 
   const save = useCallback(() => {
-    const prompt = promptQ && promptA.trim() ? { q: promptQ, a: promptA.trim() } : undefined;
-    update({ name: name.trim(), bio, photos, interests, prompt });
-    console.log("profile saved", { name, bio, photoCount: photos.length, interestCount: interests.length, prompt });
+    update({ name: name.trim(), bio, photos, interests, mainPhotoIndex });
+    console.log("profile saved", { name, bio, photoCount: photos.length, interestCount: interests.length });
     router.back();
-  }, [name, bio, photos, interests, promptQ, promptA, router, update]);
+  }, [name, bio, photos, interests, router, update, mainPhotoIndex]);
 
   const slots = Array.from({ length: 6 }, (_, i) => photos[i] ?? null);
 
@@ -99,21 +97,25 @@ export default function EditProfileScreen() {
         <TouchableOpacity onPress={() => router.back()} testID="close-edit">
           <X size={24} color="#FFF" />
         </TouchableOpacity>
-        <Text style={s.headerTitle}>Edit Profile</Text>
+        <Text style={s.headerTitle}>{t("editProfile")}</Text>
         <TouchableOpacity onPress={save} testID="save-profile">
-          <Text style={s.done}>Done</Text>
+          <Text style={s.done}>{t("done")}</Text>
         </TouchableOpacity>
       </View>
 
-      <ScrollView ref={scrollRef} contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={s.sectionLabel} onLayout={e => { yPhotos.current = e.nativeEvent.layout.y; }}>Photos</Text>
-        <Text style={s.sectionSub}>Tap to add or change — 2 minimum.</Text>
+      <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }} keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 0}>
+      <ScrollView ref={scrollRef} contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" {...(Platform.OS === "ios" ? { automaticallyAdjustKeyboardInsets: true } : {})}>
+        <Text style={s.sectionLabel} onLayout={e => { yPhotos.current = e.nativeEvent.layout.y; }}>{t("photos")}</Text>
+        <Text style={s.sectionSub}>{t("photosTapHint")}</Text>
         <View style={s.grid}>
           {slots.map((uri, i) => (
-            <TouchableOpacity key={i} style={[s.slot, uri && s.slotFilled]} onPress={() => pickPhoto(photos.length > i ? i : photos.length)} testID={`edit-slot-${i}`}>
+            <TouchableOpacity key={i} style={[s.slot, uri && s.slotFilled, mainPhotoIndex === i && uri && s.slotMain]} onPress={() => pickPhoto(photos.length > i ? i : photos.length)} onLongPress={() => uri && setMainPhotoIndex(i)} testID={`edit-slot-${i}`}>
               {uri ? (
                 <>
                   <Image source={{ uri }} style={s.slotImg} contentFit="cover" />
+                  {mainPhotoIndex === i && (
+                    <View style={s.mainBadge}><Star size={10} color="#1a1404" fill="#1a1404" /><Text style={s.mainBadgeTxt}>MAIN</Text></View>
+                  )}
                   <TouchableOpacity style={s.removeBtn} onPress={() => removePhoto(i)} testID={`remove-photo-${i}`}>
                     <X size={12} color="#FFF" />
                   </TouchableOpacity>
@@ -125,26 +127,37 @@ export default function EditProfileScreen() {
           ))}
         </View>
 
-        <Text style={s.sectionLabel}>Name</Text>
+        <TouchableOpacity style={s.verifyRow} onPress={() => router.push("/photo-verify")} testID="go-verify">
+          <View style={[s.verifyIcon, { backgroundColor: data.photoVerified ? "#2a8ae0" : "#e89216" }]}>
+            {data.photoVerified ? <BadgeCheck size={20} color="#FFF" fill="#FFF" /> : <Camera size={20} color="#FFF" />}
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={s.verifyTitle}>{data.photoVerified ? t("photoVerified") : t("getPhotoVerified")}</Text>
+            <Text style={s.verifySub}>{data.photoVerified ? t("photoVerifiedSub") : t("getPhotoVerifiedSub")}</Text>
+          </View>
+          <ChevronRight size={18} color="rgba(255,255,255,0.5)" />
+        </TouchableOpacity>
+
+        <Text style={s.sectionLabel}>{t("name")}</Text>
         <View style={s.inputBox}>
           <TextInput
             style={s.input}
             value={name}
             onChangeText={setName}
-            placeholder="Your first name"
+            placeholder={t("yourFirstName")}
             placeholderTextColor="rgba(255,255,255,0.3)"
             maxLength={30}
             testID="edit-name"
           />
         </View>
 
-        <Text style={s.sectionLabel} onLayout={e => { yBio.current = e.nativeEvent.layout.y; }}>About Me</Text>
+        <Text style={s.sectionLabel} onLayout={e => { yBio.current = e.nativeEvent.layout.y; }}>{t("aboutMe")}</Text>
         <View style={s.inputBox}>
           <TextInput
             style={[s.input, { minHeight: 90, textAlignVertical: "top" }]}
             value={bio}
             onChangeText={setBio}
-            placeholder="Tell potential matches about yourself…"
+            placeholder={t("tellAboutYou")}
             placeholderTextColor="rgba(255,255,255,0.3)"
             multiline
             maxLength={300}
@@ -153,40 +166,18 @@ export default function EditProfileScreen() {
           <Text style={s.count}>{bio.length}/300</Text>
         </View>
 
-        <Text style={s.sectionLabel} onLayout={e => { yPrompt.current = e.nativeEvent.layout.y; }}>Prompt</Text>
-        <Text style={s.sectionSub}>Pick a question and share something about you.</Text>
-        <TouchableOpacity style={s.promptPicker} onPress={() => setPickPromptOpen(true)} testID="pick-prompt">
-          <Text style={promptQ ? s.promptQ : s.promptQMuted}>{promptQ || "Choose a prompt…"}</Text>
-          <ChevronRight size={18} color="rgba(255,255,255,0.5)" />
-        </TouchableOpacity>
-        {!!promptQ && (
-          <View style={s.inputBox}>
-            <TextInput
-              style={[s.input, { minHeight: 70, textAlignVertical: "top" }]}
-              value={promptA}
-              onChangeText={setPromptA}
-              placeholder="Your answer…"
-              placeholderTextColor="rgba(255,255,255,0.3)"
-              multiline
-              maxLength={160}
-              testID="edit-prompt-answer"
-            />
-            <Text style={s.count}>{promptA.length}/160</Text>
-          </View>
-        )}
-
         <View style={s.sectionRow}>
-          <Text style={s.sectionLabel}>Interests</Text>
+          <Text style={s.sectionLabel}>{t("interests")}</Text>
           <TouchableOpacity onPress={() => setEditingInterests(v => !v)} testID="toggle-interests">
-            <Text style={s.editLink}>{editingInterests ? "Done" : "Edit"}</Text>
+            <Text style={s.editLink}>{editingInterests ? t("done") : t("edit")}</Text>
           </TouchableOpacity>
         </View>
-        <Text style={s.sectionSub}>{interests.length}/{MAX_INTERESTS} selected</Text>
+        <Text style={s.sectionSub}>{t("selected", { n: interests.length, max: MAX_INTERESTS })}</Text>
 
         {!editingInterests ? (
           <View style={s.pillWrap}>
             {interests.length === 0 ? (
-              <Text style={s.muted}>No interests yet — tap Edit to add.</Text>
+              <Text style={s.muted}>{t("noInterestsYet")}</Text>
             ) : interests.map(i => (
               <View key={i} style={[s.pill, s.pillActive]}>
                 <Text style={s.pillTextActive}>{i}</Text>
@@ -214,32 +205,12 @@ export default function EditProfileScreen() {
           </View>
         )}
 
-        <Modal visible={pickPromptOpen} animationType="slide" transparent onRequestClose={() => setPickPromptOpen(false)}>
-          <View style={s.modalBack}>
-            <View style={s.modalSheet}>
-              <View style={s.modalHeader}>
-                <Text style={s.modalTitle}>Choose a prompt</Text>
-                <TouchableOpacity onPress={() => setPickPromptOpen(false)} testID="close-prompt-modal">
-                  <X size={22} color="#FFF" />
-                </TouchableOpacity>
-              </View>
-              <ScrollView>
-                {PROMPTS.map(p => (
-                  <TouchableOpacity key={p} style={s.promptRow} onPress={() => { setPromptQ(p); setPickPromptOpen(false); }} testID={`prompt-${p}`}>
-                    <Text style={s.promptRowText}>{p}</Text>
-                    {promptQ === p && <Check size={18} color={Colors.crimsonLight} />}
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            </View>
-          </View>
-        </Modal>
-
         <TouchableOpacity style={s.saveBtn} onPress={save} testID="save-profile-bottom">
-          <Text style={s.saveBtnText}>Save Changes</Text>
+          <Text style={s.saveBtnText}>{t("saveChanges")}</Text>
         </TouchableOpacity>
-        <View style={{ height: 32 }} />
+        <View style={{ height: 120 }} />
       </ScrollView>
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -257,6 +228,13 @@ const s = StyleSheet.create({
   grid: { flexDirection: "row", flexWrap: "wrap", gap: GAP },
   slot: { width: SLOT, height: SLOT * 1.35, borderRadius: 14, borderWidth: 2, borderStyle: "dashed", borderColor: "rgba(245,240,235,0.22)", justifyContent: "center", alignItems: "center", overflow: "hidden", backgroundColor: "rgba(255,255,255,0.03)" },
   slotFilled: { borderStyle: "solid", borderColor: Colors.crimson },
+  slotMain: { borderColor: Colors.accent, borderWidth: 3 },
+  mainBadge: { position: "absolute", top: 6, left: 6, flexDirection: "row", alignItems: "center", gap: 3, backgroundColor: Colors.accent, paddingHorizontal: 6, paddingVertical: 3, borderRadius: 999 },
+  mainBadgeTxt: { color: "#1a1404", fontSize: 9, fontWeight: "800" as const, letterSpacing: 0.4 },
+  verifyRow: { flexDirection: "row", alignItems: "center", gap: 12, padding: 14, borderRadius: 16, backgroundColor: "rgba(212,168,67,0.08)", borderWidth: 1, borderColor: "rgba(212,168,67,0.3)", marginTop: 16 },
+  verifyIcon: { width: 40, height: 40, borderRadius: 20, justifyContent: "center", alignItems: "center" },
+  verifyTitle: { color: "#FFF", fontSize: 15, fontWeight: "700" as const },
+  verifySub: { color: "rgba(255,255,255,0.6)", fontSize: 12, marginTop: 2 },
   slotImg: { ...StyleSheet.absoluteFillObject },
   plusWrap: { width: 34, height: 34, borderRadius: 17, backgroundColor: "rgba(192,21,47,0.18)", justifyContent: "center", alignItems: "center" },
   removeBtn: { position: "absolute", top: 6, right: 6, width: 22, height: 22, borderRadius: 11, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "center", alignItems: "center" },

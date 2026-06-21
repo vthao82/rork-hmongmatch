@@ -5,8 +5,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import { ArrowLeft, BadgeCheck, MapPin, Users, Plus, Check } from "lucide-react-native";
 import Colors from "@/constants/colors";
-import { profiles, Profile } from "@/mocks/profiles";
+import { profiles, currentUser, Profile } from "@/mocks/profiles";
 import { useOnboarding } from "@/providers/OnboardingProvider";
+import { useT } from "@/providers/LanguageProvider";
 
 const SW = Dimensions.get("window").width;
 const CW = (SW - 16 * 2 - 12) / 2;
@@ -30,15 +31,27 @@ export default function CategoryScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const ins = useSafeAreaInsets();
   const router = useRouter();
+  const t = useT();
   const title = decodeURIComponent(id ?? "");
   const { data, update } = useOnboarding();
   const inCategory = (data.interests ?? []).includes(title);
 
   const { filtered, subtitle } = useMemo(() => {
     const entry = CATEGORY_MAP[title];
-    if (entry) return { filtered: profiles.filter(entry.match), subtitle: entry.subtitle };
-    return { filtered: profiles, subtitle: "People interested in this" };
-  }, [title]);
+    const base = entry ? profiles.filter(entry.match) : profiles;
+    const sub = entry?.subtitle ?? t("peopleInterested");
+    if (inCategory) {
+      const me: Profile = {
+        ...currentUser,
+        name: (data.name?.trim() || currentUser.name) + " (You)",
+        photos: (data.photos && data.photos.length > 0) ? data.photos : currentUser.photos,
+        bio: data.bio ?? currentUser.bio,
+      };
+      const without = base.filter(p => p.id !== currentUser.id);
+      return { filtered: [me, ...without], subtitle: sub };
+    }
+    return { filtered: base, subtitle: sub };
+  }, [title, inCategory, data]);
 
   return (
     <View style={[s.ct, { paddingTop: ins.top }]}>
@@ -51,7 +64,7 @@ export default function CategoryScreen() {
           <Text style={s.title}>{title}</Text>
           <View style={s.metaRow}>
             <Users size={13} color={Colors.accent} />
-            <Text style={s.meta}>{filtered.length} {filtered.length === 1 ? "person" : "people"}</Text>
+            <Text style={s.meta}>{filtered.length} {filtered.length === 1 ? t("person") : t("people")}</Text>
           </View>
         </View>
       </View>
@@ -67,21 +80,20 @@ export default function CategoryScreen() {
         testID="add-self-category"
       >
         {inCategory ? <Check size={16} color="#FFF" /> : <Plus size={16} color="#FFF" />}
-        <Text style={s.addSelfText}>{inCategory ? "You're in this category" : "Add yourself to this category"}</Text>
+        <Text style={s.addSelfText}>{inCategory ? t("youreInCategory") : t("addSelfCategory")}</Text>
       </TouchableOpacity>
 
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
         {filtered.length === 0 ? (
           <View style={s.empty}>
-            <Text style={s.emptyTitle}>No one here yet</Text>
-            <Text style={s.emptySub}>Be the first — add this interest to your profile.</Text>
+            <Text style={s.emptyTitle}>{t("noOneHere")}</Text>
+            <Text style={s.emptySub}>{t("noOneHereSub")}</Text>
           </View>
         ) : (
           <View style={s.grid}>
             {filtered.map(p => (
               <TouchableOpacity key={p.id} style={[s.card, { width: CW }]} activeOpacity={0.85} onPress={() => router.push(`/user/${p.id}`)} testID={`cat-profile-${p.id}`}>
                 <Image source={{ uri: p.photos[0] }} style={s.img} contentFit="cover" />
-                <View style={s.ov} />
                 {p.isOnline && <View style={s.onlineDot} />}
                 <View style={s.info}>
                   <View style={s.nameRow}>
@@ -116,6 +128,7 @@ const s = StyleSheet.create({
   card: { height: CW * 1.4, borderRadius: 16, overflow: "hidden", backgroundColor: "#111" },
   img: { ...StyleSheet.absoluteFillObject },
   ov: { position: "absolute", left: 0, right: 0, bottom: 0, height: "55%", backgroundColor: "rgba(0,0,0,0.5)" },
+  gradOv: { position: "absolute", left: 0, right: 0, bottom: 0, height: "40%", backgroundColor: "rgba(0,0,0,0.55)" },
   onlineDot: { position: "absolute", top: 10, right: 10, width: 10, height: 10, borderRadius: 5, backgroundColor: Colors.online, borderWidth: 2, borderColor: "#000" },
   info: { position: "absolute", left: 10, right: 10, bottom: 10 },
   nameRow: { flexDirection: "row", alignItems: "center", gap: 4 },

@@ -16,9 +16,16 @@ export default function PhotoVerifyScreen() {
   const [selfie, setSelfie] = useState<string | undefined>(undefined);
 
   const advance = () => {
-    if (onboarding) router.replace("/(auth)/bio");
-    else if (router.canGoBack()) router.back();
-    else router.replace("/(tabs)/profile");
+    if (onboarding) {
+      router.replace("/(auth)/bio");
+      return;
+    }
+    try {
+      if (router.canGoBack()) router.back();
+      else router.replace("/(tabs)/profile");
+    } catch {
+      router.replace("/(tabs)/profile");
+    }
   };
 
   const takeSelfie = async () => {
@@ -48,18 +55,13 @@ export default function PhotoVerifyScreen() {
     advance();
   };
 
-  const onSkip = () => {
-    update({ photoVerified: false });
-    advance();
-  };
-
   return (
     <OnboardingScreen
       footer={
         <View style={{ gap: 10 }}>
           <PillButton label={selfie ? "Submit verification" : "Take selfie"} onPress={selfie ? onContinue : takeSelfie} variant="light" testID="verify-cta" />
-          <Pressable onPress={onSkip} style={s.skipBtn} testID="verify-skip">
-            <Text style={s.skipText}>Skip — I'll verify later</Text>
+          <Pressable onPress={advance} style={s.skipBtn} testID="verify-skip">
+            <Text style={s.skipText}>Do this later</Text>
           </Pressable>
         </View>
       }

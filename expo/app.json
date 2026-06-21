@@ -15,14 +15,27 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "app.rork.8g9q9xcaqktiqbyw1ssbb"
+      "bundleIdentifier": "app.rork.8g9q9xcaqktiqbyw1ssbb",
+      "infoPlist": {
+        "CFBundleURLTypes": [
+          { "CFBundleURLSchemes": ["rork-app"] }
+        ]
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "app.rork.8g9q9xcaqktiqbyw1ssbb"
+      "package": "app.rork.8g9q9xcaqktiqbyw1ssbb",
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [{ "scheme": "rork-app" }],
+          "category": ["BROWSABLE", "DEFAULT"]
+        }
+      ]
     },
     "web": {
       "favicon": "./assets/images/favicon.png"

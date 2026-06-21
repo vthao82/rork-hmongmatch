@@ -1,12 +1,13 @@
 import createContextHook from "@nkzw/create-context-hook";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useState, useCallback } from "react";
-import { upsertProfile } from "@/lib/database";
+import { supabase } from "@/lib/supabase";
+import { syncProfile } from "@/lib/profileSync";
 
 export type GenderId = "man" | "woman" | "beyond";
 export type SeekingId = "men" | "women" | "beyond" | "everyone";
 export type LookingForId = "long" | "long-open" | "short-open" | "short" | "friends" | "unsure";
-export type DialectId = "green" | "white";
+export type DialectId = "green" | "white" | "other";
 export type WorkId = "wfh" | "full-time" | "part-time" | "school" | "government" | "labor" | "other";
 
 export type Lifestyle = {
@@ -23,7 +24,7 @@ export type Extras = {
 };
 
 export type OnboardingData = {
-  method?: "google" | "phone";
+  method?: "google" | "phone" | "email";
   email?: string;
   phone?: string;
   phoneE164?: string;
@@ -42,11 +43,15 @@ export type OnboardingData = {
   searchByDistance?: boolean;
   clan?: string;
   dialect?: DialectId;
+  dialectOther?: string;
   hometownCountry?: string;
   hometownState?: string;
   hometownCity?: string;
   work?: WorkId;
   workOther?: string;
+  religion?: string;
+  religionOther?: string;
+  mainPhotoIndex?: number;
   photoVerified?: boolean;
   likedIds?: string[];
   education?: string;
@@ -88,7 +93,7 @@ export const [OnboardingProvider, useOnboarding] = createContextHook(() => {
     (async () => {
       try {
         const [d, c] = await Promise.all([AsyncStorage.getItem(KEY), AsyncStorage.getItem(DONE)]);
-        if (d) setData({ ...defaults, ...JSON.parse(d) });
+        if (d && d !== "null") { try { setData({ ...defaults, ...JSON.parse(d) }); } catch (_e) { console.log("onboarding parse", _e); } }
         if (c === "1") setCompleted(true);
       } catch (e) {
         console.log("onboarding hydrate error", e);
@@ -109,13 +114,19 @@ export const [OnboardingProvider, useOnboarding] = createContextHook(() => {
   const finish = useCallback(async () => {
     await AsyncStorage.setItem(DONE, "1");
     setCompleted(true);
-    setData(current => {
-      upsertProfile(current).then(({ error }) => {
-        if (error) console.warn("[OnboardingProvider] profile sync error", error);
-      });
-      return current;
-    });
-  }, []);
+    try {
+      const userResp = await supabase.auth.getUser();
+      const userId = userResp?.data?.user?.id;
+      if (userId) {
+        const res = await syncProfile(userId, data);
+        if (!res.ok) console.log("[onboarding] profile sync failed", res.error);
+      } else {
+        console.log("[onboarding] no authenticated user, skipping profile sync");
+      }
+    } catch (e) {
+      console.log("[onboarding] finish sync error", e);
+    }
+  }, [data]);
 
   const reset = useCallback(async () => {
     await AsyncStorage.multiRemove([KEY, DONE]);

@@ -6,7 +6,7 @@ export default function AuthLayout() {
     <Stack
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: "transparent" },
+        contentStyle: { backgroundColor: "#0c0719" },
         animation: "slide_from_right",
       }}
     >
@@ -21,6 +21,7 @@ export default function AuthLayout() {
       <Stack.Screen name="dialect" />
       <Stack.Screen name="hometown" />
       <Stack.Screen name="orientation" />
+      <Stack.Screen name="religion" />
       <Stack.Screen name="seeking" />
       <Stack.Screen name="looking-for" />
       <Stack.Screen name="distance" />
@@ -34,6 +35,7 @@ export default function AuthLayout() {
       <Stack.Screen name="bio" />
       <Stack.Screen name="location" />
       <Stack.Screen name="complete" />
+      <Stack.Screen name="auth-callback" />
       <Stack.Screen name="account-picker" options={{ presentation: "transparentModal", animation: "fade" }} />
     </Stack>
   );
