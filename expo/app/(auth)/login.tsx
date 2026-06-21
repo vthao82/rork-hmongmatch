@@ -52,6 +52,14 @@ export default function LoginScreen() {
     }
   }, [session, emailSent]);
 
+  // If a session already exists when this screen mounts (e.g. from a
+  // cold-start deep-link after Google OAuth), skip ahead to terms.
+  useEffect(() => {
+    if (session) {
+      router.replace("/(auth)/terms");
+    }
+  }, []);
+
   const onGoogle = async () => {
     if (busy) return;
     setBusy(true);

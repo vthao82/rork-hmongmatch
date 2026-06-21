@@ -109,6 +109,16 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
       console.log("[auth] Linking.addEventListener error", e);
     }
 
+    // Handle cold-start deep links — when the OS launches the app fresh
+    // to handle a redirect URL (common after system-browser OAuth flows).
+    Linking.getInitialURL().then((initialUrl) => {
+      if (initialUrl && initialUrl.includes("auth-callback")) {
+        handleAuthRedirectUrl(initialUrl);
+      }
+    }).catch((e) => {
+      console.log("[auth] getInitialURL error", e);
+    });
+
     return () => {
       try { mounted = false; subData.subscription.unsubscribe(); linkSub?.remove(); } catch (_e) {}
     };
@@ -131,20 +141,27 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
         return { ok: false, error: error?.message ?? "Failed to start sign-in" };
       }
 
-      // openAuthSessionAsync is the single correct Expo API for OAuth on ALL platforms:
-      // - iOS: ASWebAuthenticationSession (in-app browser)
-      // - Android: Chrome Custom Tabs
-      // - Web: popup window
-      // It follows redirects (Supabase → Google → Supabase → app) and captures the
-      // final redirect URL so we can exchange the auth code for a session.
+      // openAuthSessionAsync opens an in-app browser that follows the
+      // OAuth redirect chain (Supabase → Google → Supabase → app).
+      // On success the redirect URL with the auth code is captured.
       const res = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
 
       if (res.type === "success" && res.url) {
         const ok = await handleAuthRedirectUrl(res.url);
-        return ok ? { ok: true } : { ok: false, error: "Failed to complete sign-in" };
+        if (ok) return { ok: true };
       }
+
+      // Fallback for cloud simulators and cold-start scenarios:
+      // The deep-link handler or auth-callback screen may have already
+      // exchanged the code and established a session. Poll briefly.
+      for (let i = 0; i < 8; i++) {
+        await new Promise<void>((r) => setTimeout(r, 500));
+        const { data: sessData } = await supabase.auth.getSession();
+        if (sessData.session) return { ok: true };
+      }
+
       if (res.type === "cancel") return { ok: false, error: "Sign-in canceled" };
-      return { ok: false, error: "Sign-in was interrupted" };
+      return { ok: false, error: "Sign-in was interrupted — please try again" };
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Unknown sign-in error";
       console.log("[auth] signInWithGoogle error", msg);
