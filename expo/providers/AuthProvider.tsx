@@ -1,5 +1,6 @@
 import createContextHook from "@nkzw/create-context-hook";
 import { useEffect, useState, useCallback } from "react";
+import { Platform } from "react-native";
 import * as WebBrowser from "expo-web-browser";
 import * as Linking from "expo-linking";
 import { supabase } from "@/lib/supabase";
@@ -119,6 +120,21 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
       console.log("[auth] getInitialURL error", e);
     });
 
+    // On web, detect if the page loaded with auth params (e.g. email
+    // verification link, or any OAuth redirect to the main window).
+    // Skip in popups (opened by WebBrowser.openAuthSessionAsync) —
+    // the main window handles the code exchange via the resolved URL.
+    if (Platform.OS === "web" && typeof window !== "undefined" && !window.opener) {
+      const currentUrl = window.location.href;
+      if (currentUrl.includes("code=") || currentUrl.includes("access_token=")) {
+        handleAuthRedirectUrl(currentUrl);
+        // Clean the URL so a page refresh doesn't re-trigger
+        if (window.history && window.history.replaceState) {
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      }
+    }
+
     return () => {
       try { mounted = false; subData.subscription.unsubscribe(); linkSub?.remove(); } catch (_e) {}
     };
@@ -141,27 +157,53 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
         return { ok: false, error: error?.message ?? "Failed to start sign-in" };
       }
 
-      // openAuthSessionAsync opens an in-app browser that follows the
-      // OAuth redirect chain (Supabase → Google → Supabase → app).
-      // On success the redirect URL with the auth code is captured.
-      const res = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+      // Unified approach for all platforms: WebBrowser.openAuthSessionAsync.
+      // - Web: opens a popup that follows the OAuth redirect chain. When the
+      //   popup reaches redirectTo, it closes and we get the callback URL.
+      // - iOS: uses ASWebAuthenticationSession.
+      // - Android: uses Chrome Custom Tabs.
+      //
+      // In cloud simulators these native APIs may be unavailable, so we fall
+      // back to Linking.openURL (system browser) and poll for the session.
+      try {
+        const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
 
-      if (res.type === "success" && res.url) {
-        const ok = await handleAuthRedirectUrl(res.url);
-        if (ok) return { ok: true };
+        if (result.type === "success" && result.url) {
+          // Exchange the auth code for a session
+          const handled = await handleAuthRedirectUrl(result.url);
+          if (handled) return { ok: true };
+
+          // On web the popup may have already stored the session via
+          // detectSessionInUrl before closing; check local storage.
+          const { data: sessData } = await supabase.auth.getSession();
+          if (sessData.session) return { ok: true };
+
+          return { ok: false, error: "Sign-in could not be completed. Please try again." };
+        }
+
+        // User cancelled the browser dialog
+        return { ok: false, error: "Sign-in canceled" };
+      } catch (wbErr) {
+        // WebBrowser failed (e.g. no Chrome on Android emulator).
+        // Fall back to the system browser and poll for the session.
+        console.log("[auth] WebBrowser failed, falling back to Linking.openURL:", wbErr);
+        try {
+          await Linking.openURL(data.url);
+        } catch (linkErr) {
+          console.log("[auth] Linking.openURL also failed:", linkErr);
+          return { ok: false, error: "Could not open browser. Please make sure a browser is installed." };
+        }
+
+        // Poll for the session to appear. The deep-link handler (native)
+        // or the auth-callback route will exchange the code.
+        for (let i = 0; i < 30; i++) {
+          await new Promise<void>((r) => setTimeout(r, 1000));
+          const { data: sessData } = await supabase.auth.getSession();
+          if (sessData.session) return { ok: true };
+        }
+
+        return { ok: false, error: "Sign-in timed out. Please close the browser and try again." };
       }
-
-      // Fallback for cloud simulators and cold-start scenarios:
-      // The deep-link handler or auth-callback screen may have already
-      // exchanged the code and established a session. Poll briefly.
-      for (let i = 0; i < 8; i++) {
-        await new Promise<void>((r) => setTimeout(r, 500));
-        const { data: sessData } = await supabase.auth.getSession();
-        if (sessData.session) return { ok: true };
-      }
-
-      if (res.type === "cancel") return { ok: false, error: "Sign-in canceled" };
-      return { ok: false, error: "Sign-in was interrupted — please try again" };
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Unknown sign-in error";
       console.log("[auth] signInWithGoogle error", msg);

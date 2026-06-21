@@ -16,7 +16,7 @@ function createSafeClient(): SupabaseClient {
         storage: Platform.OS === "web" ? undefined : (AsyncStorage as unknown as Storage),
         autoRefreshToken: true,
         persistSession: true,
-        detectSessionInUrl: Platform.OS === "web",
+        detectSessionInUrl: false,
         flowType: "pkce",
       },
     });

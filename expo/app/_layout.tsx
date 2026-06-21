@@ -12,7 +12,7 @@ import { LanguageProvider } from "@/providers/LanguageProvider";
 import { TierProvider } from "@/providers/TierProvider";
 import { AuthProvider } from "@/providers/AuthProvider";
 
-SplashScreen.preventAutoHideAsync();
+try { SplashScreen.preventAutoHideAsync(); } catch (e) { console.log("[splash] preventAutoHideAsync error", e); }
 const qc = new QueryClient();
 
 function RootLayoutNav() {
@@ -34,8 +34,14 @@ function RootLayoutNav() {
   );
 }
 
-export default function RootLayout() {
-  useEffect(() => { SplashScreen.hideAsync(); }, []);
+export default function AppContent() {
+  useEffect(() => {
+    try {
+      SplashScreen.hideAsync();
+    } catch (e) {
+      console.log("[splash] hideAsync error", e);
+    }
+  }, []);
   return (
     <QueryClientProvider client={qc}>
       <SafeAreaProvider>

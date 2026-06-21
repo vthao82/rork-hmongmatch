@@ -45,20 +45,14 @@ export default function LoginScreen() {
     ]).start();
   }, [fade, rise]);
 
-  // When the user verifies their email and the session appears, navigate forward
-  useEffect(() => {
-    if (session && emailSent) {
-      router.push("/(auth)/terms");
-    }
-  }, [session, emailSent]);
-
-  // If a session already exists when this screen mounts (e.g. from a
-  // cold-start deep-link after Google OAuth), skip ahead to terms.
+  // Navigate forward whenever a session becomes available.
+  // This covers: Google OAuth on web (page redirect + reload), Google OAuth
+  // on native (deep link callback), email sign-in, and email verification.
   useEffect(() => {
     if (session) {
       router.replace("/(auth)/terms");
     }
-  }, []);
+  }, [session]);
 
   const onGoogle = async () => {
     if (busy) return;

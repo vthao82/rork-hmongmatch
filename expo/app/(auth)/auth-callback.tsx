@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, ActivityIndicator, Platform } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { supabase } from "@/lib/supabase";
 
@@ -9,6 +9,17 @@ export default function AuthCallbackScreen() {
 
   useEffect(() => {
     let cancelled = false;
+
+    // If this page loaded in a popup window (web OAuth via WebBrowser.openAuthSessionAsync),
+    // don't exchange the code here. The main window opened us and will exchange the code
+    // when openAuthSessionAsync resolves with this URL. Exchanging here would consume the
+    // one-time code and prevent the main window from completing sign-in.
+    if (Platform.OS === "web" && typeof window !== "undefined" && window.opener) {
+      if (!cancelled) setStatus("Completing sign-in…");
+      // The popup will be closed automatically by WebBrowser.openAuthSessionAsync.
+      return () => { cancelled = true; };
+    }
+
     const handle = async () => {
       try {
         const code = typeof params.code === "string" ? params.code : undefined;
