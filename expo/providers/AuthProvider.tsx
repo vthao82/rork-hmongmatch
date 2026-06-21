@@ -1,6 +1,5 @@
 import createContextHook from "@nkzw/create-context-hook";
-import { useEffect, useState, useCallback, useRef } from "react";
-import { Platform } from "react-native";
+import { useEffect, useState, useCallback } from "react";
 import * as WebBrowser from "expo-web-browser";
 import * as Linking from "expo-linking";
 import { supabase } from "@/lib/supabase";
@@ -79,7 +78,6 @@ async function handleAuthRedirectUrl(url: string): Promise<boolean> {
 export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
-  const pendingResolve = useRef<((ok: boolean) => void) | null>(null);
 
   useEffect(() => {
     let mounted = true;
@@ -95,10 +93,6 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
     const { data: subData } = supabase.auth.onAuthStateChange((_event, s) => {
       try {
         setSession(s);
-        if (s && pendingResolve.current) {
-          pendingResolve.current(true);
-          pendingResolve.current = null;
-        }
       } catch (e) { console.log("[auth] onAuthStateChange error", e); }
     });
 
@@ -123,38 +117,34 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
   const signInWithGoogle = useCallback(async (): Promise<{ ok: boolean; error?: string }> => {
     try {
       const redirectTo = Linking.createURL("auth-callback");
+
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: { redirectTo, skipBrowserRedirect: true },
+        options: {
+          redirectTo,
+          queryParams: { prompt: "select_account", access_type: "offline" },
+        },
       });
+
       if (error || !data?.url) {
+        console.log("[auth] signInWithOAuth error:", error?.message);
         return { ok: false, error: error?.message ?? "Failed to start sign-in" };
       }
-      if (Platform.OS === "web") {
-        if (typeof window !== "undefined") window.location.href = data.url;
-        return { ok: true };
-      }
+
+      // openAuthSessionAsync is the single correct Expo API for OAuth on ALL platforms:
+      // - iOS: ASWebAuthenticationSession (in-app browser)
+      // - Android: Chrome Custom Tabs
+      // - Web: popup window
+      // It follows redirects (Supabase → Google → Supabase → app) and captures the
+      // final redirect URL so we can exchange the auth code for a session.
       const res = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+
       if (res.type === "success" && res.url) {
         const ok = await handleAuthRedirectUrl(res.url);
-        if (!ok) return { ok: false, error: "Failed to complete sign-in" };
-        return { ok: true };
+        return ok ? { ok: true } : { ok: false, error: "Failed to complete sign-in" };
       }
-      if (res.type === "cancel") {
-        return { ok: false, error: "Sign-in canceled" };
-      }
-      // Browser didn't return cleanly — wait for deep-link fallback
-      return new Promise<boolean>((resolve) => {
-        let settled = false;
-        const done = (ok: boolean) => {
-          if (settled) return;
-          settled = true;
-          if (pendingResolve.current === resolve) pendingResolve.current = null;
-          resolve(ok);
-        };
-        pendingResolve.current = (ok: boolean) => { clearTimeout(tm); done(ok); };
-        const tm = setTimeout(() => { done(false); }, 30000);
-      }).then((ok) => ok ? { ok: true } : { ok: false, error: "Sign-in timed out" });
+      if (res.type === "cancel") return { ok: false, error: "Sign-in canceled" };
+      return { ok: false, error: "Sign-in was interrupted" };
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Unknown sign-in error";
       console.log("[auth] signInWithGoogle error", msg);
