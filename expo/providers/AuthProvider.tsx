@@ -148,7 +148,9 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
 
   const signInWithGoogle = useCallback(async (): Promise<{ ok: boolean; error?: string }> => {
     try {
-      const redirectTo = Linking.createURL("auth-callback");
+      const redirectTo = Platform.OS === "web"
+        ? Linking.createURL("auth-callback")
+        : "https://dev-8g9q9xcaqktiqbyw1ssbb.rorktest.dev/auth-callback";
       console.log("[auth] redirectTo URL:", redirectTo);
 
       const { data, error } = await supabase.auth.signInWithOAuth({
@@ -245,7 +247,9 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
   const signUpWithEmail = useCallback(async (email: string, password: string): Promise<EmailSignUpResult> => {
     try {
       const trimmed = email.trim();
-      const emailRedirectTo = Linking.createURL("auth-callback");
+      const emailRedirectTo = Platform.OS === "web"
+        ? Linking.createURL("auth-callback")
+        : "https://dev-8g9q9xcaqktiqbyw1ssbb.rorktest.dev/auth-callback";
       const { data, error } = await supabase.auth.signUp({
         email: trimmed,
         password,
@@ -270,7 +274,9 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
 
   const resendVerificationEmail = useCallback(async (email: string): Promise<{ ok: boolean; error?: string }> => {
     try {
-      const emailRedirectTo = Linking.createURL("auth-callback");
+      const emailRedirectTo = Platform.OS === "web"
+        ? Linking.createURL("auth-callback")
+        : "https://dev-8g9q9xcaqktiqbyw1ssbb.rorktest.dev/auth-callback";
       const { error } = await supabase.auth.resend({
         type: "signup",
         email: email.trim(),
