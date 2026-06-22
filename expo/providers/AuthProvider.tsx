@@ -170,30 +170,21 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
         return { ok: false, error: error?.message ?? "Failed to start sign-in" };
       }
 
-      // Open the system browser. After Google auth, Supabase redirects to the
-      // exp:// URL which the OS intercepts and routes back to Expo Go, firing
-      // the Linking event listener which handles the session.
-      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
-      console.log("[auth] WebBrowser result type:", result.type, "url:", (result as any).url ?? "none");
+      // On Android, Chrome Custom Tabs can't handle exp:// redirects — it
+      // tries to load them as a web URL and fails. Instead open the system
+      // browser via Linking.openURL. After Google auth, Supabase redirects to
+      // the exp:// URL and Android's intent system routes it back to Expo Go,
+      // firing the Linking event listener which exchanges the tokens.
+      await Linking.openURL(data.url);
 
-      if (result.type === "success" && result.url) {
-        const handled = await handleAuthRedirectUrl(result.url);
-        console.log("[auth] handleAuthRedirectUrl result:", handled);
-        if (handled) return { ok: true };
-      }
-
-      // Poll for up to 10 seconds in case the deep link listener set the session
-      for (let i = 0; i < 10; i++) {
+      // Poll for up to 60 seconds while the user completes auth in the browser
+      for (let i = 0; i < 60; i++) {
         await new Promise<void>((r) => setTimeout(r, 1000));
         const { data: sessData } = await supabase.auth.getSession();
         if (sessData.session) return { ok: true };
       }
 
-      if (result.type === "cancel" || result.type === "dismiss") {
-        return { ok: false, error: "Sign-in canceled." };
-      }
-
-      return { ok: false, error: "Sign-in could not be completed. Please try again." };
+      return { ok: false, error: "Sign-in timed out. Please try again." };
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Unknown sign-in error";
       console.log("[auth] signInWithGoogle error", msg);
