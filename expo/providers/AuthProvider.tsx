@@ -148,67 +148,49 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
 
   const signInWithGoogle = useCallback(async (): Promise<{ ok: boolean; error?: string }> => {
     try {
+      // Use the exp:// deep link URL. In Expo Go, Linking.createURL generates
+      // an exp:// URL that the OS can route back to Expo Go after OAuth.
       const redirectTo = Platform.OS === "web"
         ? Linking.createURL("auth-callback")
-        : "https://auth.expo.io/@anonymous/8g9q9xcaqktiqbyw1ssbb";
+        : Linking.createURL("auth-callback");
       console.log("[auth] redirectTo URL:", redirectTo);
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
           redirectTo,
-          queryParams: { prompt: "select_account", access_type: "offline" },
+          queryParams: { prompt: "select_account" },
+          skipBrowserRedirect: true,
         },
       });
 
       console.log("[auth] signInWithOAuth result - url:", data?.url ? "got URL" : "NO URL", "error:", error?.message);
 
       if (error || !data?.url) {
-        console.log("[auth] signInWithOAuth error:", error?.message);
         return { ok: false, error: error?.message ?? "Failed to start sign-in" };
       }
 
-      try {
-        console.log("[auth] opening WebBrowser...");
-        const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
-        console.log("[auth] WebBrowser result type:", result.type, "url:", (result as any).url ?? "none");
+      // Open the system browser. After Google auth, Supabase redirects to the
+      // exp:// URL which the OS intercepts and routes back to Expo Go, firing
+      // the Linking event listener which handles the session.
+      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+      console.log("[auth] WebBrowser result type:", result.type, "url:", (result as any).url ?? "none");
 
-        if (result.type === "success" && result.url) {
-          const handled = await handleAuthRedirectUrl(result.url);
-          console.log("[auth] handleAuthRedirectUrl result:", handled);
-          if (handled) return { ok: true };
-        }
-      } catch (wbErr) {
-        console.log("[auth] WebBrowser failed, falling back:", wbErr);
+      if (result.type === "success" && result.url) {
+        const handled = await handleAuthRedirectUrl(result.url);
+        console.log("[auth] handleAuthRedirectUrl result:", handled);
+        if (handled) return { ok: true };
       }
 
-      // After the popup closes (for any reason — success, cancel, dismiss,
-      // or error), poll for the session. The popup's auth-callback page may
-      // have exchanged the code directly, writing the session to localStorage
-      // (shared with this main window on web) or established it via deep link
-      // on native. This covers all the ways the session could have been
-      // established without our openAuthSessionAsync promise capturing it.
-      for (let i = 0; i < 30; i++) {
+      // Poll for up to 10 seconds in case the deep link listener set the session
+      for (let i = 0; i < 10; i++) {
         await new Promise<void>((r) => setTimeout(r, 1000));
         const { data: sessData } = await supabase.auth.getSession();
         if (sessData.session) return { ok: true };
       }
 
-      // If polling didn't find a session, try opening the system browser
-      // as a last resort (native platforms with deep-link support).
-      if (Platform.OS !== "web") {
-        try {
-          await Linking.openURL(data.url);
-        } catch (linkErr) {
-          console.log("[auth] Linking.openURL failed:", linkErr);
-          return { ok: false, error: "Could not open browser. Please make sure a browser is installed." };
-        }
-        for (let i = 0; i < 30; i++) {
-          await new Promise<void>((r) => setTimeout(r, 1000));
-          const { data: sessData } = await supabase.auth.getSession();
-          if (sessData.session) return { ok: true };
-        }
-        return { ok: false, error: "Sign-in timed out. Please close the browser and try again." };
+      if (result.type === "cancel" || result.type === "dismiss") {
+        return { ok: false, error: "Sign-in canceled." };
       }
 
       return { ok: false, error: "Sign-in could not be completed. Please try again." };
