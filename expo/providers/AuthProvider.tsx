@@ -3,7 +3,6 @@ import { useEffect, useState, useCallback } from "react";
 import { Platform } from "react-native";
 import * as WebBrowser from "expo-web-browser";
 import * as Linking from "expo-linking";
-import * as AuthSession from "expo-auth-session";
 import { supabase } from "@/lib/supabase";
 import type { Session, User } from "@supabase/supabase-js";
 
@@ -151,7 +150,7 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
     try {
       const redirectTo = Platform.OS === "web"
         ? Linking.createURL("auth-callback")
-        : AuthSession.makeRedirectUri({ scheme: "rork-app", useProxy: true });
+        : "https://auth.expo.io/@anonymous/8g9q9xcaqktiqbyw1ssbb";
       console.log("[auth] redirectTo URL:", redirectTo);
 
       const { data, error } = await supabase.auth.signInWithOAuth({
