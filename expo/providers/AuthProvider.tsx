@@ -67,7 +67,7 @@ function extractParams(url: string): Record<string, string> {
 async function handleAuthRedirectUrl(url: string): Promise<boolean> {
   const params = extractParams(url);
   if (params.code) {
-    const { error } = await supabase.auth.exchangeCodeForSession(params.code);
+    const { error } = await supabase.auth.exchangeCodeForSession(url);
     if (error) { console.log("[auth] exchangeCodeForSession error", error.message); return false; }
     return true;
   }
