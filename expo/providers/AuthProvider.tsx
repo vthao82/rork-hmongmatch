@@ -149,6 +149,7 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
   const signInWithGoogle = useCallback(async (): Promise<{ ok: boolean; error?: string }> => {
     try {
       const redirectTo = Linking.createURL("auth-callback");
+      console.log("[auth] redirectTo URL:", redirectTo);
 
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
@@ -158,16 +159,21 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
         },
       });
 
+      console.log("[auth] signInWithOAuth result - url:", data?.url ? "got URL" : "NO URL", "error:", error?.message);
+
       if (error || !data?.url) {
         console.log("[auth] signInWithOAuth error:", error?.message);
         return { ok: false, error: error?.message ?? "Failed to start sign-in" };
       }
 
       try {
+        console.log("[auth] opening WebBrowser...");
         const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+        console.log("[auth] WebBrowser result type:", result.type, "url:", (result as any).url ?? "none");
 
         if (result.type === "success" && result.url) {
           const handled = await handleAuthRedirectUrl(result.url);
+          console.log("[auth] handleAuthRedirectUrl result:", handled);
           if (handled) return { ok: true };
         }
       } catch (wbErr) {
