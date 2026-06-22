@@ -17,7 +17,7 @@ function createSafeClient(): SupabaseClient {
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: false,
-        flowType: "pkce",
+        flowType: "implicit",
       },
     });
   } catch (e) {
