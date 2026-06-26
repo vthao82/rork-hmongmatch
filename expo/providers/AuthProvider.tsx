@@ -49,6 +49,12 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
     selectAccount: true,
   });
 
+  useEffect(() => {
+    if (_request?.redirectUri) {
+      console.log("[auth] Google OAuth redirect URI:", _request.redirectUri);
+    }
+  }, [_request]);
+
   // Listen for Firebase auth state changes
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
