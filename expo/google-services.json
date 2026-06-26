@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "1004199539174",
+    "project_id": "hmong-date",
+    "storage_bucket": "hmong-date.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1004199539174:android:71a011e1172a38b46de627",
+        "android_client_info": {
+          "package_name": "app.rork.hmongmatch"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1004199539174-a947opurbaftcplnl7igaof0hu76h7il.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBQqlH0RZbce5tBTNenN7PA4u3uEwfBaVQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1004199539174-a947opurbaftcplnl7igaof0hu76h7il.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
