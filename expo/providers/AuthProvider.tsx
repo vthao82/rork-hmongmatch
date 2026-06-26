@@ -1,7 +1,7 @@
 import createContextHook from "@nkzw/create-context-hook";
 import { useEffect, useState, useCallback } from "react";
 import * as WebBrowser from "expo-web-browser";
-import * as Google from "expo-auth-session/providers/google";
+import * as AuthSession from "expo-auth-session";
 import {
   onAuthStateChanged,
   signInWithCredential,
@@ -17,6 +17,12 @@ import { auth } from "@/lib/firebase";
 WebBrowser.maybeCompleteAuthSession();
 
 const WEB_CLIENT_ID = "611154447714-cf6es6ga7s8chqg3kch0m7scj6it3tvu.apps.googleusercontent.com";
+const REDIRECT_URI = "https://auth.expo.io/@anonymous/8g9q9xcaqktiqbyw1ssbb";
+
+const GOOGLE_DISCOVERY = {
+  authorizationEndpoint: "https://accounts.google.com/o/oauth2/v2/auth",
+  tokenEndpoint: "https://oauth2.googleapis.com/token",
+};
 
 export type EmailSignInResult = {
   ok: boolean;
@@ -43,18 +49,17 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  const [_request, response, promptAsync] = Google.useAuthRequest({
-    webClientId: WEB_CLIENT_ID,
-    androidClientId: "1004199539174-a947opurbaftcplnl7igaof0hu76h7il.apps.googleusercontent.com",
-    redirectUri: "https://auth.expo.io/@anonymous/8g9q9xcaqktiqbyw1ssbb",
-    selectAccount: true,
-  });
-
-  useEffect(() => {
-    if (_request?.redirectUri) {
-      console.log("[auth] Google OAuth redirect URI:", _request.redirectUri);
-    }
-  }, [_request]);
+  const [_request, response, promptAsync] = AuthSession.useAuthRequest(
+    {
+      clientId: WEB_CLIENT_ID,
+      redirectUri: REDIRECT_URI,
+      scopes: ["openid", "profile", "email"],
+      responseType: AuthSession.ResponseType.Token,
+      usePKCE: false,
+      extraParams: { prompt: "select_account" },
+    },
+    GOOGLE_DISCOVERY
+  );
 
   // Listen for Firebase auth state changes
   useEffect(() => {
@@ -68,8 +73,13 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
   // Handle Google OAuth response
   useEffect(() => {
     if (response?.type === "success") {
-      const { id_token, access_token } = response.params;
-      const credential = GoogleAuthProvider.credential(id_token ?? null, access_token);
+      const accessToken = (response as AuthSession.TokenResponse).authentication?.accessToken
+        ?? response.params?.access_token;
+      if (!accessToken) {
+        console.log("[auth] No access token in response", response);
+        return;
+      }
+      const credential = GoogleAuthProvider.credential(null, accessToken);
       signInWithCredential(auth, credential).catch((e) => {
         console.log("[auth] signInWithCredential error", e);
       });
