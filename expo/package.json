@@ -6,7 +6,9 @@
     "start": "bunx rork start -p 8g9q9xcaqktiqbyw1ssbb --tunnel",
     "start-web": "bunx rork start -p 8g9q9xcaqktiqbyw1ssbb --web --tunnel",
     "start-web-dev": "DEBUG=expo* bunx rork start -p 8g9q9xcaqktiqbyw1ssbb --web --tunnel",
-    "lint": "expo lint"
+    "lint": "expo lint",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   },
   "dependencies": {
     "@expo-google-fonts/cinzel": "^0.4.2",

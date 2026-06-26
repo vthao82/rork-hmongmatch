@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "app.rork.8g9q9xcaqktiqbyw1ssbb",
+      "bundleIdentifier": "app.rork.hmongmatch",
       "infoPlist": {
         "CFBundleURLTypes": [
           { "CFBundleURLSchemes": ["rork-app"] }
@@ -27,7 +27,7 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-      "package": "app.rork.8g9q9xcaqktiqbyw1ssbb",
+      "package": "app.rork.hmongmatch",
       "intentFilters": [
         {
           "action": "VIEW",
