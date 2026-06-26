@@ -45,6 +45,7 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
 
   const [_request, response, promptAsync] = Google.useAuthRequest({
     webClientId: WEB_CLIENT_ID,
+    androidClientId: "1004199539174-a947opurbaftcplnl7igaof0hu76h7il.apps.googleusercontent.com",
     selectAccount: true,
   });
 
