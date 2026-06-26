@@ -1,17 +1,27 @@
 import createContextHook from "@nkzw/create-context-hook";
 import { useEffect, useState, useCallback } from "react";
-import { Platform } from "react-native";
 import * as WebBrowser from "expo-web-browser";
-import * as Linking from "expo-linking";
-import { supabase } from "@/lib/supabase";
-import type { Session, User } from "@supabase/supabase-js";
+import * as Google from "expo-auth-session/providers/google";
+import {
+  onAuthStateChanged,
+  signInWithCredential,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  sendEmailVerification,
+  GoogleAuthProvider,
+  signOut as firebaseSignOut,
+  type User,
+} from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 WebBrowser.maybeCompleteAuthSession();
+
+// Android OAuth client ID from google-services.json
+const ANDROID_CLIENT_ID = "1004199539174-a947opurbaftcplnl7igaof0hu76h7il.apps.googleusercontent.com";
 
 export type EmailSignInResult = {
   ok: boolean;
   error?: string;
-  mfaRequired?: boolean;
 };
 
 export type EmailSignUpResult = {
@@ -21,256 +31,103 @@ export type EmailSignUpResult = {
 };
 
 export type AuthState = {
-  session: Session | null;
   user: User | null;
   loading: boolean;
   signInWithGoogle: () => Promise<{ ok: boolean; error?: string }>;
   signInWithEmail: (email: string, password: string) => Promise<EmailSignInResult>;
   signUpWithEmail: (email: string, password: string) => Promise<EmailSignUpResult>;
-  resendVerificationEmail: (email: string) => Promise<{ ok: boolean; error?: string }>;
+  resendVerificationEmail: () => Promise<{ ok: boolean; error?: string }>;
   signOut: () => Promise<void>;
 };
 
-function extractParams(url: string): Record<string, string> {
-  const out: Record<string, string> = {};
-  if (!url) return out;
-  const parsePairs = (segment: string) => {
-    segment.split("&").forEach((pair) => {
-      if (!pair) return;
-      const eq = pair.indexOf("=");
-      const k = eq >= 0 ? pair.slice(0, eq) : pair;
-      const v = eq >= 0 ? pair.slice(eq + 1) : "";
-      if (!k) return;
-      try {
-        out[decodeURIComponent(k)] = decodeURIComponent(v);
-      } catch {
-        out[k] = v;
-      }
-    });
-  };
-  try {
-    const qIdx = url.indexOf("?");
-    const hIdx = url.indexOf("#");
-    if (qIdx >= 0) {
-      const end = hIdx > qIdx ? hIdx : url.length;
-      parsePairs(url.slice(qIdx + 1, end));
-    }
-    if (hIdx >= 0) {
-      parsePairs(url.slice(hIdx + 1));
-    }
-  } catch (e) {
-    console.log("[auth] url parse error", e);
-  }
-  return out;
-}
-
-async function handleAuthRedirectUrl(url: string): Promise<boolean> {
-  const params = extractParams(url);
-  if (params.code) {
-    const { error } = await supabase.auth.exchangeCodeForSession(url);
-    if (error) { console.log("[auth] exchangeCodeForSession error", error.message); return false; }
-    return true;
-  }
-  if (params.access_token && params.refresh_token) {
-    const { error } = await supabase.auth.setSession({
-      access_token: params.access_token,
-      refresh_token: params.refresh_token,
-    });
-    if (error) { console.log("[auth] setSession error", error.message); return false; }
-    return true;
-  }
-  return false;
-}
-
 export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
-  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
+  const [_request, response, promptAsync] = Google.useAuthRequest({
+    androidClientId: ANDROID_CLIENT_ID,
+    selectAccount: true,
+  });
+
+  // Listen for Firebase auth state changes
   useEffect(() => {
-    let mounted = true;
-    supabase.auth.getSession().then(({ data }) => {
-      if (!mounted) return;
-      setSession(data.session ?? null);
+    const unsub = onAuthStateChanged(auth, (u) => {
+      setUser(u);
       setLoading(false);
-    }).catch((e) => {
-      console.log("[auth] getSession error", e);
-      if (mounted) setLoading(false);
     });
-
-    const { data: subData } = supabase.auth.onAuthStateChange((_event, s) => {
-      try {
-        setSession(s);
-      } catch (e) { console.log("[auth] onAuthStateChange error", e); }
-    });
-
-    const handleDeepLink = (ev: { url: string }) => {
-      const url = ev?.url ?? "";
-      if (!url.includes("auth-callback")) return;
-      handleAuthRedirectUrl(url);
-    };
-
-    let linkSub: { remove: () => void } | null = null;
-    try {
-      linkSub = Linking.addEventListener("url", handleDeepLink);
-    } catch (e) {
-      console.log("[auth] Linking.addEventListener error", e);
-    }
-
-    // Handle cold-start deep links — when the OS launches the app fresh
-    // to handle a redirect URL (common after system-browser OAuth flows).
-    Linking.getInitialURL().then((initialUrl) => {
-      if (initialUrl && initialUrl.includes("auth-callback")) {
-        handleAuthRedirectUrl(initialUrl);
-      }
-    }).catch((e) => {
-      console.log("[auth] getInitialURL error", e);
-    });
-
-    // On web, detect if the page loaded with auth params (e.g. email
-    // verification link, or any OAuth redirect to the main window).
-    // Skip in popups (opened by WebBrowser.openAuthSessionAsync) —
-    // the main window handles the code exchange via the resolved URL.
-    if (Platform.OS === "web" && typeof window !== "undefined" && !window.opener) {
-      const currentUrl = window.location.href;
-      if (currentUrl.includes("code=") || currentUrl.includes("access_token=")) {
-        handleAuthRedirectUrl(currentUrl);
-        // Clean the URL so a page refresh doesn't re-trigger
-        if (window.history && window.history.replaceState) {
-          window.history.replaceState({}, document.title, window.location.pathname);
-        }
-      }
-    }
-
-    return () => {
-      try { mounted = false; subData.subscription.unsubscribe(); linkSub?.remove(); } catch (_e) {}
-    };
+    return unsub;
   }, []);
+
+  // Handle Google OAuth response
+  useEffect(() => {
+    if (response?.type === "success") {
+      const { id_token, access_token } = response.params;
+      const credential = GoogleAuthProvider.credential(id_token ?? null, access_token);
+      signInWithCredential(auth, credential).catch((e) => {
+        console.log("[auth] signInWithCredential error", e);
+      });
+    }
+  }, [response]);
 
   const signInWithGoogle = useCallback(async (): Promise<{ ok: boolean; error?: string }> => {
     try {
-      // Use the exp:// deep link URL. In Expo Go, Linking.createURL generates
-      // an exp:// URL that the OS can route back to Expo Go after OAuth.
-      const redirectTo = Platform.OS === "web"
-        ? Linking.createURL("auth-callback")
-        : Linking.createURL("auth-callback");
-      console.log("[auth] redirectTo URL:", redirectTo);
-
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo,
-          queryParams: { prompt: "select_account" },
-          skipBrowserRedirect: true,
-        },
-      });
-
-      console.log("[auth] signInWithOAuth result - url:", data?.url ? "got URL" : "NO URL", "error:", error?.message);
-
-      if (error || !data?.url) {
-        return { ok: false, error: error?.message ?? "Failed to start sign-in" };
-      }
-
-      // On Android, Chrome Custom Tabs can't handle exp:// redirects — it
-      // tries to load them as a web URL and fails. Instead open the system
-      // browser via Linking.openURL. After Google auth, Supabase redirects to
-      // the exp:// URL and Android's intent system routes it back to Expo Go,
-      // firing the Linking event listener which exchanges the tokens.
-      await Linking.openURL(data.url);
-
-      // Poll for up to 60 seconds while the user completes auth in the browser
-      for (let i = 0; i < 60; i++) {
-        await new Promise<void>((r) => setTimeout(r, 1000));
-        const { data: sessData } = await supabase.auth.getSession();
-        if (sessData.session) return { ok: true };
-      }
-
-      return { ok: false, error: "Sign-in timed out. Please try again." };
+      const result = await promptAsync();
+      if (result.type === "success") return { ok: true };
+      if (result.type === "cancel" || result.type === "dismiss") return { ok: false, error: "Sign-in canceled." };
+      return { ok: false, error: "Google sign-in failed. Please try again." };
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Unknown sign-in error";
       console.log("[auth] signInWithGoogle error", msg);
       return { ok: false, error: msg };
     }
-  }, []);
+  }, [promptAsync]);
 
   const signInWithEmail = useCallback(async (email: string, password: string): Promise<EmailSignInResult> => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
-      if (error) {
-        const msg = error.message;
-        if (msg.includes("Invalid login credentials")) {
-          return { ok: false, error: "Wrong email or password. Try again or sign up." };
-        }
-        return { ok: false, error: msg };
-      }
-      // MFA (multi-factor authentication) is required when signInWithPassword
-      // succeeds (no error) but returns a null session. The session will be
-      // established once the user completes the MFA challenge. The
-      // onAuthStateChange listener will fire when that happens.
-      if (!data.session) {
-        return { ok: true, mfaRequired: true };
-      }
+      await signInWithEmailAndPassword(auth, email.trim(), password);
       return { ok: true };
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Unknown sign-in error";
-      console.log("[auth] signInWithEmail error", msg);
-      return { ok: false, error: msg };
+    } catch (e: any) {
+      const code = e?.code ?? "";
+      if (code === "auth/invalid-credential" || code === "auth/wrong-password" || code === "auth/user-not-found") {
+        return { ok: false, error: "Wrong email or password. Try again or sign up." };
+      }
+      return { ok: false, error: e?.message ?? "Sign-in failed." };
     }
   }, []);
 
   const signUpWithEmail = useCallback(async (email: string, password: string): Promise<EmailSignUpResult> => {
     try {
-      const trimmed = email.trim();
-      const emailRedirectTo = Platform.OS === "web"
-        ? Linking.createURL("auth-callback")
-        : "https://dev-8g9q9xcaqktiqbyw1ssbb.rorktest.dev/auth-callback";
-      const { data, error } = await supabase.auth.signUp({
-        email: trimmed,
-        password,
-        options: { emailRedirectTo },
-      });
-      if (error) {
-        const msg = error.message;
-        if (msg.includes("already registered") || msg.includes("already exists")) {
-          return { ok: false, error: "An account with this email already exists. Sign in instead." };
-        }
-        return { ok: false, error: msg };
+      const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
+      await sendEmailVerification(cred.user);
+      return { ok: true, emailConfirmationRequired: true };
+    } catch (e: any) {
+      const code = e?.code ?? "";
+      if (code === "auth/email-already-in-use") {
+        return { ok: false, error: "An account with this email already exists. Sign in instead." };
       }
-      // If session is null, email confirmation is required
-      const emailConfirmationRequired = !data.session;
-      return { ok: true, emailConfirmationRequired };
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Unknown sign-up error";
-      console.log("[auth] signUpWithEmail error", msg);
-      return { ok: false, error: msg };
+      if (code === "auth/weak-password") {
+        return { ok: false, error: "Password must be at least 6 characters." };
+      }
+      return { ok: false, error: e?.message ?? "Sign-up failed." };
     }
   }, []);
 
-  const resendVerificationEmail = useCallback(async (email: string): Promise<{ ok: boolean; error?: string }> => {
+  const resendVerificationEmail = useCallback(async (): Promise<{ ok: boolean; error?: string }> => {
     try {
-      const emailRedirectTo = Platform.OS === "web"
-        ? Linking.createURL("auth-callback")
-        : "https://dev-8g9q9xcaqktiqbyw1ssbb.rorktest.dev/auth-callback";
-      const { error } = await supabase.auth.resend({
-        type: "signup",
-        email: email.trim(),
-        options: { emailRedirectTo },
-      });
-      if (error) return { ok: false, error: error.message };
+      if (!auth.currentUser) return { ok: false, error: "Not signed in." };
+      await sendEmailVerification(auth.currentUser);
       return { ok: true };
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Unknown error";
-      console.log("[auth] resendVerificationEmail error", msg);
-      return { ok: false, error: msg };
+    } catch (e: any) {
+      return { ok: false, error: e?.message ?? "Could not resend email." };
     }
   }, []);
 
   const signOut = useCallback(async () => {
-    try { await supabase.auth.signOut(); } catch (e) { console.log("[auth] signOut error", e); }
+    try { await firebaseSignOut(auth); } catch (e) { console.log("[auth] signOut error", e); }
   }, []);
 
   return {
-    session,
-    user: session?.user ?? null,
+    user,
     loading,
     signInWithGoogle,
     signInWithEmail,

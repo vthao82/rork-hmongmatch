@@ -27,7 +27,7 @@ function GoogleG() {
 
 export default function LoginScreen() {
   const { update } = useOnboarding();
-  const { signInWithGoogle, signInWithEmail, signUpWithEmail, resendVerificationEmail, session } = useAuth();
+  const { signInWithGoogle, signInWithEmail, signUpWithEmail, resendVerificationEmail, user } = useAuth();
   const t = useT();
   const [busy, setBusy] = useState<boolean>(false);
   const [mode, setMode] = useState<"signin" | "signup">("signin");
@@ -50,10 +50,10 @@ export default function LoginScreen() {
   // This covers: Google OAuth on web (page redirect + reload), Google OAuth
   // on native (deep link callback), email sign-in, and email verification.
   useEffect(() => {
-    if (session) {
+    if (user) {
       router.replace("/(auth)/terms");
     }
-  }, [session]);
+  }, [user]);
 
   const onGoogle = async () => {
     if (busy) return;
@@ -101,10 +101,8 @@ export default function LoginScreen() {
           Alert.alert("Sign-in failed", res.error ?? "Please try again.");
           return;
         }
-        if (res.mfaRequired) {
-          // MFA (two-factor) is required. The Supabase UI in the browser
-          // will prompt for the verification code. Once verified, the session
-          // appears and the useEffect above navigates to terms automatically.
+        if (false) {
+          // placeholder — Firebase MFA not implemented yet
           setMfaPending(true);
           keepBusy = true;
           return;
@@ -134,7 +132,7 @@ export default function LoginScreen() {
     if (resending || !emailSent) return;
     setResending(true);
     try {
-      const res = await resendVerificationEmail(emailSent);
+      const res = await resendVerificationEmail();
       if (!res.ok) {
         Alert.alert("Couldn't resend", res.error ?? "Please try again.");
       } else {
