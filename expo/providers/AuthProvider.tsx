@@ -16,8 +16,7 @@ import { auth } from "@/lib/firebase";
 
 WebBrowser.maybeCompleteAuthSession();
 
-// Android OAuth client ID from google-services.json
-const ANDROID_CLIENT_ID = "1004199539174-a947opurbaftcplnl7igaof0hu76h7il.apps.googleusercontent.com";
+const WEB_CLIENT_ID = "611154447714-cf6es6ga7s8chqg3kch0m7scj6it3tvu.apps.googleusercontent.com";
 
 export type EmailSignInResult = {
   ok: boolean;
@@ -45,7 +44,7 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
   const [loading, setLoading] = useState<boolean>(true);
 
   const [_request, response, promptAsync] = Google.useAuthRequest({
-    androidClientId: ANDROID_CLIENT_ID,
+    webClientId: WEB_CLIENT_ID,
     selectAccount: true,
   });
 
