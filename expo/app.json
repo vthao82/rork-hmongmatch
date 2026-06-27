@@ -18,7 +18,11 @@
       "bundleIdentifier": "app.rork.hmongmatch",
       "infoPlist": {
         "CFBundleURLTypes": [
-          { "CFBundleURLSchemes": ["rork-app"] }
+          {
+            "CFBundleURLSchemes": [
+              "rork-app"
+            ]
+          }
         ]
       }
     },
@@ -33,8 +37,15 @@
         {
           "action": "VIEW",
           "autoVerify": true,
-          "data": [{ "scheme": "rork-app" }],
-          "category": ["BROWSABLE", "DEFAULT"]
+          "data": [
+            {
+              "scheme": "rork-app"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
         }
       ]
     },
@@ -50,7 +61,14 @@
       ],
       "@react-native-google-signin/google-signin"
     ],
-    "experiments": {
+    "experiments": {},
+    "extra": {
+      "router": {
+        "origin": "https://rork.com/"
+      },
+      "eas": {
+        "projectId": "4c260e22-91f7-4928-b9d1-20218b62631b"
+      }
     }
   }
 }
