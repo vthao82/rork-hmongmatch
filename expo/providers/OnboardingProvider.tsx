@@ -1,7 +1,7 @@
 import createContextHook from "@nkzw/create-context-hook";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useEffect, useState, useCallback } from "react";
-import { supabase } from "@/lib/supabase";
+import { auth } from "@/lib/firebase";
 import { syncProfile } from "@/lib/profileSync";
 
 export type GenderId = "man" | "woman" | "beyond";
@@ -115,8 +115,7 @@ export const [OnboardingProvider, useOnboarding] = createContextHook(() => {
     await AsyncStorage.setItem(DONE, "1");
     setCompleted(true);
     try {
-      const userResp = await supabase.auth.getUser();
-      const userId = userResp?.data?.user?.id;
+      const userId = auth.currentUser?.uid;
       if (userId) {
         const res = await syncProfile(userId, data);
         if (!res.ok) console.log("[onboarding] profile sync failed", res.error);

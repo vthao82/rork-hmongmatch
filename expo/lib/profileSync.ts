@@ -1,6 +1,10 @@
-import { supabase } from "@/lib/supabase";
 import type { OnboardingData } from "@/providers/OnboardingProvider";
 
+/**
+ * Shape of a saved user profile. Kept as a reference for the upcoming
+ * Firestore migration (Phase 4). Field names are snake_case for now to
+ * minimize churn when we wire Firestore up; rename freely then.
+ */
 export type ProfileRow = {
   id: string;
   name: string | null;
@@ -30,86 +34,15 @@ export type ProfileRow = {
   updated_at?: string;
 };
 
-/** Upsert the local onboarding data to the authenticated user's row in `profiles`. */
-export async function syncProfile(userId: string, data: OnboardingData): Promise<{ ok: boolean; error?: string }> {
-  try {
-    const row: ProfileRow = {
-      id: userId,
-      name: data.name ?? null,
-      birthday: data.birthday ?? null,
-      bio: data.bio ?? null,
-      gender: data.genders?.[0] ?? null,
-      seeking: data.seeking ?? null,
-      looking_for: data.lookingFor ?? null,
-      clan: data.clan ?? null,
-      dialect: data.dialect ?? null,
-      dialect_other: data.dialectOther ?? null,
-      hometown_country: data.hometownCountry ?? null,
-      hometown_state: data.hometownState ?? null,
-      hometown_city: data.hometownCity ?? null,
-      work: data.work ?? null,
-      religion: data.religion ?? null,
-      education: data.education ?? null,
-      interests: data.interests ?? [],
-      photos: data.photos ?? [],
-      main_photo_index: data.mainPhotoIndex ?? 0,
-      photo_verified: data.photoVerified ?? false,
-      distance: data.distance ?? null,
-      distance_worldwide: data.distanceWorldwide ?? false,
-      distance_us_only: data.distanceUSOnly ?? false,
-      lifestyle: data.lifestyle ?? {},
-      extras: data.extras ?? {},
-      updated_at: new Date().toISOString(),
-    };
-    const { error, status } = await supabase.from("profiles").upsert(row, { onConflict: "id" });
-    if (error) {
-      console.log("[profileSync] upsert error", error.message, "status", status);
-      // RLS / permission errors are non-fatal during development
-      if (status === 403 || error.code === "42501" || error.message.includes("policy")) {
-        console.log("[profileSync] RLS may be blocking — run the RLS policy SQL in Supabase Dashboard");
-      }
-      return { ok: false, error: error.message };
-    }
-    return { ok: true };
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : "Unknown sync error";
-    console.log("[profileSync] error", msg);
-    return { ok: false, error: msg };
-  }
-}
-
-/** Record a like or dislike interaction. Returns whether a match was created. */
-export async function recordInteraction(
-  fromUserId: string,
-  toProfileId: string,
-  action: "like" | "dislike",
-): Promise<{ ok: boolean; matched?: boolean; error?: string }> {
-  try {
-    const { error } = await supabase.from("interactions").upsert(
-      { from_user: fromUserId, to_user: toProfileId, action },
-      { onConflict: "from_user,to_user" },
-    );
-    if (error) return { ok: false, error: error.message };
-    if (action === "like") {
-      const { data: reverse } = await supabase
-        .from("interactions")
-        .select("action")
-        .eq("from_user", toProfileId)
-        .eq("to_user", fromUserId)
-        .eq("action", "like")
-        .maybeSingle();
-      if (reverse) {
-        const [a, b] = [fromUserId, toProfileId].sort();
-        await supabase.from("matches").upsert(
-          { user_a: a, user_b: b },
-          { onConflict: "user_a,user_b" },
-        );
-        return { ok: true, matched: true };
-      }
-    }
-    return { ok: true, matched: false };
-  } catch (e) {
-    const msg = e instanceof Error ? e.message : "Unknown interaction error";
-    return { ok: false, error: msg };
-  }
+/**
+ * TODO (Phase 4 — Firestore): wire this up to write the profile row to
+ * Firestore at `users/{userId}`. For now it's a no-op so the rest of the
+ * onboarding flow keeps working with local AsyncStorage state.
+ */
+export async function syncProfile(
+  _userId: string,
+  _data: OnboardingData
+): Promise<{ ok: boolean; error?: string }> {
+  console.log("[profileSync] no-op — Firestore integration pending (Phase 4)");
+  return { ok: true };
 }
