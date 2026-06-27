@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState, useEffect } from "react";
-import { View, Text, StyleSheet, Dimensions, FlatList, TouchableOpacity, Modal, Platform } from "react-native";
+import { View, Text, StyleSheet, Dimensions, FlatList, TouchableOpacity, Modal, Platform, ActivityIndicator, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import { MapPin, BadgeCheck, X, Heart, RotateCcw, MessageCircle, Zap, Crown } from "lucide-react-native";
@@ -7,7 +7,8 @@ import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import Colors from "@/constants/colors";
-import { profiles as allProfiles, Profile } from "@/mocks/profiles";
+import { Profile } from "@/mocks/profiles";
+import { useDiscoverProfiles, recordSwipe } from "@/lib/discoverProfiles";
 import HmongMatchHeader from "@/components/HmongMatchHeader";
 import RedBackground from "@/components/RedBackground";
 import { useTier } from "@/providers/TierProvider";
@@ -79,15 +80,17 @@ export default function BrowseScreen() {
   const t = useT();
   const { isPaid, remaining, consumeLike, consumeDislike, consumeRewind, startBoost, stopBoost, boostActive, showLimitModal, setShowLimitModal, show75Modal, setShow75Modal, usage, markSeen } = useTier();
   const { consume: addLike } = useLikes();
+  const { profiles: liveProfiles, loading: loadingProfiles, error: profilesError, reload: reloadProfiles } = useDiscoverProfiles();
   const [idx, setIdx] = useState<number>(0);
   const [history, setHistory] = useState<{ id: string; liked: boolean }[]>([]);
+  const [matchedProfile, setMatchedProfile] = useState<Profile | null>(null);
   const cardHeight = W.height - ins.top - ins.bottom - 220;
 
   // Filter out already-seen users to avoid showing same person again
   const queue = useMemo(() => {
     const seen = new Set(usage.seenIds ?? []);
-    return allProfiles.filter(p => !seen.has(p.id));
-  }, [usage.seenIds]);
+    return liveProfiles.filter(p => !seen.has(p.id));
+  }, [usage.seenIds, liveProfiles]);
 
   useEffect(() => {
     if (idx >= queue.length && queue.length > 0) setIdx(0);
@@ -108,14 +111,23 @@ export default function BrowseScreen() {
     const ok = consumeLike(current.id);
     if (!ok) return;
     addLike(current.id);
+    const liked = current;
     advance(true);
+    // Persist swipe + check for match in the background
+    recordSwipe(liked.id, true).then((res) => {
+      if (res.ok && res.isMatch) {
+        setMatchedProfile(liked);
+      }
+    });
   }, [current, consumeLike, addLike, advance]);
 
   const onDislike = useCallback(() => {
     if (!current) return;
     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     consumeDislike();
+    const passed = current;
     advance(false);
+    recordSwipe(passed.id, false).catch((e) => console.log("[swipe] pass error", e));
   }, [current, consumeDislike, advance]);
 
   const onMessage = useCallback(() => {
@@ -166,11 +178,28 @@ export default function BrowseScreen() {
       </View>
 
       <View style={st.cardArea}>
-        {!current ? (
+        {loadingProfiles ? (
+          <View style={st.empty}>
+            <ActivityIndicator size="large" color={Colors.gold} />
+            <Text style={st.emptyTitle}>Finding people…</Text>
+          </View>
+        ) : profilesError ? (
+          <View style={st.empty}>
+            <Heart size={48} color={Colors.dark.textFaint} />
+            <Text style={st.emptyTitle}>Couldn’t load profiles</Text>
+            <Text style={st.emptySub}>{profilesError}</Text>
+            <TouchableOpacity onPress={() => reloadProfiles()} style={st.retryBtn} testID="retry-discover">
+              <Text style={st.retryTxt}>Try again</Text>
+            </TouchableOpacity>
+          </View>
+        ) : !current ? (
           <View style={st.empty}>
             <Heart size={48} color={Colors.dark.textFaint} />
             <Text style={st.emptyTitle}>{t("seenEveryoneTitle")}</Text>
             <Text style={st.emptySub}>{t("seenEveryoneSub")}</Text>
+            <TouchableOpacity onPress={() => reloadProfiles()} style={st.retryBtn} testID="refresh-discover">
+              <Text style={st.retryTxt}>Refresh</Text>
+            </TouchableOpacity>
           </View>
         ) : (
           <View style={{ flex: 1 }}>
@@ -226,6 +255,33 @@ export default function BrowseScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* It's a Match! */}
+      <Modal visible={!!matchedProfile} transparent animationType="fade" onRequestClose={() => setMatchedProfile(null)}>
+        <View style={st.modal}>
+          <View style={st.matchCard}>
+            <Text style={st.matchTitle}>It’s a Match! 💞</Text>
+            <Text style={st.matchSub}>You and {matchedProfile?.name} liked each other.</Text>
+            {!!matchedProfile?.photos?.[0] && (
+              <Image source={{ uri: matchedProfile.photos[0] }} style={st.matchPhoto} contentFit="cover" transition={200} />
+            )}
+            <TouchableOpacity
+              style={st.cta}
+              onPress={() => {
+                const p = matchedProfile;
+                setMatchedProfile(null);
+                if (p) router.push(`/chat/${p.id}`);
+              }}
+              testID="match-message-btn"
+            >
+              <Text style={st.ctaTxt}>Send a message</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setMatchedProfile(null)} testID="match-keep-swiping">
+              <Text style={st.later}>Keep swiping</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -273,4 +329,10 @@ const st = StyleSheet.create({
   cta: { backgroundColor: Colors.accent, paddingHorizontal: 32, paddingVertical: 14, borderRadius: 999, marginTop: 18 },
   ctaTxt: { color: "#1a1404", fontSize: 14, fontWeight: "700" as const },
   later: { color: "rgba(255,255,255,0.5)", marginTop: 14, fontSize: 13 },
+  retryBtn: { marginTop: 16, paddingHorizontal: 22, paddingVertical: 10, borderRadius: 999, borderWidth: 1, borderColor: Colors.gold },
+  retryTxt: { color: Colors.gold, fontSize: 13, fontWeight: "700" as const },
+  matchCard: { backgroundColor: "#16060c", borderRadius: 22, padding: 26, alignItems: "center", width: "100%", borderWidth: 1, borderColor: "rgba(212,168,67,0.4)" },
+  matchTitle: { color: Colors.gold, fontSize: 26, fontWeight: "800" as const, textAlign: "center" as const, letterSpacing: -0.5 },
+  matchSub: { color: "rgba(255,255,255,0.85)", fontSize: 14, textAlign: "center" as const, marginTop: 8, lineHeight: 20 },
+  matchPhoto: { width: 160, height: 200, borderRadius: 16, marginTop: 18, borderWidth: 2, borderColor: Colors.gold },
 });
