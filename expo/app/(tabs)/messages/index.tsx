@@ -8,18 +8,17 @@ import { MessageSquarePlus, Search, X as XIcon } from "lucide-react-native";
 import Colors from "@/constants/colors";
 import HmongMatchHeader from "@/components/HmongMatchHeader";
 import RedBackground from "@/components/RedBackground";
-import { conversations as mockConversations, matches, Conversation, profiles } from "@/mocks/profiles";
+import { conversations as mockConversations, matches, Conversation, profiles as mockProfiles } from "@/mocks/profiles";
+import { useAllProfiles, useMyMatches } from "@/lib/discoverProfiles";
 import { useLikes } from "@/providers/LikesProvider";
 import { useT } from "@/providers/LanguageProvider";
 
 const CONVOS_KEY = "hmongdate.convos.v1";
 
-function buildConvo(profileId: string): Conversation | null {
-  const p = profiles.find(x => x.id === profileId);
-  if (!p) return null;
+function buildConvoFromProfile(profile: { id: string; name: string; age: number; photos: string[] }): Conversation {
   return {
-    id: `conv_${p.id}`,
-    profile: p,
+    id: `conv_${profile.id}`,
+    profile: profile as any,
     lastMessage: "You matched! Say hello 👋",
     lastMessageTime: "Just now",
     unreadCount: 0,
@@ -32,6 +31,8 @@ export default function ChatTab() {
   const router = useRouter();
   const t = useT();
   const { likedIds } = useLikes();
+  const { byId: liveById } = useAllProfiles();
+  const { matchIds: liveMatchIds } = useMyMatches();
   const [q, setQ] = useState<string>("");
   const [newOpen, setNewOpen] = useState<boolean>(false);
   const [persistedConvos, setPersistedConvos] = useState<Conversation[]>([]);
@@ -47,25 +48,33 @@ export default function ChatTab() {
     })();
   }, []);
 
-  // Generate conversations from liked profiles that aren't already in mock or persisted
+  // Generate conversations from real Firestore matches and liked profiles
   useEffect(() => {
-    if (likedIds.length === 0) return;
+    const seedIds = Array.from(new Set([...liveMatchIds, ...likedIds]));
+    if (seedIds.length === 0) return;
     (async () => {
       try {
         const existing = new Set([
           ...mockConversations.map(c => c.profile.id),
           ...persistedConvos.map(c => c.profile.id),
         ]);
-        const newIds = likedIds.filter(id => !existing.has(id));
+        const newIds = seedIds.filter(id => !existing.has(id));
         if (newIds.length === 0) return;
-        const newConvos = newIds.map(id => buildConvo(id)).filter(Boolean) as Conversation[];
+        const newConvos = newIds
+          .map(id => {
+            const live = liveById[id];
+            if (live) return buildConvoFromProfile(live);
+            const mock = mockProfiles.find(p => p.id === id);
+            return mock ? buildConvoFromProfile(mock) : null;
+          })
+          .filter(Boolean) as Conversation[];
         if (newConvos.length === 0) return;
         const merged = [...persistedConvos, ...newConvos];
         setPersistedConvos(merged);
         await AsyncStorage.setItem(CONVOS_KEY, JSON.stringify(merged)).catch(() => {});
       } catch (e) { console.log("convos sync", e); }
     })();
-  }, [likedIds]);
+  }, [liveMatchIds, likedIds, liveById]);
 
   // Merge mock + persisted conversations, deduplicate by profile id
   const allConvos = useMemo<Conversation[]>(() => {

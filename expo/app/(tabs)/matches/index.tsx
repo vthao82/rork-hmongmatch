@@ -8,7 +8,8 @@ import { Modal, Alert } from "react-native";
 import Colors from "@/constants/colors";
 import HmongMatchHeader from "@/components/HmongMatchHeader";
 import RedBackground from "@/components/RedBackground";
-import { profiles } from "@/mocks/profiles";
+import { profiles as mockProfiles } from "@/mocks/profiles";
+import { useAllProfiles, useMyMatches } from "@/lib/discoverProfiles";
 import { useLikes, DAILY_LIMIT } from "@/providers/LikesProvider";
 import { useTier } from "@/providers/TierProvider";
 import { useT } from "@/providers/LanguageProvider";
@@ -22,10 +23,25 @@ export default function LikesScreen() {
   const t = useT();
   const { used, premium, likedIds } = useLikes();
   const { isPaid } = useTier();
+  const { byId: liveById } = useAllProfiles();
+  const { matchIds: liveMatchIds } = useMyMatches();
   const [tab, setTab] = useState<"likes" | "liked" | "top">("liked");
   const [blocked, setBlocked] = useState<string[]>([]);
   const [upgradeOpen, setUpgradeOpen] = useState<boolean>(false);
-  const myLiked = profiles.filter(p => likedIds.includes(p.id) && !blocked.includes(p.id));
+  // "You Liked" — pull from Firestore live profiles by id (fall back to mocks during loading)
+  const myLiked = likedIds
+    .filter((id) => !blocked.includes(id))
+    .map((id) => liveById[id] ?? mockProfiles.find((p) => p.id === id))
+    .filter((p): p is NonNullable<typeof p> => !!p);
+  // "Matches" — mutual likes from /matches collection
+  const liveMatchProfiles = liveMatchIds
+    .filter((id) => !blocked.includes(id))
+    .map((id) => liveById[id])
+    .filter((p): p is NonNullable<typeof p> => !!p);
+  // "Top Picks" — show all other live profiles (excluding self & already-liked)
+  const topPicks = Object.values(liveById)
+    .filter((p) => !likedIds.includes(p.id) && !blocked.includes(p.id))
+    .slice(0, 12);
 
   const blockUser = (id: string, name: string) => {
     Alert.alert(t("blockTitle", { name }), t("blockBody"), [
@@ -111,7 +127,7 @@ export default function LikesScreen() {
 
           <Text style={s.sectionHead}>{t("whoLikedYou")}</Text>
           <View style={s.grid}>
-            {profiles.slice(0, 4).map(p => (
+            {topPicks.slice(0, 4).map(p => (
               <TouchableOpacity key={p.id} style={[s.pick, { width: CW }]} activeOpacity={0.85} onPress={() => { if (!premium && !isPaid) setUpgradeOpen(true); else router.push(`/user/${p.id}`); }} testID={`liked-by-${p.id}`}>
                 <Image source={{ uri: p.photos[0] }} style={s.pickImg} contentFit="cover" blurRadius={premium ? 0 : 14} />
                 <View style={s.pickOverlay} />
@@ -137,7 +153,7 @@ export default function LikesScreen() {
         <ScrollView contentContainerStyle={s.topGrid} showsVerticalScrollIndicator={false}>
           <Text style={s.topPrompt}>{t("upgradeTopPicks")}</Text>
           <View style={s.grid}>
-            {profiles.slice(0, 4).map(p => (
+            {topPicks.slice(0, 4).map(p => (
               <TouchableOpacity key={p.id} style={[s.pick, { width: CW }]} activeOpacity={0.85} onPress={() => { if (!isPaid) setUpgradeOpen(true); else router.push(`/user/${p.id}`); }} testID={`top-${p.id}`}>
                 <Image source={{ uri: p.photos[0] }} style={s.pickImg} contentFit="cover" blurRadius={isPaid ? 0 : 8} />
                 <View style={s.pickOverlay} />

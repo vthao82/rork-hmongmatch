@@ -125,6 +125,78 @@ export function useDiscoverProfiles() {
 }
 
 /**
+ * Hook: fetches ALL profiles from Firestore (including the current user).
+ * Used by Likes/Chat tabs to look up names + photos by user id.
+ */
+export function useAllProfiles() {
+  const [byId, setById] = useState<Record<string, Profile>>({});
+  const [loading, setLoading] = useState<boolean>(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const snap = await getDocs(collection(db, "users"));
+      const map: Record<string, Profile> = {};
+      snap.forEach((d) => {
+        map[d.id] = rowToProfile(d.id, d.data());
+      });
+      setById(map);
+    } catch (e) {
+      console.log("[useAllProfiles] error", e);
+      setById({});
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  return { byId, loading, reload: load };
+}
+
+/**
+ * Hook: subscribe to matches involving the current user.
+ * Each match doc lives at /matches/{sortedUid1_sortedUid2} with userIds: string[].
+ */
+export function useMyMatches() {
+  const [matchIds, setMatchIds] = useState<string[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const me = auth.currentUser;
+      if (!me) {
+        setMatchIds([]);
+        return;
+      }
+      const q = query(collection(db, "matches"), where("userIds", "array-contains", me.uid));
+      const snap = await getDocs(q);
+      const ids: string[] = [];
+      snap.forEach((d) => {
+        const ids2 = d.data().userIds as string[];
+        const otherId = ids2.find((x) => x !== me.uid);
+        if (otherId) ids.push(otherId);
+      });
+      setMatchIds(ids);
+    } catch (e) {
+      console.log("[useMyMatches] error", e);
+      setMatchIds([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  return { matchIds, loading, reload: load };
+}
+
+/**
  * Record a swipe and (if mutual) create a match.
  * Returns { isMatch: true } when the other user already liked you.
  */
