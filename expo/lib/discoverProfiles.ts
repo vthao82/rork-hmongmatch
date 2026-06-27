@@ -88,13 +88,27 @@ export function useDiscoverProfiles() {
         return;
       }
 
-      // Fetch users (up to QUEUE_LIMIT) and the current user's prior swipes in parallel
-      const [usersSnap, swipesSnap] = await Promise.all([
-        getDocs(query(collection(db, "users"), limit(QUEUE_LIMIT))),
-        getDocs(collection(db, "users", me.uid, "swipes")),
-      ]);
+      // Fetch users (any signed-in user can read) and the current user's prior swipes.
+      // Run them separately so a failure on one (e.g. missing swipes rule) doesn't
+      // block the other.
+      let usersSnap;
+      try {
+        usersSnap = await getDocs(query(collection(db, "users"), limit(QUEUE_LIMIT)));
+      } catch (e: any) {
+        console.log("[discover] users query failed", e);
+        throw e;
+      }
 
-      const seen = new Set<string>(swipesSnap.docs.map((d) => d.id));
+      let swipeIds = new Set<string>();
+      try {
+        const swipesSnap = await getDocs(collection(db, "users", me.uid, "swipes"));
+        swipesSnap.forEach((d) => swipeIds.add(d.id));
+      } catch (e) {
+        // Non-fatal — show all profiles if we can't read swipes
+        console.log("[discover] swipes query failed (continuing)", e);
+      }
+
+      const seen = swipeIds;
       seen.add(me.uid); // never show yourself
 
       const list: Profile[] = [];
