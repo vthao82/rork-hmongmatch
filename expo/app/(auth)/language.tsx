@@ -35,7 +35,7 @@ export default function LanguageScreen() {
 
   const onContinue = async () => {
     await setLang(sel);
-    router.replace("/(auth)/login");
+    router.replace("/(auth)/terms");
   };
 
   return (

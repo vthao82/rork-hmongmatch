@@ -16,7 +16,7 @@ export default function Index() {
     );
   }
   if (completed) return <Redirect href="/discover" />;
-  return <Redirect href="/(auth)/language" />;
+  return <Redirect href="/(auth)/login" />;
 }
 
 const s = StyleSheet.create({

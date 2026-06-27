@@ -55,7 +55,7 @@ export default function LoginScreen() {
       if (!emailSent && user.email) setEmailSent(user.email);
       return;
     }
-    router.replace("/(auth)/terms");
+    router.replace("/(auth)/language");
   }, [user, emailVerified, emailSent]);
 
   // While on the "Check your email" screen, poll Firebase every 3s for verification status.
@@ -79,7 +79,7 @@ export default function LoginScreen() {
         }
         return;
       }
-      router.push("/(auth)/terms");
+      // Navigation handled by the user/emailVerified useEffect above.
     } catch (e) {
       console.log("google login error", e);
       Alert.alert("Sign-in failed", "Please try again.");
