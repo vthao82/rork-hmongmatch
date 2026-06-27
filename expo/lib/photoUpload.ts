@@ -1,9 +1,5 @@
 import { ref, uploadBytes, getDownloadURL, deleteObject } from "firebase/storage";
-import * as ImageManipulator from "expo-image-manipulator";
 import { storage } from "@/lib/firebase";
-
-const MAX_WIDTH = 1280; // resize so the longest side is at most 1280px
-const COMPRESS_QUALITY = 0.7; // 0.7 ≈ great quality, ~10x smaller than original
 
 /**
  * True if the URI is already a Firebase Storage (or any https) URL.
@@ -13,32 +9,10 @@ export function isRemoteUrl(uri: string): boolean {
 }
 
 /**
- * Resize + JPEG-compress a local image. PNG screenshots become JPEGs.
- * Returns a new local file:// URI of the compressed image.
- */
-async function compressImageAsync(localUri: string): Promise<string> {
-  try {
-    const result = await ImageManipulator.manipulateAsync(
-      localUri,
-      [{ resize: { width: MAX_WIDTH } }],
-      {
-        compress: COMPRESS_QUALITY,
-        format: ImageManipulator.SaveFormat.JPEG,
-      }
-    );
-    return result.uri;
-  } catch (e) {
-    console.log("[photoUpload] compress failed, using original", e);
-    return localUri;
-  }
-}
-
-/**
  * Upload a local image (file://...) to Firebase Storage at
  * `users/{userId}/photos/{photoId}.jpg`. Returns the public download URL.
  *
- * The image is resized to max 1280px wide and compressed to ~70% JPEG quality
- * before upload. If the URI is already remote, it's returned as-is.
+ * If the URI is already remote, it's returned as-is (no re-upload).
  */
 export async function uploadPhotoAsync(
   userId: string,
@@ -49,17 +23,14 @@ export async function uploadPhotoAsync(
   if (!localUri) throw new Error("uploadPhotoAsync: missing localUri");
   if (isRemoteUrl(localUri)) return localUri;
 
-  // Compress before upload to save storage cost and speed up everything downstream.
-  const compressedUri = await compressImageAsync(localUri);
-
-  // Fetch the compressed file and convert to a Blob.
-  const response = await fetch(compressedUri);
+  // Fetch the file from the local URI and convert to a Blob.
+  const response = await fetch(localUri);
   const blob = await response.blob();
 
   const path = `users/${userId}/photos/${photoId}.jpg`;
   const storageRef = ref(storage, path);
 
-  await uploadBytes(storageRef, blob, { contentType: "image/jpeg" });
+  await uploadBytes(storageRef, blob, { contentType: blob.type || "image/jpeg" });
   const downloadUrl = await getDownloadURL(storageRef);
   return downloadUrl;
 }
