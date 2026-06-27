@@ -5,9 +5,11 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import { ArrowLeft, BadgeCheck, MapPin, Users, Plus, Check } from "lucide-react-native";
 import Colors from "@/constants/colors";
-import { profiles, currentUser, Profile } from "@/mocks/profiles";
+import { profiles as mockProfiles, currentUser, Profile } from "@/mocks/profiles";
+import { useAllProfiles } from "@/lib/discoverProfiles";
 import { useOnboarding } from "@/providers/OnboardingProvider";
 import { useT } from "@/providers/LanguageProvider";
+import { auth } from "@/lib/firebase";
 
 const SW = Dimensions.get("window").width;
 const CW = (SW - 16 * 2 - 12) / 2;
@@ -34,24 +36,38 @@ export default function CategoryScreen() {
   const t = useT();
   const title = decodeURIComponent(id ?? "");
   const { data, update } = useOnboarding();
+  const { byId: liveById } = useAllProfiles();
   const inCategory = (data.interests ?? []).includes(title);
 
   const { filtered, subtitle } = useMemo(() => {
     const entry = CATEGORY_MAP[title];
-    const base = entry ? profiles.filter(entry.match) : profiles;
+    // Prefer live Firestore profiles; fall back to mocks if empty during load
+    const liveList = Object.values(liveById);
+    const all: Profile[] = liveList.length > 0 ? liveList : mockProfiles;
+    // Exclude current user from the base list (we'll add them at the top if they match)
+    const myUid = auth.currentUser?.uid;
+    const baseFull = myUid ? all.filter((p) => p.id !== myUid) : all;
+    const base = entry ? baseFull.filter(entry.match) : baseFull;
     const sub = entry?.subtitle ?? t("peopleInterested");
     if (inCategory) {
-      const me: Profile = {
-        ...currentUser,
-        name: (data.name?.trim() || currentUser.name) + " (You)",
-        photos: (data.photos && data.photos.length > 0) ? data.photos : currentUser.photos,
-        bio: data.bio ?? currentUser.bio,
-      };
-      const without = base.filter(p => p.id !== currentUser.id);
-      return { filtered: [me, ...without], subtitle: sub };
+      const meLive = myUid ? liveById[myUid] : null;
+      const me: Profile = meLive
+        ? {
+            ...meLive,
+            name: (data.name?.trim() || meLive.name) + " (You)",
+            photos: (data.photos && data.photos.length > 0) ? data.photos : meLive.photos,
+            bio: data.bio ?? meLive.bio,
+          }
+        : {
+            ...currentUser,
+            name: (data.name?.trim() || currentUser.name) + " (You)",
+            photos: (data.photos && data.photos.length > 0) ? data.photos : currentUser.photos,
+            bio: data.bio ?? currentUser.bio,
+          };
+      return { filtered: [me, ...base], subtitle: sub };
     }
     return { filtered: base, subtitle: sub };
-  }, [title, inCategory, data]);
+  }, [title, inCategory, data, liveById]);
 
   return (
     <View style={[s.ct, { paddingTop: ins.top }]}>

@@ -89,7 +89,9 @@ export default function BrowseScreen() {
   // Filter out already-seen users to avoid showing same person again
   const queue = useMemo(() => {
     const seen = new Set(usage.seenIds ?? []);
-    return liveProfiles.filter(p => !seen.has(p.id));
+    const filtered = liveProfiles.filter(p => !seen.has(p.id));
+    console.log(`[Discover] live=${liveProfiles.length} seen=${seen.size} queue=${filtered.length}`);
+    return filtered;
   }, [usage.seenIds, liveProfiles]);
 
   useEffect(() => {
