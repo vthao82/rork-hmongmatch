@@ -47,7 +47,8 @@
         {
           "origin": "https://rork.com/"
         }
-      ]
+      ],
+      "@react-native-google-signin/google-signin"
     ],
     "experiments": {
     }

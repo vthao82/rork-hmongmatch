@@ -27,7 +27,7 @@ function GoogleG() {
 
 export default function LoginScreen() {
   const { update } = useOnboarding();
-  const { signInWithGoogle, signInWithEmail, signUpWithEmail, resendVerificationEmail, user } = useAuth();
+  const { signInWithGoogle, signInWithEmail, signUpWithEmail, resendVerificationEmail, user, emailVerified, reloadUser, signOut } = useAuth();
   const t = useT();
   const [busy, setBusy] = useState<boolean>(false);
   const [mode, setMode] = useState<"signin" | "signup">("signin");
@@ -46,14 +46,26 @@ export default function LoginScreen() {
     ]).start();
   }, [fade, rise]);
 
-  // Navigate forward whenever a session becomes available.
-  // This covers: Google OAuth on web (page redirect + reload), Google OAuth
-  // on native (deep link callback), email sign-in, and email verification.
+  // Navigate forward only when a user is present AND verified.
+  // Unverified email users get pinned to the "Check your email" screen below.
   useEffect(() => {
-    if (user) {
-      router.replace("/(auth)/terms");
+    if (!user) return;
+    if (!emailVerified) {
+      // Show the "Check your email" screen for unverified email users
+      if (!emailSent && user.email) setEmailSent(user.email);
+      return;
     }
-  }, [user]);
+    router.replace("/(auth)/terms");
+  }, [user, emailVerified, emailSent]);
+
+  // While on the "Check your email" screen, poll Firebase every 3s for verification status.
+  useEffect(() => {
+    if (!emailSent) return;
+    const interval = setInterval(() => {
+      reloadUser().catch((e) => console.log("[verify] reload error", e));
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [emailSent, reloadUser]);
 
   const onGoogle = async () => {
     if (busy) return;
@@ -101,13 +113,9 @@ export default function LoginScreen() {
           Alert.alert("Sign-in failed", res.error ?? "Please try again.");
           return;
         }
-        if (false) {
-          // placeholder — Firebase MFA not implemented yet
-          setMfaPending(true);
-          keepBusy = true;
-          return;
-        }
-        router.push("/(auth)/terms");
+        // Navigation handled by the user/emailVerified useEffect above:
+        // - verified users → /(auth)/terms
+        // - unverified email users → "Check your email" screen
       } else {
         const res = await signUpWithEmail(trimmed, password);
         if (!res.ok) {
@@ -116,9 +124,8 @@ export default function LoginScreen() {
         }
         if (res.emailConfirmationRequired) {
           setEmailSent(trimmed);
-        } else {
-          router.push("/(auth)/terms");
         }
+        // Navigation handled by the user/emailVerified useEffect above.
       }
     } catch (e) {
       console.log("email auth error", e);
@@ -145,7 +152,14 @@ export default function LoginScreen() {
     }
   };
 
-  const onBackToSignIn = () => {
+  const onBackToSignIn = async () => {
+    // Sign out so the user can use the form again (otherwise our useEffect
+    // would just pin them back to the verify screen).
+    try {
+      await signOut();
+    } catch (e) {
+      console.log("[verify] signOut error", e);
+    }
     setEmailSent(null);
     setMode("signin");
   };
