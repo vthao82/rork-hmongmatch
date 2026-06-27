@@ -1,6 +1,5 @@
-import { initializeApp, getApps } from "firebase/app";
-import { initializeAuth, getAuth, getReactNativePersistence } from "firebase/auth";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { initializeApp, getApps, type FirebaseApp } from "firebase/app";
+import { getAuth, type Auth } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBQqlH0RZbce5tBTNenN7PA4u3uEwfBaVQ",
@@ -11,8 +10,8 @@ const firebaseConfig = {
   appId: "1:1004199539174:android:71a011e1172a38b46de627",
 };
 
-const isNew = getApps().length === 0;
-const app = isNew ? initializeApp(firebaseConfig) : getApps()[0];
-export const auth = isNew
-  ? initializeAuth(app, { persistence: getReactNativePersistence(AsyncStorage) })
-  : getAuth(app);
+const app: FirebaseApp = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
+
+// Firebase v11+ auto-detects React Native and uses AsyncStorage for
+// persistence when @react-native-async-storage/async-storage is installed.
+export const auth: Auth = getAuth(app);
