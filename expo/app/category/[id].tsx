@@ -24,9 +24,32 @@ const CATEGORY_MAP: Record<string, { match: (p: Profile) => boolean; subtitle: s
   "Family First": { match: p => /family/i.test(p.bio) || /family|clan|traditions/i.test(p.interests.join(" ")), subtitle: "Family-oriented people" },
   "Outdoors & Hunting": { match: p => p.interests.some(i => /fish|hiking|camping|outdoor|hunting/i.test(i)), subtitle: "Adventurous spirits" },
   "Travel": { match: p => p.interests.some(i => /travel|road trip/i.test(i)), subtitle: "Wanderers unite" },
-  "Long-term partner": { match: p => /relationship/i.test(p.lookingFor), subtitle: "Looking for something serious" },
-  "Serious Daters": { match: p => /relationship/i.test(p.lookingFor), subtitle: "Dating with intention" },
-  "Short-term fun": { match: p => /casual/i.test(p.lookingFor), subtitle: "Keep it casual" },
+  // Relationship goals — match user's stored lookingFor ID OR descriptive label
+  "Long-term partner": {
+    match: p => /^long$/i.test(p.lookingFor) || /long.?term|relationship|marriage|serious/i.test(p.lookingFor),
+    subtitle: "Looking for something serious",
+  },
+  "Long-term, open to short": {
+    match: p => /long.?open|long.?term.?open/i.test(p.lookingFor),
+    subtitle: "Long-term — but flexible",
+  },
+  "Short-term, open to long": {
+    match: p => /short.?open|short.?term.?open/i.test(p.lookingFor),
+    subtitle: "Short-term — but open to more",
+  },
+  "Short-term fun": {
+    match: p => /^short$/i.test(p.lookingFor) || /short.?term|casual|fun/i.test(p.lookingFor),
+    subtitle: "Keep it casual",
+  },
+  "Serious Daters": { match: p => /relationship|marriage|long/i.test(p.lookingFor), subtitle: "Dating with intention" },
+};
+
+// Maps a Relationship Goals card label to its OnboardingData.lookingFor ID
+const RELATIONSHIP_LABEL_TO_ID: Record<string, string> = {
+  "Long-term partner": "long",
+  "Long-term, open to short": "long-open",
+  "Short-term, open to long": "short-open",
+  "Short-term fun": "short",
 };
 
 export default function CategoryScreen() {
@@ -37,7 +60,13 @@ export default function CategoryScreen() {
   const title = decodeURIComponent(id ?? "");
   const { data, update } = useOnboarding();
   const { byId: liveById } = useAllProfiles();
-  const inCategory = (data.interests ?? []).includes(title);
+  // The user belongs to a Relationship Goals card if their lookingFor ID matches;
+  // otherwise it's an interests-based category.
+  const inCategory = (() => {
+    const relationshipId = RELATIONSHIP_LABEL_TO_ID[title];
+    if (relationshipId) return data.lookingFor === relationshipId;
+    return (data.interests ?? []).includes(title);
+  })();
 
   const { filtered, subtitle } = useMemo(() => {
     const entry = CATEGORY_MAP[title];
@@ -87,9 +116,15 @@ export default function CategoryScreen() {
       <Text style={s.sub}>{subtitle}</Text>
       <TouchableOpacity
         onPress={() => {
-          const cur = data.interests ?? [];
-          const next = inCategory ? cur.filter(x => x !== title) : [...cur, title];
-          update({ interests: next });
+          const relationshipId = RELATIONSHIP_LABEL_TO_ID[title];
+          if (relationshipId) {
+            // Relationship Goals card → toggle lookingFor instead of interests
+            update({ lookingFor: inCategory ? undefined : (relationshipId as any) });
+          } else {
+            const cur = data.interests ?? [];
+            const next = inCategory ? cur.filter(x => x !== title) : [...cur, title];
+            update({ interests: next });
+          }
         }}
         activeOpacity={0.85}
         style={[s.addSelf, inCategory && s.addSelfOn]}
