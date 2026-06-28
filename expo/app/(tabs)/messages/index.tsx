@@ -1,107 +1,81 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState } from "react";
 import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, Modal } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { Image } from "expo-image";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { MessageSquarePlus, Search, X as XIcon } from "lucide-react-native";
 import Colors from "@/constants/colors";
 import HmongMatchHeader from "@/components/HmongMatchHeader";
 import RedBackground from "@/components/RedBackground";
-import { conversations as mockConversations, matches, Conversation, profiles as mockProfiles } from "@/mocks/profiles";
-import { useAllProfiles, useMyMatches } from "@/lib/discoverProfiles";
-import { useLikes } from "@/providers/LikesProvider";
+import { profiles as mockProfiles } from "@/mocks/profiles";
+import { useAllProfiles } from "@/lib/discoverProfiles";
+import { useChatThreads, formatRelative, type ChatThread } from "@/lib/chat";
 import { useT } from "@/providers/LanguageProvider";
+import VerifiedBadge from "@/components/VerifiedBadge";
 
-const CONVOS_KEY = "hmongdate.convos.v1";
+type Row = {
+  otherUid: string;
+  name: string;
+  age: number;
+  photo: string | null;
+  verified: boolean;
+  isOnline: boolean;
+  lastMessage: string;
+  timeLabel: string;
+  unreadCount: number;
+  lastMessageAt: number;
+};
 
-function buildConvoFromProfile(profile: { id: string; name: string; age: number; photos: string[] }): Conversation {
-  return {
-    id: `conv_${profile.id}`,
-    profile: profile as any,
-    lastMessage: "You matched! Say hello 👋",
-    lastMessageTime: "Just now",
-    unreadCount: 0,
-    messages: [],
-  };
+function profileForThread(
+  thread: ChatThread,
+  liveById: Record<string, { id: string; name: string; age: number; photos: string[]; verified: boolean; isOnline: boolean }>
+) {
+  const live = liveById[thread.otherUid];
+  if (live) return live;
+  return mockProfiles.find((p) => p.id === thread.otherUid) ?? null;
 }
 
 export default function ChatTab() {
   const ins = useSafeAreaInsets();
   const router = useRouter();
   const t = useT();
-  const { likedIds } = useLikes();
   const { byId: liveById } = useAllProfiles();
-  const { matchIds: liveMatchIds } = useMyMatches();
+  const { threads } = useChatThreads();
   const [q, setQ] = useState<string>("");
   const [newOpen, setNewOpen] = useState<boolean>(false);
-  const [persistedConvos, setPersistedConvos] = useState<Conversation[]>([]);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        const raw = await AsyncStorage.getItem(CONVOS_KEY);
-        if (raw && raw !== "null") {
-          try { const parsed = JSON.parse(raw) as Conversation[]; if (Array.isArray(parsed)) setPersistedConvos(parsed); } catch (_e) { console.log("convos parse", _e); }
-        }
-      } catch (e) { console.log("convos hydrate", e); }
-    })();
-  }, []);
-
-  // Generate conversations from real Firestore matches and liked profiles
-  useEffect(() => {
-    const seedIds = Array.from(new Set([...liveMatchIds, ...likedIds]));
-    if (seedIds.length === 0) return;
-    (async () => {
-      try {
-        const existing = new Set([
-          ...mockConversations.map(c => c.profile.id),
-          ...persistedConvos.map(c => c.profile.id),
-        ]);
-        const newIds = seedIds.filter(id => !existing.has(id));
-        if (newIds.length === 0) return;
-        const newConvos = newIds
-          .map(id => {
-            const live = liveById[id];
-            if (live) return buildConvoFromProfile(live);
-            const mock = mockProfiles.find(p => p.id === id);
-            return mock ? buildConvoFromProfile(mock) : null;
-          })
-          .filter(Boolean) as Conversation[];
-        if (newConvos.length === 0) return;
-        const merged = [...persistedConvos, ...newConvos];
-        setPersistedConvos(merged);
-        await AsyncStorage.setItem(CONVOS_KEY, JSON.stringify(merged)).catch(() => {});
-      } catch (e) { console.log("convos sync", e); }
-    })();
-  }, [liveMatchIds, likedIds, liveById]);
-
-  // Merge mock + persisted conversations, deduplicate by profile id
-  const allConvos = useMemo<Conversation[]>(() => {
-    const seen = new Set<string>();
-    const merged: Conversation[] = [];
-    // Persisted first (user-created)
-    for (const c of persistedConvos) {
-      if (!seen.has(c.profile.id)) {
-        seen.add(c.profile.id);
-        merged.push(c);
-      }
+  const rows = useMemo<Row[]>(() => {
+    const list: Row[] = [];
+    for (const thread of threads) {
+      const profile = profileForThread(thread, liveById as Record<string, { id: string; name: string; age: number; photos: string[]; verified: boolean; isOnline: boolean }>);
+      if (!profile) continue;
+      list.push({
+        otherUid: thread.otherUid,
+        name: profile.name,
+        age: profile.age,
+        photo: profile.photos?.[0] ?? null,
+        verified: !!profile.verified,
+        isOnline: !!profile.isOnline,
+        lastMessage: thread.lastMessage ?? t("sayHello"),
+        timeLabel: formatRelative(thread.lastMessageAt),
+        unreadCount: thread.unreadCount,
+        lastMessageAt: thread.lastMessageAt ?? 0,
+      });
     }
-    // Then mock (fallback)
-    for (const c of mockConversations) {
-      if (!seen.has(c.profile.id)) {
-        seen.add(c.profile.id);
-        merged.push(c);
-      }
-    }
-    return merged;
-  }, [persistedConvos]);
+    return list;
+  }, [threads, liveById, t]);
 
-  const filtered: Conversation[] = useMemo(() => {
-    if (!q.trim()) return allConvos;
+  const matchesWithoutThread = useMemo(() => {
+    return threads
+      .map((thread) => profileForThread(thread, liveById as Record<string, { id: string; name: string; age: number; photos: string[]; verified: boolean; isOnline: boolean }>))
+      .filter((p): p is NonNullable<typeof p> => !!p);
+  }, [threads, liveById]);
+
+  const filtered = useMemo<Row[]>(() => {
+    if (!q.trim()) return rows;
     const needle = q.trim().toLowerCase();
-    return allConvos.filter(c => c.profile.name.toLowerCase().includes(needle));
-  }, [q, allConvos]);
+    return rows.filter((r) => r.name.toLowerCase().includes(needle));
+  }, [q, rows]);
 
   return (
     <View style={[s.ct, { paddingTop: ins.top }]}>
@@ -120,7 +94,7 @@ export default function ChatTab() {
           style={s.search}
           value={q}
           onChangeText={setQ}
-          placeholder={t("searchMatches", { n: allConvos.length })}
+          placeholder={t("searchMatches", { n: rows.length })}
           placeholderTextColor="rgba(255,255,255,0.45)"
           testID="chat-search"
         />
@@ -142,18 +116,25 @@ export default function ChatTab() {
       ) : (
         <FlatList
           data={filtered}
-          keyExtractor={i => i.id}
+          keyExtractor={i => i.otherUid}
           contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 24 }}
           renderItem={({ item }) => (
-            <TouchableOpacity style={s.row} onPress={() => router.push(`/chat/${item.profile.id}`)} testID={`conv-${item.id}`} activeOpacity={0.75}>
+            <TouchableOpacity style={s.row} onPress={() => router.push(`/chat/${item.otherUid}`)} testID={`conv-${item.otherUid}`} activeOpacity={0.75}>
               <View style={{ position: "relative" }}>
-                <Image source={{ uri: item.profile.photos[0] }} style={s.avatar} contentFit="cover" />
-                {item.profile.isOnline && <View style={s.onlineDot} />}
+                {item.photo ? (
+                  <Image source={{ uri: item.photo }} style={s.avatar} contentFit="cover" />
+                ) : (
+                  <View style={s.avatar} />
+                )}
+                {item.isOnline && <View style={s.onlineDot} />}
               </View>
               <View style={{ flex: 1 }}>
                 <View style={s.rowTop}>
-                  <Text style={s.name}>{item.profile.name}</Text>
-                  <Text style={s.time}>{item.lastMessageTime}</Text>
+                  <View style={s.nameRow}>
+                    <Text style={s.name}>{item.name}</Text>
+                    <VerifiedBadge verified={item.verified} size={14} />
+                  </View>
+                  <Text style={s.time}>{item.timeLabel}</Text>
                 </View>
                 <View style={s.rowBottom}>
                   <Text style={[s.preview, item.unreadCount > 0 && s.previewUnread]} numberOfLines={1}>{item.lastMessage}</Text>
@@ -174,15 +155,18 @@ export default function ChatTab() {
           </View>
           <Text style={s.modalSub}>{t("chooseMatch")}</Text>
           <FlatList
-            data={matches}
+            data={matchesWithoutThread}
             keyExtractor={i => i.id}
             contentContainerStyle={{ padding: 16 }}
             renderItem={({ item }) => (
-              <TouchableOpacity style={s.matchRow} onPress={() => { setNewOpen(false); router.push(`/chat/${item.profile.id}`); }} testID={`new-${item.id}`}>
-                <Image source={{ uri: item.profile.photos[0] }} style={s.avatar} contentFit="cover" />
+              <TouchableOpacity style={s.matchRow} onPress={() => { setNewOpen(false); router.push(`/chat/${item.id}`); }} testID={`new-${item.id}`}>
+                <Image source={{ uri: item.photos[0] }} style={s.avatar} contentFit="cover" />
                 <View style={{ flex: 1 }}>
-                  <Text style={s.name}>{item.profile.name}, {item.profile.age}</Text>
-                  <Text style={s.matchedAt}>{t("matched", { when: item.matchedAt })}</Text>
+                  <View style={s.nameRow}>
+                    <Text style={s.name}>{item.name}, {item.age}</Text>
+                    <VerifiedBadge verified={!!item.verified} size={14} />
+                  </View>
+                  <Text style={s.matchedAt}>{t("matched", { when: "recently" })}</Text>
                 </View>
               </TouchableOpacity>
             )}
@@ -211,6 +195,7 @@ const s = StyleSheet.create({
   avatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: "#222" },
   onlineDot: { position: "absolute", bottom: 2, right: 2, width: 12, height: 12, borderRadius: 6, backgroundColor: Colors.online, borderWidth: 2, borderColor: "#190614" },
   rowTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center" },
+  nameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   rowBottom: { flexDirection: "row", alignItems: "center", gap: 8, marginTop: 4 },
   name: { color: "#FFF", fontSize: 16, fontWeight: "700" as const },
   time: { color: "rgba(255,255,255,0.5)", fontSize: 12 },

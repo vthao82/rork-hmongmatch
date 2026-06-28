@@ -9,7 +9,9 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { MapPin, Briefcase, BadgeCheck, X, Heart, Star } from 'lucide-react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { MapPin, X, Heart, Star } from 'lucide-react-native';
+import VerifiedBadge from '@/components/VerifiedBadge';
 import Colors from '@/constants/colors';
 import { Profile } from '@/mocks/profiles';
 
@@ -143,14 +145,16 @@ export default function SwipeCard({ profile, onSwipeLeft, onSwipeRight, onSuperL
         contentFit="cover"
         transition={200}
       />
-      <View style={styles.gradient}>
+      <LinearGradient
+        colors={["transparent", "rgba(0,0,0,0.7)"]}
+        style={styles.gradient}
+        pointerEvents="none"
+      >
         <View style={styles.infoContainer}>
           <View style={styles.nameRow}>
             <Text style={styles.name}>{profile.name}</Text>
             <Text style={styles.age}>{profile.age}</Text>
-            {profile.verified && (
-              <BadgeCheck size={20} color={Colors.superLike} fill={Colors.superLike} />
-            )}
+            <VerifiedBadge verified={!!profile.verified} size={20} />
           </View>
           <View style={styles.clanRow}>
             <Text style={styles.clan}>{profile.clan} Clan</Text>
@@ -167,7 +171,7 @@ export default function SwipeCard({ profile, onSwipeLeft, onSwipeRight, onSuperL
             ))}
           </View>
         </View>
-      </View>
+      </LinearGradient>
 
       {isFirst && (
         <>
@@ -238,8 +242,6 @@ const styles = StyleSheet.create({
     right: 0,
     height: '50%',
     justifyContent: 'flex-end',
-    backgroundColor: 'transparent',
-    backgroundImage: 'linear-gradient(transparent, rgba(0,0,0,0.7))',
   },
   infoContainer: {
     padding: 20,

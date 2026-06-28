@@ -6,7 +6,7 @@ import { Stack, useRouter } from "expo-router";
 import { ArrowLeft, MapPin, ChevronRight, Check, X as XIcon, Crown } from "lucide-react-native";
 import Colors from "@/constants/colors";
 import { useTier } from "@/providers/TierProvider";
-import { useLanguage, useT } from "@/providers/LanguageProvider";
+import { useT } from "@/providers/LanguageProvider";
 
 const ADV_KEY = "hmongdate.adv-filters.v1";
 const PREF_KEY = "hmongdate.discovery.v1";
@@ -143,8 +143,7 @@ function PickerModal({ visible, config, selected, onClose, onSave, t }: { visibl
 export default function SettingsScreen() {
   const ins = useSafeAreaInsets();
   const router = useRouter();
-  const { tier, isPaid, upgrade } = useTier();
-  const { lang, setLang } = useLanguage();
+  const { isPaid } = useTier();
   const t = useT();
 
   const [worldwide, setWorldwide] = useState<boolean>(false);
@@ -224,23 +223,6 @@ export default function SettingsScreen() {
   const onWorldwide = (v: boolean) => { setWorldwide(v); if (v) setUsOnly(false); persistPref({ worldwide: v, usOnly: v ? false : usOnly }); };
   const onUSOnly = (v: boolean) => { setUsOnly(v); if (v) setWorldwide(false); persistPref({ usOnly: v, worldwide: v ? false : worldwide }); };
 
-  const confirmLangChange = useCallback((next: "en" | "hmn") => {
-    if (next === lang) return;
-    const title = next === "en" ? "Change language to English?" : "Hloov hom lus mus rau Hmoob?";
-    const msg = next === "en" ? "The app will refresh in English." : "Lub app yuav rov pib dua ua lus Hmoob.";
-    const cancel = next === "en" ? "Cancel" : "Tsis Yog";
-    const confirm = next === "en" ? "Yes, change" : "Yog, Hloov";
-    void t;
-    Alert.alert(title, msg, [
-      { text: cancel, style: "cancel" },
-      { text: confirm, onPress: async () => {
-        await setLang(next);
-        // refresh app by re-routing to root
-        setTimeout(() => router.replace("/(tabs)/discover" as never), 50);
-      } },
-    ]);
-  }, [lang, setLang, router]);
-
   return (
     <View style={[s.ct, { paddingTop: ins.top }]}>
       <Stack.Screen options={{ headerShown: false }} />
@@ -257,28 +239,11 @@ export default function SettingsScreen() {
           <TouchableOpacity style={s.planCard} onPress={() => router.push("/subscription")} activeOpacity={0.85} testID="plan-card">
             <Crown size={22} color={Colors.accent} />
             <View style={{ flex: 1 }}>
-              <Text style={s.planTitle}>{tier === "gold" ? t("hmongDateGold") : tier === "plus" ? t("hmongDatePlus") : t("freePlan")}</Text>
-              <Text style={s.planSub}>{tier === "gold" ? t("allFeaturesUnlocked") : tier === "plus" ? t("tapUpgradeGold") : t("upgradeForUnlimited")}</Text>
+              <Text style={s.planTitle}>{isPaid ? t("hmongDateGold") : t("freePlan")}</Text>
+              <Text style={s.planSub}>{isPaid ? t("allFeaturesUnlocked") : t("upgradeForUnlimited")}</Text>
             </View>
             <Text style={s.upgradeLink}>{isPaid ? t("manage") : t("upgrade")}</Text>
           </TouchableOpacity>
-        </Section>
-
-        <Section title={t("language")}>
-          <View style={s.card}>
-            <Text style={s.rowLabel}>{t("appLanguage")}</Text>
-            <Text style={s.rowSub}>{t("languagePref")}</Text>
-            <View style={s.langRow}>
-              <TouchableOpacity onPress={() => confirmLangChange("en")} style={[s.langChip, lang === "en" && s.langChipOn]} testID="lang-en" activeOpacity={0.85}>
-                <Text style={s.langFlag}>🇺🇸</Text>
-                <Text style={[s.langTxt, lang === "en" && s.langTxtOn]}>English</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => confirmLangChange("hmn")} style={[s.langChip, lang === "hmn" && s.langChipOn]} testID="lang-hmn" activeOpacity={0.85}>
-                <Text style={s.langFlag}>🌿</Text>
-                <Text style={[s.langTxt, lang === "hmn" && s.langTxtOn]}>Hmoob</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
         </Section>
 
         <Section title={t("discoverySettings")}>
@@ -361,12 +326,12 @@ export default function SettingsScreen() {
             <View style={s.rowToggle}>
               <View style={{ flex: 1, paddingRight: 8 }}>
                 <Text style={s.rowLabel}>{t("priorityVisibility")}</Text>
-                <Text style={s.rowSub}>{tier === "gold" ? t("priorityVisibilityOn") : t("priorityVisibilityOff")}</Text>
+                <Text style={s.rowSub}>{isPaid ? t("priorityVisibilityOn") : t("priorityVisibilityOff")}</Text>
               </View>
               <Toggle
                 value={priorityVisibility}
                 onChange={(v) => {
-                  if (tier !== "gold" && v) {
+                  if (!isPaid && v) {
                     Alert.alert(t("goldRequired"), t("goldRequiredMsg"), [
                       { text: t("cancel"), style: "cancel" },
                       { text: t("upgrade"), onPress: () => router.push("/subscription") },
@@ -419,7 +384,7 @@ export default function SettingsScreen() {
           <Row label={t("reportProblem")} onPress={() => router.push("/report")} testID="report-row" />
           <TouchableOpacity style={s.row} onPress={() => Alert.alert(t("logout"), t("logoutConfirm"), [
             { text: t("cancel"), style: "cancel" },
-            { text: t("logout"), style: "destructive", onPress: () => router.replace("/(auth)/language" as never) },
+            { text: t("logout"), style: "destructive", onPress: () => router.replace("/(auth)/login" as never) },
           ])} testID="logout-row">
             <Text style={[s.rowLabel, { color: Colors.primary }]}>{t("logout")}</Text>
           </TouchableOpacity>
@@ -482,10 +447,4 @@ const s = StyleSheet.create({
   upgradeLink: { color: Colors.accent, fontSize: 14, fontWeight: "700" as const },
   toast: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-end", backgroundColor: "rgba(47,192,113,0.2)", borderColor: Colors.like, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, marginBottom: 8 },
   toastTxt: { color: Colors.like, fontSize: 12, fontWeight: "700" as const },
-  langRow: { flexDirection: "row", gap: 10, marginTop: 12 },
-  langChip: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 12, borderRadius: 14, borderWidth: 1.5, borderColor: "rgba(255,255,255,0.15)", backgroundColor: "rgba(255,255,255,0.04)" },
-  langChipOn: { borderColor: Colors.primary, backgroundColor: "rgba(192,21,47,0.18)" },
-  langFlag: { fontSize: 18 },
-  langTxt: { color: "rgba(255,255,255,0.75)", fontSize: 14, fontWeight: "700" as const },
-  langTxtOn: { color: "#FFF" },
 });

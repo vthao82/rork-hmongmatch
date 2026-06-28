@@ -2,7 +2,8 @@ import React from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { Image } from "expo-image";
-import { MapPin, Globe, Heart, BadgeCheck, MessageCircle, X } from "lucide-react-native";
+import { MapPin, Globe, Heart, MessageCircle, X } from "lucide-react-native";
+import VerifiedBadge from "@/components/VerifiedBadge";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { profiles } from "@/mocks/profiles";
@@ -14,7 +15,7 @@ export default function UserProfileScreen() {
   return (
     <><Stack.Screen options={{ title: p.name }} />
       <ScrollView style={s.ct} showsVerticalScrollIndicator={false}>
-        <View style={s.ph}><Image source={{ uri: p.photos[0] }} style={s.pi} contentFit="cover" transition={300} /><View style={s.po} /><View style={s.pf}><View style={s.nr}><Text style={s.nm}>{p.name}, {p.age}</Text>{p.verified && <BadgeCheck size={22} color={Colors.superLike} fill={Colors.superLike} />}</View><Text style={s.cl}>{p.clan} Clan</Text></View></View>
+        <View style={s.ph}><Image source={{ uri: p.photos[0] }} style={s.pi} contentFit="cover" transition={300} /><View style={s.po} /><View style={s.pf}><View style={s.nr}><Text style={s.nm}>{p.name}, {p.age}</Text><VerifiedBadge verified={!!p.verified} size={22} /></View><Text style={s.cl}>{p.clan} Clan</Text></View></View>
         <View style={s.cn}>
           <View style={s.ab}><TouchableOpacity style={s.pb} onPress={() => router.back()}><X size={24} color={Colors.nope} /></TouchableOpacity><TouchableOpacity style={s.mb} onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push(`/chat/${p.id}`); }}><MessageCircle size={24} color="#FFF" /><Text style={s.mt}>Message</Text></TouchableOpacity><TouchableOpacity style={s.lb}><Heart size={24} color={Colors.like} /></TouchableOpacity></View>
           <View style={s.se}><Text style={s.st}>About</Text><Text style={s.bt}>{p.bio}</Text></View>

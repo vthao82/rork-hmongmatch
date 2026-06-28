@@ -1,47 +1,65 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, FlatList, Dimensions, Platform } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, ActivityIndicator, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { X, Check, Lock, Flame } from "lucide-react-native";
+import { X, Check, Flame, Crown, Sparkles } from "lucide-react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import Colors from "@/constants/colors";
 import { useT } from "@/providers/LanguageProvider";
+import { useTier, UNLIMITED_PRICE, UNLIMITED_PRICE_LABEL } from "@/providers/TierProvider";
 
-const SW = Dimensions.get("window").width;
-
-type Plan = { id: "plus" | "gold" | "platinum"; name: string; price: string; color: string; border: string; bg: readonly [string, string] };
-
-const PLANS: Plan[] = [
-  { id: "plus", name: "Hmong Match +", price: "STARTING AT $29.99", color: Colors.primary, border: "#ff5574", bg: ["#3a0512", "#1a0208"] as const },
-  { id: "gold", name: "Hmong Match GOLD", price: "STARTING AT $44.99", color: Colors.accent, border: Colors.accent, bg: ["#2a1f05", "#140e02"] as const },
-  { id: "platinum", name: "Hmong Match PLATINUM", price: "STARTING AT $59.99", color: "#c0c0d6", border: "#c0c0d6", bg: ["#1a1a22", "#0c0c10"] as const },
-];
-
-type Feature = { label: string; desc?: string; plus: boolean; gold: boolean; platinum: boolean };
+type Perk = { label: string; desc?: string };
 
 export default function SubscriptionScreen() {
   const ins = useSafeAreaInsets();
   const router = useRouter();
   const t = useT();
-  const [idx, setIdx] = useState<number>(0);
-  const current = PLANS[idx];
+  const { isPaid, purchaseUnlimited, restorePurchases } = useTier();
+  const [busy, setBusy] = useState<"buy" | "restore" | null>(null);
 
-  const SECTIONS_I18N: { title: string; features: Feature[] }[] = [
-    { title: t("upgradeYourLikes"), features: [
-      { label: t("unlimitedLikes"), plus: true, gold: true, platinum: true },
-      { label: t("seeWhoLikesYouRow"), plus: false, gold: true, platinum: true },
-      { label: t("priorityLikes"), desc: t("priorityLikesDesc"), plus: false, gold: false, platinum: true },
-    ]},
-    { title: t("enhanceExperience"), features: [
-      { label: t("unlimitedRewinds"), plus: true, gold: true, platinum: true },
-      { label: t("freeBoostMonth"), plus: false, gold: true, platinum: true },
-      { label: t("freeSuperLikes"), plus: false, gold: true, platinum: true },
-      { label: t("freeFirstImpressions"), desc: t("freeFirstImpressionsDesc"), plus: false, gold: false, platinum: true },
-    ]},
-    { title: t("premiumDiscovery"), features: [
-      { label: t("unlimitedPassport"), plus: true, gold: true, platinum: true },
-    ]},
+  const PERKS: Perk[] = [
+    { label: t("unlimitedLikes") },
+    { label: t("unlimitedRewinds") },
+    { label: t("seeWhoLikesYouRow") },
+    { label: t("priorityVisibility"), desc: t("priorityVisibilityOn") },
+    { label: t("freeBoostMonth") },
+    { label: t("freeSuperLikes") },
+    { label: t("unlimitedPassport") },
   ];
+
+  const buy = async () => {
+    if (busy) return;
+    setBusy("buy");
+    try {
+      const res = await purchaseUnlimited();
+      if (res.ok) {
+        Alert.alert(
+          t("hmongDateGold") /* reused string: "You're in!" not present, fall back */,
+          "Unlimited unlocked! Enjoy 💛",
+          [{ text: "OK", onPress: () => router.back() }]
+        );
+      } else {
+        Alert.alert("Purchase failed", res.error ?? "Please try again.");
+      }
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const restore = async () => {
+    if (busy) return;
+    setBusy("restore");
+    try {
+      const res = await restorePurchases();
+      if (res.ok && res.entitled) {
+        Alert.alert("Restored", "Your Unlimited plan is active.");
+      } else {
+        Alert.alert("No purchase found", "We couldn't find an active subscription to restore.");
+      }
+    } finally {
+      setBusy(null);
+    }
+  };
 
   return (
     <View style={[s.ct, { paddingTop: ins.top }]}>
@@ -53,65 +71,72 @@ export default function SubscriptionScreen() {
         <View style={{ width: 26 }} />
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
-        <FlatList
-          horizontal
-          pagingEnabled
-          data={PLANS}
-          keyExtractor={p => p.id}
-          showsHorizontalScrollIndicator={false}
-          onMomentumScrollEnd={e => setIdx(Math.round(e.nativeEvent.contentOffset.x / SW))}
-          renderItem={({ item }) => (
-            <View style={{ width: SW, paddingHorizontal: 24 }}>
-              <LinearGradient colors={item.bg} style={[s.planCard, { borderColor: item.border }]}>
-                <Flame size={28} color={item.color} fill={item.color} />
-                <Text style={s.planName}>{item.name}</Text>
-              </LinearGradient>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 160 }}>
+        <View style={s.heroWrap}>
+          <LinearGradient
+            colors={["#3a0512", "#1a0208"] as const}
+            style={[s.heroCard, { borderColor: Colors.primary }]}
+          >
+            <Flame size={36} color={Colors.primary} fill={Colors.primary} />
+            <Text style={s.brand}>Hmong Date</Text>
+            <Text style={s.planName}>UNLIMITED</Text>
+            <View style={s.priceRow}>
+              <Text style={s.priceBig}>{UNLIMITED_PRICE}</Text>
             </View>
-          )}
-        />
-
-        <View style={s.dots}>
-          {PLANS.map((_, i) => (
-            <View key={i} style={[s.dot, idx === i && s.dotActive]} />
-          ))}
+            <Text style={s.heroSub}>One plan. Everything unlocked.</Text>
+          </LinearGradient>
         </View>
 
-        {SECTIONS_I18N.map(sec => {
-          const key = current.id === "plus" ? "plus" : current.id === "gold" ? "gold" : "platinum";
-          return (
-            <View key={sec.title} style={s.section}>
-              <View style={s.sectionPill}><Text style={s.sectionPillText}>{sec.title}</Text></View>
-              <View style={s.featureCard}>
-                {sec.features.map(f => {
-                  const enabled = key === "plus" ? f.plus : key === "gold" ? f.gold : f.platinum;
-                  return (
-                    <View key={f.label} style={s.featureRow}>
-                      <View style={s.featureIcon}>
-                        {enabled ? <Check size={22} color={Colors.primary} strokeWidth={3} /> : <Lock size={18} color="rgba(255,255,255,0.45)" />}
-                      </View>
-                      <View style={{ flex: 1 }}>
-                        <Text style={[s.featureLabel, !enabled && s.featureLabelDim]}>{f.label}</Text>
-                        {f.desc && <Text style={s.featureDesc}>{f.desc}</Text>}
-                      </View>
-                    </View>
-                  );
-                })}
+        <View style={s.section}>
+          <View style={s.sectionPill}>
+            <Sparkles size={12} color="#FFF" />
+            <Text style={s.sectionPillText}>What you get</Text>
+          </View>
+          <View style={s.featureCard}>
+            {PERKS.map((p) => (
+              <View key={p.label} style={s.featureRow}>
+                <View style={s.featureIcon}>
+                  <Check size={20} color={Colors.primary} strokeWidth={3} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.featureLabel}>{p.label}</Text>
+                  {p.desc ? <Text style={s.featureDesc}>{p.desc}</Text> : null}
+                </View>
               </View>
-            </View>
-          );
-        })}
+            ))}
+          </View>
+        </View>
+
+        <TouchableOpacity onPress={restore} disabled={!!busy} style={s.restoreBtn} testID="restore-purchases">
+          <Text style={s.restoreTxt}>{busy === "restore" ? "Restoring…" : "Restore purchases"}</Text>
+        </TouchableOpacity>
+
+        <Text style={s.legal}>
+          Subscription auto-renews monthly until cancelled. Cancel anytime in your store account settings.
+        </Text>
       </ScrollView>
 
       <View style={[s.ctaWrap, { paddingBottom: Math.max(ins.bottom, 16) }]}>
-        {current.id === "plus" ? (
-          <LinearGradient colors={["#ff5574", "#ff8a3d"] as const} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={s.cta}>
-            <Text style={s.ctaText}>{current.price}</Text>
-          </LinearGradient>
-        ) : (
-          <View style={[s.cta, { backgroundColor: current.color }]}>
-            <Text style={[s.ctaText, { color: "#1a1404" }]}>{current.price}</Text>
+        {isPaid ? (
+          <View style={[s.cta, { backgroundColor: "rgba(255,255,255,0.08)", borderWidth: 1, borderColor: "rgba(255,255,255,0.2)" }]}>
+            <Crown size={18} color={Colors.accent} />
+            <Text style={[s.ctaText, { color: "#FFF", marginLeft: 8 }]}>You&apos;re on Unlimited</Text>
           </View>
+        ) : (
+          <TouchableOpacity activeOpacity={0.9} onPress={buy} disabled={!!busy} testID="buy-unlimited">
+            <LinearGradient
+              colors={["#ff5574", "#ff8a3d"] as const}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={s.cta}
+            >
+              {busy === "buy" ? (
+                <ActivityIndicator color="#FFF" />
+              ) : (
+                <Text style={s.ctaText}>GO UNLIMITED · {UNLIMITED_PRICE_LABEL}</Text>
+              )}
+            </LinearGradient>
+          </TouchableOpacity>
         )}
       </View>
     </View>
@@ -122,21 +147,25 @@ const s = StyleSheet.create({
   ct: { flex: 1, backgroundColor: "#000" },
   header: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 20, paddingVertical: 14 },
   title: { color: "#FFF", fontSize: 18, fontWeight: "700" as const },
-  planCard: { height: 160, borderRadius: 16, borderWidth: 2, alignItems: "center", justifyContent: "center", marginTop: 8, gap: 10 },
-  planName: { color: "#FFF", fontSize: 22, fontWeight: "800" as const, letterSpacing: -0.3 },
-  dots: { flexDirection: "row", gap: 8, justifyContent: "center", marginVertical: 18 },
-  dot: { width: 7, height: 7, borderRadius: 4, backgroundColor: "rgba(255,255,255,0.25)" },
-  dotActive: { backgroundColor: "#FFF" },
-  section: { paddingHorizontal: 20, marginBottom: 16 },
-  sectionPill: { alignSelf: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.2)", borderRadius: 999, paddingHorizontal: 16, paddingVertical: 6, backgroundColor: "#000", zIndex: 2, marginBottom: -16 },
+  heroWrap: { paddingHorizontal: 24, paddingTop: 6 },
+  heroCard: { borderRadius: 22, borderWidth: 2, padding: 28, alignItems: "center", gap: 8 },
+  brand: { color: "rgba(255,255,255,0.55)", fontSize: 12, letterSpacing: 2, fontWeight: "700" as const, marginTop: 6 },
+  planName: { color: "#FFF", fontSize: 32, fontWeight: "900" as const, letterSpacing: 1, marginTop: 2 },
+  priceRow: { flexDirection: "row", alignItems: "baseline", marginTop: 8 },
+  priceBig: { color: "#FFF", fontSize: 28, fontWeight: "800" as const, letterSpacing: -0.5 },
+  heroSub: { color: "rgba(255,255,255,0.7)", fontSize: 13, marginTop: 6 },
+  section: { paddingHorizontal: 20, marginTop: 28 },
+  sectionPill: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.2)", borderRadius: 999, paddingHorizontal: 14, paddingVertical: 6, backgroundColor: "#000", zIndex: 2, marginBottom: -16 },
   sectionPillText: { color: "#FFF", fontSize: 13, fontWeight: "600" as const },
   featureCard: { borderWidth: 1, borderColor: "rgba(255,255,255,0.12)", borderRadius: 16, padding: 16, paddingTop: 22 },
   featureRow: { flexDirection: "row", alignItems: "flex-start", gap: 14, paddingVertical: 10 },
   featureIcon: { width: 24, alignItems: "center", marginTop: 2 },
-  featureLabel: { color: "#FFF", fontSize: 16, fontWeight: "700" as const },
-  featureLabelDim: { color: "rgba(255,255,255,0.55)" },
+  featureLabel: { color: "#FFF", fontSize: 15, fontWeight: "700" as const },
   featureDesc: { color: "rgba(255,255,255,0.55)", fontSize: 13, marginTop: 4, lineHeight: 18 },
+  restoreBtn: { alignSelf: "center", marginTop: 24, paddingVertical: 8, paddingHorizontal: 14 },
+  restoreTxt: { color: "rgba(255,255,255,0.7)", fontSize: 13, fontWeight: "600" as const, textDecorationLine: "underline" },
+  legal: { color: "rgba(255,255,255,0.4)", fontSize: 11, textAlign: "center" as const, marginTop: 18, marginHorizontal: 28, lineHeight: 16 },
   ctaWrap: { position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 20, paddingTop: 12, backgroundColor: "#000" },
-  cta: { borderRadius: 999, paddingVertical: 18, alignItems: "center", ...Platform.select({ ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 8 }, default: {} }) },
+  cta: { borderRadius: 999, paddingVertical: 18, alignItems: "center", justifyContent: "center", flexDirection: "row", ...Platform.select({ ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 8 }, default: {} }) },
   ctaText: { color: "#FFF", fontSize: 15, fontWeight: "800" as const, letterSpacing: 1 },
 });

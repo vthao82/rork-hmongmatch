@@ -33,6 +33,8 @@ const Colors = {
   nope: "#ff4b5c",
   superLike: palette.gold,
   online: "#2fc071",
+  verified: "#2196f3",
+  unverified: "#f5a623",
 
   dark: {
     bg: palette.ink,

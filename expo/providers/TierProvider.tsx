@@ -2,7 +2,20 @@ import createContextHook from "@nkzw/create-context-hook";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useCallback, useEffect, useState } from "react";
 
-export type Tier = "free" | "plus" | "gold";
+/**
+ * Two-tier subscription model:
+ *   - "free"      : everyone starts here
+ *   - "unlimited" : single paid tier ($19.99/mo) that unlocks all premium gates
+ *
+ * NOTE: RevenueCat is not wired in production yet — `purchaseUnlimited()` is a
+ * stubbed promise that resolves true. When RevenueCat is hooked up natively
+ * (post-App-Store accounts) replace the body of `purchaseUnlimited` with the
+ * real entitlement check; the rest of the app already trusts `tier`.
+ */
+export type Tier = "free" | "unlimited";
+
+export const UNLIMITED_PRICE = "$19.99 / mo";
+export const UNLIMITED_PRICE_LABEL = "$19.99/mo";
 
 export const FREE_LIMITS = {
   likes: 10,
@@ -38,6 +51,14 @@ function emptyUsage(): Usage {
   return { date: today(), likes: 0, dislikes: DISLIKE_START, swipes: 0, rewinds: 0, messages: 0, seenIds: [] };
 }
 
+// Migrate any legacy stored tier value ("plus"/"gold") to "unlimited".
+function normalizeTier(raw: string | null): Tier {
+  if (!raw) return "free";
+  if (raw === "free") return "free";
+  // anything else (plus / gold / unlimited) → unlimited
+  return "unlimited";
+}
+
 export const [TierProvider, useTier] = createContextHook(() => {
   const [tier, setTier] = useState<Tier>("free");
   const [usage, setUsage] = useState<Usage>(emptyUsage());
@@ -49,7 +70,12 @@ export const [TierProvider, useTier] = createContextHook(() => {
     (async () => {
       try {
         const [t, u] = await Promise.all([AsyncStorage.getItem(KEY), AsyncStorage.getItem(USAGE_KEY)]);
-        if (t === "plus" || t === "gold") setTier(t);
+        const normalized = normalizeTier(t);
+        setTier(normalized);
+        // If we migrated a legacy value, persist the new canonical name
+        if (t && t !== normalized) {
+          try { await AsyncStorage.setItem(KEY, normalized); } catch (_e) {}
+        }
         if (u && u !== "null") {
           try { const parsed = JSON.parse(u) as Usage; if (parsed?.date === today()) setUsage({ ...emptyUsage(), ...parsed }); else setUsage(emptyUsage()); } catch (_e) { setUsage(emptyUsage()); }
         }
@@ -62,12 +88,35 @@ export const [TierProvider, useTier] = createContextHook(() => {
     try { await AsyncStorage.setItem(USAGE_KEY, JSON.stringify(u)); } catch (e) { console.log("usage persist", e); }
   }, []);
 
-  const upgrade = useCallback(async (t: Tier) => {
+  const setTierAndPersist = useCallback(async (t: Tier) => {
     setTier(t);
     try { await AsyncStorage.setItem(KEY, t); } catch (e) { console.log("tier save", e); }
   }, []);
 
-  const isPaid = tier !== "free";
+  /**
+   * Stubbed purchase flow. Native RevenueCat will replace this body.
+   * For now we simply mark the user as Unlimited locally so all gated UI unlocks
+   * end-to-end for testing.
+   */
+  const purchaseUnlimited = useCallback(async (): Promise<{ ok: boolean; error?: string }> => {
+    // TODO(RevenueCat): replace stub with `Purchases.purchasePackage(...)`.
+    await setTierAndPersist("unlimited");
+    return { ok: true };
+  }, [setTierAndPersist]);
+
+  const restorePurchases = useCallback(async (): Promise<{ ok: boolean; entitled: boolean }> => {
+    // TODO(RevenueCat): replace stub with `Purchases.restorePurchases()` and
+    // inspect `customerInfo.entitlements.active["unlimited"]`.
+    return { ok: true, entitled: tier === "unlimited" };
+  }, [tier]);
+
+  // Legacy alias used by older screens. Still expects a tier argument but we now
+  // coerce to "unlimited" regardless of input.
+  const upgrade = useCallback(async (_legacyTier?: string) => {
+    await setTierAndPersist("unlimited");
+  }, [setTierAndPersist]);
+
+  const isPaid = tier === "unlimited";
 
   const checkAndPrompt = useCallback((next: Usage) => {
     if (isPaid) return;
@@ -87,7 +136,7 @@ export const [TierProvider, useTier] = createContextHook(() => {
     if (pct) setShow75Modal(true);
   }, [isPaid]);
 
-  const consumeLike = useCallback((profileId?: string): boolean => {
+  const consumeLike = useCallback((_profileId?: string): boolean => {
     if (!isPaid && usage.likes >= FREE_LIMITS.likes) {
       setShowLimitModal(true);
       return false;
@@ -152,10 +201,10 @@ export const [TierProvider, useTier] = createContextHook(() => {
   }, [isPaid, usage, persistUsage, checkAndPrompt]);
 
   const startBoost = useCallback((): boolean => {
-    const minutes = tier === "gold" ? 60 : tier === "plus" ? 60 : 30;
+    // Unlimited gets 60-minute boosts; free gets a 30-minute boost once a month
+    const minutes = isPaid ? 60 : 30;
     const now = Date.now();
     if (!isPaid) {
-      // free tier: 1 boost per month
       const monthMs = 30 * 24 * 60 * 60 * 1000;
       if (usage.boostUsedAt && now - usage.boostUsedAt < monthMs) return false;
     }
@@ -163,7 +212,7 @@ export const [TierProvider, useTier] = createContextHook(() => {
     setUsage(next);
     persistUsage(next);
     return true;
-  }, [tier, isPaid, usage, persistUsage]);
+  }, [isPaid, usage, persistUsage]);
 
   const stopBoost = useCallback(() => {
     const next: Usage = { ...usage, boostActiveUntil: undefined };
@@ -184,6 +233,8 @@ export const [TierProvider, useTier] = createContextHook(() => {
     tier,
     isPaid,
     upgrade,
+    purchaseUnlimited,
+    restorePurchases,
     usage,
     remaining,
     consumeLike,

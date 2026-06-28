@@ -55,7 +55,7 @@ export default function LoginScreen() {
       if (!emailSent && user.email) setEmailSent(user.email);
       return;
     }
-    router.replace("/(auth)/language");
+    router.replace("/(auth)/terms");
   }, [user, emailVerified, emailSent]);
 
   // While on the "Check your email" screen, poll Firebase every 3s for verification status.

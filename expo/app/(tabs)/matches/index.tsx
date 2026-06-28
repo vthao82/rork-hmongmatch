@@ -1,18 +1,18 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ScrollView } from "react-native";
+import { View, Text, StyleSheet, TouchableOpacity, Dimensions, ScrollView, Modal, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import { Heart, Star, Zap, ArrowRight, Ban, Crown } from "lucide-react-native";
 import { useRouter } from "expo-router";
-import { Modal, Alert } from "react-native";
 import Colors from "@/constants/colors";
 import HmongMatchHeader from "@/components/HmongMatchHeader";
 import RedBackground from "@/components/RedBackground";
 import { profiles as mockProfiles } from "@/mocks/profiles";
-import { useAllProfiles, useMyMatches } from "@/lib/discoverProfiles";
+import { useAllProfiles } from "@/lib/discoverProfiles";
 import { useLikes, DAILY_LIMIT } from "@/providers/LikesProvider";
 import { useTier } from "@/providers/TierProvider";
 import { useT } from "@/providers/LanguageProvider";
+import VerifiedBadge from "@/components/VerifiedBadge";
 
 const SW = Dimensions.get("window").width;
 const CW = (SW - 32 - 12) / 2;
@@ -24,7 +24,6 @@ export default function LikesScreen() {
   const { used, premium, likedIds } = useLikes();
   const { isPaid } = useTier();
   const { byId: liveById } = useAllProfiles();
-  const { matchIds: liveMatchIds } = useMyMatches();
   const [tab, setTab] = useState<"likes" | "liked" | "top">("liked");
   const [blocked, setBlocked] = useState<string[]>([]);
   const [upgradeOpen, setUpgradeOpen] = useState<boolean>(false);
@@ -32,11 +31,6 @@ export default function LikesScreen() {
   const myLiked = likedIds
     .filter((id) => !blocked.includes(id))
     .map((id) => liveById[id] ?? mockProfiles.find((p) => p.id === id))
-    .filter((p): p is NonNullable<typeof p> => !!p);
-  // "Matches" — mutual likes from /matches collection
-  const liveMatchProfiles = liveMatchIds
-    .filter((id) => !blocked.includes(id))
-    .map((id) => liveById[id])
     .filter((p): p is NonNullable<typeof p> => !!p);
   // "Top Picks" — show all other live profiles (excluding self & already-liked)
   const topPicks = Object.values(liveById)
@@ -50,7 +44,6 @@ export default function LikesScreen() {
     ]);
   };
 
-  const likesCount = premium ? used : used;
   const shownRemaining = premium ? t("unlimitedLikesText") : t("leftOutOf", { n: Math.max(0, DAILY_LIMIT - used) });
 
   return (
@@ -94,7 +87,10 @@ export default function LikesScreen() {
                   <Image source={{ uri: p.photos[0] }} style={s.pickImg} contentFit="cover" />
                   <View style={s.pickOverlay} />
                   <View style={s.pickInfo}>
-                    <Text style={s.pickName}>{p.name}, {p.age}</Text>
+                    <View style={s.pickNameRow}>
+                      <Text style={s.pickName}>{p.name}, {p.age}</Text>
+                      <VerifiedBadge verified={!!p.verified} size={14} />
+                    </View>
                     <Text style={s.pickTime}>{p.distance}</Text>
                   </View>
                   <View style={s.likedBadge}><Heart size={12} color="#FFF" fill="#FFF" /></View>
@@ -216,7 +212,8 @@ const s = StyleSheet.create({
   pick: { height: CW * 1.25, borderRadius: 14, overflow: "hidden", backgroundColor: "#111" },
   pickImg: { ...StyleSheet.absoluteFillObject },
   pickOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.35)" },
-  pickInfo: { position: "absolute", left: 10, bottom: 10 },
+  pickInfo: { position: "absolute", left: 10, bottom: 10, right: 10 },
+  pickNameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   pickName: { color: "#FFF", fontSize: 15, fontWeight: "700" as const },
   pickTime: { color: Colors.accent, fontSize: 12, fontWeight: "600" as const, marginTop: 2 },
   pickStar: { position: "absolute", bottom: 10, right: 10, width: 26, height: 26, borderRadius: 13, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "center", alignItems: "center" },

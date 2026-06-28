@@ -20,7 +20,7 @@ export default function InterestsTab() {
   const ins = useSafeAreaInsets();
   const router = useRouter();
   const t = useT();
-  const { tier, isPaid } = useTier();
+  const { isPaid } = useTier();
   const { data } = useOnboarding();
   const [lockOpen, setLockOpen] = useState<boolean>(false);
   const [seeAll, setSeeAll] = useState<string | null>(null);
@@ -64,7 +64,7 @@ export default function InterestsTab() {
                     {!group.freeAccess && !isPaid && (
                       <View style={s.proPill}>
                         <Crown size={10} color={Colors.accent} />
-                        <Text style={s.proPillTxt}>{t("plus")}</Text>
+                        <Text style={s.proPillTxt}>UNLIMITED</Text>
                       </View>
                     )}
                   </View>

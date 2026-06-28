@@ -2,86 +2,86 @@ import React, { useState, useRef, useEffect } from "react";
 import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert } from "react-native";
 import { useLocalSearchParams, Stack, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Image } from "expo-image";
 import { Send, Video, Lock } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
-import { conversations, profiles as mockProfiles, Message } from "@/mocks/profiles";
+import { profiles as mockProfiles } from "@/mocks/profiles";
 import { useAllProfiles } from "@/lib/discoverProfiles";
+import { useChatMessages, sendChatMessage, markMessageRead, formatRelative, type ChatMessage } from "@/lib/chat";
+import { auth } from "@/lib/firebase";
 import { useTier } from "@/providers/TierProvider";
 import { useT } from "@/providers/LanguageProvider";
-
-const chatKey = (id: string) => `hmongdate.chat.${id}.v1`;
 
 export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const ins = useSafeAreaInsets();
   const t = useT();
-  const { tier, consumeMessage } = useTier();
+  const { isPaid, consumeMessage } = useTier();
   const { byId: liveById } = useAllProfiles();
+  const me = auth.currentUser;
   // Prefer live Firestore profile; fall back to mocks during loading or for legacy IDs
   const pr = (id ? liveById[id] : null) ?? mockProfiles.find(x => x.id === id);
-  const cv = conversations.find(c => c.profile.id === id);
-  const [ms, setMs] = useState<Message[]>([]);
+  const { messages, matchId } = useChatMessages(id);
   const [tx, setTx] = useState<string>("");
-  const [hydrated, setHydrated] = useState<boolean>(false);
-  const lr = useRef<FlatList>(null);
+  const lr = useRef<FlatList<ChatMessage>>(null);
 
-  // Hydrate persisted messages, fall back to mock messages
+  // Mark unread incoming messages as read once we open the chat
   useEffect(() => {
-    if (!id) return;
-    (async () => {
-      try {
-        const raw = await AsyncStorage.getItem(chatKey(id));
-        if (raw && raw !== "null") {
-          try {
-            const parsed = JSON.parse(raw) as Message[];
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              setMs(parsed);
-              setHydrated(true);
-              return;
-            }
-          } catch (_e) { console.log("chat parse", _e); }
-        }
-        // Fall back to mock messages if available
-        if (cv?.messages && cv.messages.length > 0) {
-          setMs(cv.messages);
-        }
-      } catch (e) { console.log("chat hydrate error", e); }
-      finally { setHydrated(true); }
-    })();
-  }, [id]);
+    if (!matchId || !me) return;
+    messages.forEach((m) => {
+      if (m.senderId !== me.uid && !m.read) {
+        void markMessageRead(matchId, m.id);
+      }
+    });
+  }, [messages, matchId, me?.uid]);
 
-  // Persist on change (only after hydration to avoid overwriting persisted data)
   useEffect(() => {
-    if (!hydrated || !id) return;
-    AsyncStorage.setItem(chatKey(id), JSON.stringify(ms)).catch(e => console.log("chat save error", e));
-  }, [ms, id, hydrated]);
+    if (messages.length > 0) setTimeout(() => lr.current?.scrollToEnd({ animated: true }), 100);
+  }, [messages.length]);
 
-  useEffect(() => { if (ms.length > 0) setTimeout(() => lr.current?.scrollToEnd({ animated: true }), 100); }, [ms]);
+  const myUid = me?.uid ?? "";
+
+  const renderMsg = ({ item }: { item: ChatMessage }) => {
+    const mine = item.senderId === myUid;
+    return (
+      <View style={[s.mr, mine ? s.my : s.th]}>
+        {!mine && pr && <Image source={{ uri: pr.photos[0] }} style={s.ma} contentFit="cover" />}
+        <View style={[s.bb, mine ? s.mb2 : s.tb]}>
+          <Text style={[s.bt2, mine ? s.mbt : s.tbt]}>{item.text}</Text>
+          <Text style={[s.tt, mine ? s.mtt : s.ttt]}>{formatRelative(item.createdAt)}</Text>
+        </View>
+      </View>
+    );
+  };
 
   if (!pr) return (
     <View style={s.cen}>
       <Text style={s.err}>{t("convNotFound")}</Text>
-      <TouchableOpacity style={{marginTop:16}} onPress={() => router.back()}>
-        <Text style={{color:Colors.primary,fontSize:14,fontWeight:"700" as const}}>{t("back")}</Text>
+      <TouchableOpacity style={{ marginTop: 16 }} onPress={() => router.back()}>
+        <Text style={{ color: Colors.primary, fontSize: 14, fontWeight: "700" as const }}>{t("back")}</Text>
       </TouchableOpacity>
     </View>
   );
 
-  const send = () => {
-    if (!tx.trim()) return;
+  const send = async () => {
+    const trimmed = tx.trim();
+    if (!trimmed) return;
+    if (!id) return;
     const ok = consumeMessage();
     if (!ok) return;
     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-    setMs(p => [...p, { id: `m_${Date.now()}`, senderId: "me", text: tx.trim(), timestamp: "Just now", read: false }]);
     setTx("");
+    const res = await sendChatMessage(id, trimmed);
+    if (!res.ok) {
+      Alert.alert("Couldn't send", res.error ?? "Please try again.");
+      setTx(trimmed); // restore so user doesn't lose draft
+    }
   };
 
   const onVideo = () => {
-    if (tier !== "gold") {
+    if (!isPaid) {
       Alert.alert(t("videoGoldTitle"), t("videoGoldSub"), [
         { text: t("maybeLater"), style: "cancel" },
         { text: t("seePlans"), onPress: () => router.push("/subscription") },
@@ -91,19 +91,6 @@ export default function ChatScreen() {
     Alert.alert(t("startVideoChat"), t("startVideoChatWith", { name: pr.name }));
   };
 
-  const renderMsg = ({ item }: { item: Message }) => {
-    const me = item.senderId === "me";
-    return (
-      <View style={[s.mr, me ? s.my : s.th]}>
-        {!me && <Image source={{ uri: pr.photos[0] }} style={s.ma} contentFit="cover" />}
-        <View style={[s.bb, me ? s.mb2 : s.tb]}>
-          <Text style={[s.bt2, me ? s.mbt : s.tbt]}>{item.text}</Text>
-          <Text style={[s.tt, me ? s.mtt : s.ttt]}>{item.timestamp}</Text>
-        </View>
-      </View>
-    );
-  };
-
   return (
     <>
       <Stack.Screen options={{
@@ -111,15 +98,15 @@ export default function ChatScreen() {
         headerRight: () => (
           <View style={s.headerRight}>
             <TouchableOpacity onPress={onVideo} style={s.headerVideo} testID="header-video">
-              <Video size={20} color={tier === "gold" ? Colors.accent : Colors.textTertiary} />
-              {tier !== "gold" && <Lock size={10} color={Colors.textTertiary} style={s.lockOverlay} />}
+              <Video size={20} color={isPaid ? Colors.accent : Colors.textTertiary} />
+              {!isPaid && <Lock size={10} color={Colors.textTertiary} style={s.lockOverlay} />}
             </TouchableOpacity>
             <Image source={{ uri: pr.photos[0] }} style={s.ha} contentFit="cover" />
           </View>
         )
       }} />
       <KeyboardAvoidingView style={s.ct} behavior={Platform.OS === "ios" ? "padding" : "height"} keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}>
-        {ms.length === 0 ? (
+        {messages.length === 0 ? (
           <View style={s.ec}>
             <Image source={{ uri: pr.photos[0] }} style={s.ea} contentFit="cover" />
             <Text style={s.en}>{pr.name}</Text>
@@ -129,7 +116,7 @@ export default function ChatScreen() {
         ) : (
           <FlatList
             ref={lr}
-            data={ms}
+            data={messages}
             renderItem={renderMsg}
             keyExtractor={i => i.id}
             contentContainerStyle={s.ml}
@@ -141,8 +128,8 @@ export default function ChatScreen() {
         )}
         <View style={[s.ir, { paddingBottom: Math.max(ins.bottom, 12) + 24 }]}>
           <TouchableOpacity style={s.videoBtn} onPress={onVideo} testID="video-btn">
-            <Video size={20} color={tier === "gold" ? Colors.accent : Colors.textTertiary} />
-            {tier !== "gold" && <Lock size={10} color={Colors.textTertiary} style={s.lockOverlay} />}
+            <Video size={20} color={isPaid ? Colors.accent : Colors.textTertiary} />
+            {!isPaid && <Lock size={10} color={Colors.textTertiary} style={s.lockOverlay} />}
           </TouchableOpacity>
           <TextInput
             style={s.ip}

@@ -3,7 +3,8 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-nati
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { Settings as SettingsIcon, Edit3, BadgeCheck, Image as ImageIcon, Type, Star, Zap, Flame, Plus, Lock, Check, AlertTriangle } from "lucide-react-native";
+import { Settings as SettingsIcon, Edit3, Image as ImageIcon, Type, Star, Zap, Flame, Plus, Lock, Check, AlertTriangle } from "lucide-react-native";
+import VerifiedBadge from "@/components/VerifiedBadge";
 import Colors from "@/constants/colors";
 import { currentUser } from "@/mocks/profiles";
 import HmongMatchHeader from "@/components/HmongMatchHeader";
@@ -66,7 +67,7 @@ export default function ProfileScreen() {
           <View style={s.nameCol}>
             <View style={s.nameRow}>
               <Text style={s.name}>{displayName}</Text>
-              <BadgeCheck size={18} color="#4A90D9" fill="#4A90D9" />
+              <VerifiedBadge verified={!!data.photoVerified} size={18} />
             </View>
             <TouchableOpacity style={s.editBtn} onPress={() => router.push("/edit-profile")} testID="edit-profile">
               <Edit3 size={14} color="#1a1a1f" />
@@ -105,7 +106,7 @@ export default function ProfileScreen() {
             <View style={s.goldBadge}>
               <Flame size={18} color={Colors.accent} fill={Colors.accent} />
               <Text style={s.goldWordmark}>Hmong Date</Text>
-              <View style={s.goldChip}><Text style={s.goldChipText}>GOLD</Text></View>
+              <View style={s.goldChip}><Text style={s.goldChipText}>UNLIMITED</Text></View>
             </View>
             <View style={s.upgradeBtn}><Text style={s.upgradeText}>{t("upgrade")}</Text></View>
           </View>
@@ -113,7 +114,7 @@ export default function ProfileScreen() {
             <Text style={s.compareTitle}>{t("whatsIncluded")}</Text>
             <View style={s.compareCols}>
               <Text style={s.compareColText}>{t("free")}</Text>
-              <Text style={s.compareColText}>{t("gold")}</Text>
+              <Text style={s.compareColText}>Unlimited</Text>
             </View>
           </View>
           {[

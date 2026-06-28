@@ -13,6 +13,8 @@ export interface Profile {
   isOnline: boolean;
   lastActive: string;
   verified: boolean;
+  hometownCity?: string | null;
+  hometownState?: string | null;
 }
 
 export interface Match {

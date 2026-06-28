@@ -66,7 +66,32 @@ function rowToProfile(id: string, row: DocumentData): Profile {
     isOnline: false,
     lastActive: "",
     verified: !!row.photoVerified,
+    hometownCity: (row.hometownCity as string) ?? null,
+    hometownState: (row.hometownState as string) ?? null,
   };
+}
+
+function norm(v: string | null | undefined): string {
+  return (v ?? "").trim().toLowerCase();
+}
+
+/**
+ * Sort by location proximity (state/city match against the current user).
+ * 1) Same city + same state → highest priority
+ * 2) Same state → next
+ * 3) Everyone else → last (stable within group)
+ */
+function sortByLocation(list: Profile[], myCity: string | null, myState: string | null): Profile[] {
+  const me = { city: norm(myCity), state: norm(myState) };
+  if (!me.city && !me.state) return list;
+  const score = (p: Profile): number => {
+    const pc = norm(p.hometownCity ?? null);
+    const ps = norm(p.hometownState ?? null);
+    if (me.city && me.state && pc === me.city && ps === me.state) return 3;
+    if (me.state && ps === me.state) return 2;
+    return 1;
+  };
+  return [...list].sort((a, b) => score(b) - score(a));
 }
 
 /**
@@ -108,6 +133,20 @@ export function useDiscoverProfiles() {
         console.log("[discover] swipes query failed (continuing)", e);
       }
 
+      // Load my own profile so we can sort others by location proximity
+      let myCity: string | null = null;
+      let myState: string | null = null;
+      try {
+        const meSnap = await getDoc(doc(db, "users", me.uid));
+        if (meSnap.exists()) {
+          const r = meSnap.data();
+          myCity = (r.hometownCity as string) ?? null;
+          myState = (r.hometownState as string) ?? null;
+        }
+      } catch (e) {
+        console.log("[discover] my profile fetch failed (continuing)", e);
+      }
+
       const seen = swipeIds;
       seen.add(me.uid); // never show yourself
 
@@ -121,7 +160,8 @@ export function useDiscoverProfiles() {
         list.push(rowToProfile(d.id, row));
       });
 
-      setProfiles(list);
+      const sorted = sortByLocation(list, myCity, myState);
+      setProfiles(sorted);
     } catch (e: any) {
       console.log("[discover] load error", e);
       setError(e?.message ?? "Failed to load profiles");

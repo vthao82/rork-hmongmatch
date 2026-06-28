@@ -10,7 +10,6 @@ export default function AuthLayout() {
         animation: "slide_from_right",
       }}
     >
-      <Stack.Screen name="language" />
       <Stack.Screen name="login" />
       <Stack.Screen name="terms" />
       <Stack.Screen name="rules" />
