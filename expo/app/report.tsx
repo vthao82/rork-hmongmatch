@@ -43,7 +43,7 @@ export default function ReportScreen() {
           <Text style={s.bannerText}>Reports are confidential. Help us keep Hmong Date safe.</Text>
         </View>
 
-        <Text style={s.section}>What's going on?</Text>
+        <Text style={s.section}>What&apos;s going on?</Text>
         {REASONS.map(r => {
           const on = reason === r;
           return (
