@@ -10,6 +10,7 @@ import { useAllProfiles } from "@/lib/discoverProfiles";
 import { useOnboarding } from "@/providers/OnboardingProvider";
 import { useT } from "@/providers/LanguageProvider";
 import { auth } from "@/lib/firebase";
+import { CATEGORY_GROUPS } from "@/constants/categories";
 
 const SW = Dimensions.get("window").width;
 const CW = (SW - 16 * 2 - 12) / 2;
@@ -57,14 +58,27 @@ export default function CategoryScreen() {
   const ins = useSafeAreaInsets();
   const router = useRouter();
   const t = useT();
-  const title = decodeURIComponent(id ?? "");
+  const raw = decodeURIComponent(id ?? "");
+
+  // Parse "groupId:cardId" from the route param and look up the user-facing label.
+  // Falls back to the raw string if the format isn't recognized (back-compat).
+  const { title, cardId, groupId } = (() => {
+    const parts = raw.split(":");
+    if (parts.length === 2) {
+      const [g, c] = parts;
+      const group = CATEGORY_GROUPS.find((x) => x.id === g);
+      const card = group?.cards.find((x) => x.id === c);
+      if (card) return { title: card.label, cardId: c, groupId: g };
+    }
+    return { title: raw, cardId: "", groupId: "" };
+  })();
+
   const { data, update } = useOnboarding();
   const { byId: liveById } = useAllProfiles();
-  // The user belongs to a Relationship Goals card if their lookingFor ID matches;
-  // otherwise it's an interests-based category.
+  // The user belongs to a Relationship Goals card if their lookingFor ID matches the cardId.
+  // For other categories we check the interests array against the title.
   const inCategory = (() => {
-    const relationshipId = RELATIONSHIP_LABEL_TO_ID[title];
-    if (relationshipId) return data.lookingFor === relationshipId;
+    if (groupId === "goals" && cardId) return data.lookingFor === cardId;
     return (data.interests ?? []).includes(title);
   })();
 
@@ -116,10 +130,9 @@ export default function CategoryScreen() {
       <Text style={s.sub}>{subtitle}</Text>
       <TouchableOpacity
         onPress={() => {
-          const relationshipId = RELATIONSHIP_LABEL_TO_ID[title];
-          if (relationshipId) {
+          if (groupId === "goals" && cardId) {
             // Relationship Goals card → toggle lookingFor instead of interests
-            update({ lookingFor: inCategory ? undefined : (relationshipId as any) });
+            update({ lookingFor: inCategory ? undefined : (cardId as any) });
           } else {
             const cur = data.interests ?? [];
             const next = inCategory ? cur.filter(x => x !== title) : [...cur, title];

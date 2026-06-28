@@ -7,7 +7,8 @@ import { Image } from "expo-image";
 import { Send, Video, Lock } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
-import { conversations, profiles, Message } from "@/mocks/profiles";
+import { conversations, profiles as mockProfiles, Message } from "@/mocks/profiles";
+import { useAllProfiles } from "@/lib/discoverProfiles";
 import { useTier } from "@/providers/TierProvider";
 import { useT } from "@/providers/LanguageProvider";
 
@@ -19,7 +20,9 @@ export default function ChatScreen() {
   const ins = useSafeAreaInsets();
   const t = useT();
   const { tier, consumeMessage } = useTier();
-  const pr = profiles.find(x => x.id === id);
+  const { byId: liveById } = useAllProfiles();
+  // Prefer live Firestore profile; fall back to mocks during loading or for legacy IDs
+  const pr = (id ? liveById[id] : null) ?? mockProfiles.find(x => x.id === id);
   const cv = conversations.find(c => c.profile.id === id);
   const [ms, setMs] = useState<Message[]>([]);
   const [tx, setTx] = useState<string>("");
