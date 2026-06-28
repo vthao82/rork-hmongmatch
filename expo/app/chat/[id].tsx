@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, Keyboard
 import { useLocalSearchParams, Stack, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
-import { Send, Video, Lock } from "lucide-react-native";
+import { Send, Video } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { profiles as mockProfiles } from "@/mocks/profiles";
@@ -18,7 +18,7 @@ export default function ChatScreen() {
   const router = useRouter();
   const ins = useSafeAreaInsets();
   const t = useT();
-  const { isPaid, consumeMessage } = useTier();
+  const { consumeMessage } = useTier();
   const { byId: liveById } = useAllProfiles();
   const me = auth.currentUser;
   // Prefer live Firestore profile; fall back to mocks during loading or for legacy IDs
@@ -81,14 +81,11 @@ export default function ChatScreen() {
   };
 
   const onVideo = () => {
-    if (!isPaid) {
-      Alert.alert(t("videoGoldTitle"), t("videoGoldSub"), [
-        { text: t("maybeLater"), style: "cancel" },
-        { text: t("seePlans"), onPress: () => router.push("/subscription") },
-      ]);
-      return;
-    }
-    Alert.alert(t("startVideoChat"), t("startVideoChatWith", { name: pr.name }));
+    Alert.alert(
+      "Video messages",
+      "Coming soon! You'll be able to record and send video messages to your matches.",
+      [{ text: "OK", style: "default" }]
+    );
   };
 
   return (
@@ -98,8 +95,7 @@ export default function ChatScreen() {
         headerRight: () => (
           <View style={s.headerRight}>
             <TouchableOpacity onPress={onVideo} style={s.headerVideo} testID="header-video">
-              <Video size={20} color={isPaid ? Colors.accent : Colors.textTertiary} />
-              {!isPaid && <Lock size={10} color={Colors.textTertiary} style={s.lockOverlay} />}
+              <Video size={20} color={Colors.accent} />
             </TouchableOpacity>
             <Image source={{ uri: pr.photos[0] }} style={s.ha} contentFit="cover" />
           </View>
@@ -128,8 +124,7 @@ export default function ChatScreen() {
         )}
         <View style={[s.ir, { paddingBottom: Math.max(ins.bottom, 12) + 24 }]}>
           <TouchableOpacity style={s.videoBtn} onPress={onVideo} testID="video-btn">
-            <Video size={20} color={isPaid ? Colors.accent : Colors.textTertiary} />
-            {!isPaid && <Lock size={10} color={Colors.textTertiary} style={s.lockOverlay} />}
+            <Video size={20} color={Colors.accent} />
           </TouchableOpacity>
           <TextInput
             style={s.ip}

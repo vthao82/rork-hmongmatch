@@ -23,6 +23,12 @@ export const FREE_LIMITS = {
   rewinds: 10,
   messages: 5,
   boostMin: 30,
+  boostsPerMonth: 1,
+};
+
+export const UNLIMITED_LIMITS = {
+  boostMin: 60,
+  boostsPerMonth: 2,
 };
 
 const KEY = "hmongdate.tier.v1";
@@ -37,6 +43,8 @@ type Usage = {
   messages: number;
   boostUsedAt?: number;
   boostActiveUntil?: number;
+  /** Timestamps (ms) of each boost START in the trailing 30 days. */
+  boostHistory?: number[];
   seenIds: string[];
 };
 
@@ -48,7 +56,7 @@ function today(): string {
 const DISLIKE_START = 10;
 
 function emptyUsage(): Usage {
-  return { date: today(), likes: 0, dislikes: DISLIKE_START, swipes: 0, rewinds: 0, messages: 0, seenIds: [] };
+  return { date: today(), likes: 0, dislikes: DISLIKE_START, swipes: 0, rewinds: 0, messages: 0, boostHistory: [], seenIds: [] };
 }
 
 // Migrate any legacy stored tier value ("plus"/"gold") to "unlimited".
@@ -201,14 +209,19 @@ export const [TierProvider, useTier] = createContextHook(() => {
   }, [isPaid, usage, persistUsage, checkAndPrompt]);
 
   const startBoost = useCallback((): boolean => {
-    // Unlimited gets 60-minute boosts; free gets a 30-minute boost once a month
-    const minutes = isPaid ? 60 : 30;
     const now = Date.now();
-    if (!isPaid) {
-      const monthMs = 30 * 24 * 60 * 60 * 1000;
-      if (usage.boostUsedAt && now - usage.boostUsedAt < monthMs) return false;
-    }
-    const next: Usage = { ...usage, boostUsedAt: now, boostActiveUntil: now + minutes * 60 * 1000 };
+    const monthMs = 30 * 24 * 60 * 60 * 1000;
+    // Prune boosts older than 30 days
+    const recent = (usage.boostHistory ?? []).filter((ts) => now - ts < monthMs);
+    const cap = isPaid ? UNLIMITED_LIMITS.boostsPerMonth : FREE_LIMITS.boostsPerMonth;
+    if (recent.length >= cap) return false;
+    const minutes = isPaid ? UNLIMITED_LIMITS.boostMin : FREE_LIMITS.boostMin;
+    const next: Usage = {
+      ...usage,
+      boostUsedAt: now,
+      boostActiveUntil: now + minutes * 60 * 1000,
+      boostHistory: [...recent, now],
+    };
     setUsage(next);
     persistUsage(next);
     return true;

@@ -21,10 +21,8 @@ export default function SubscriptionScreen() {
     { label: t("unlimitedLikes") },
     { label: t("unlimitedRewinds") },
     { label: t("seeWhoLikesYouRow") },
-    { label: t("priorityVisibility"), desc: t("priorityVisibilityOn") },
-    { label: t("freeBoostMonth") },
-    { label: t("freeSuperLikes") },
-    { label: t("unlimitedPassport") },
+    { label: "2 free boosts per month", desc: "Be one of the top profiles for 60 minutes" },
+    { label: "Video messages", desc: "Coming soon — record and send video to your matches" },
   ];
 
   const buy = async () => {

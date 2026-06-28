@@ -152,7 +152,6 @@ export default function SettingsScreen() {
   const [showFurther, setShowFurther] = useState<boolean>(true);
   const [discovery, setDiscovery] = useState<boolean>(true);
   const [photoVerifiedChat, setPhotoVerifiedChat] = useState<boolean>(false);
-  const [priorityVisibility, setPriorityVisibility] = useState<boolean>(false);
   const [location, setLocation] = useState<string>("Little Canada, Minnesota");
   const [ageLow, setAgeLow] = useState<number>(21);
   const [ageHigh, setAgeHigh] = useState<number>(45);
@@ -182,7 +181,6 @@ export default function SettingsScreen() {
           if (p.worldwide !== undefined) setWorldwide(p.worldwide);
           if (p.usOnly !== undefined) setUsOnly(p.usOnly);
           if (p.distance !== undefined) setDistance(p.distance);
-          if (p.priorityVisibility !== undefined) setPriorityVisibility(p.priorityVisibility);
           if (p.location) setLocation(p.location);
           if (p.ageLow !== undefined) setAgeLow(p.ageLow);
           if (p.ageHigh !== undefined) setAgeHigh(p.ageHigh);
@@ -320,29 +318,6 @@ export default function SettingsScreen() {
                 <Text style={s.rowSub}>{t("enableDiscoverySub")}</Text>
               </View>
               <Toggle value={discovery} onChange={setDiscovery} testID="discovery-toggle" />
-            </View>
-          </View>
-          <View style={s.card}>
-            <View style={s.rowToggle}>
-              <View style={{ flex: 1, paddingRight: 8 }}>
-                <Text style={s.rowLabel}>{t("priorityVisibility")}</Text>
-                <Text style={s.rowSub}>{isPaid ? t("priorityVisibilityOn") : t("priorityVisibilityOff")}</Text>
-              </View>
-              <Toggle
-                value={priorityVisibility}
-                onChange={(v) => {
-                  if (!isPaid && v) {
-                    Alert.alert(t("goldRequired"), t("goldRequiredMsg"), [
-                      { text: t("cancel"), style: "cancel" },
-                      { text: t("upgrade"), onPress: () => router.push("/subscription") },
-                    ]);
-                    return;
-                  }
-                  setPriorityVisibility(v);
-                  persistPref({ priorityVisibility: v });
-                }}
-                testID="priority-toggle"
-              />
             </View>
           </View>
         </Section>
