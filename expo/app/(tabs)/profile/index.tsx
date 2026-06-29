@@ -1,16 +1,18 @@
 import React from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { Settings as SettingsIcon, Edit3, Image as ImageIcon, Type, Star, Zap, Flame, Plus, Lock, Check, AlertTriangle } from "lucide-react-native";
+import { Settings as SettingsIcon, Edit3, Image as ImageIcon, Type, Flame, Plus, Lock, Check, AlertTriangle, Eye } from "lucide-react-native";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import Colors from "@/constants/colors";
 import { currentUser } from "@/mocks/profiles";
 import HmongMatchHeader from "@/components/HmongMatchHeader";
 import RedBackground from "@/components/RedBackground";
 import { useOnboarding } from "@/providers/OnboardingProvider";
+import { useTier } from "@/providers/TierProvider";
 import { useT } from "@/providers/LanguageProvider";
+import { auth } from "@/lib/firebase";
 
 function TaskCard({ icon, title, sub, pct, onPress, done, testID }: { icon: React.ReactNode; title: string; sub: string; pct: string; onPress: () => void; done?: boolean; testID?: string }) {
   return (
@@ -50,6 +52,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const t = useT();
   const { data } = useOnboarding();
+  const { isPaid, upgrade } = useTier();
   const displayName = data.name?.trim() ? data.name : currentUser.name;
   const photo = data.photos && data.photos.length > 0 ? data.photos[0] : currentUser.photos[0];
   const photoCount = data.photos?.length ?? 0;
@@ -69,10 +72,24 @@ export default function ProfileScreen() {
               <Text style={s.name}>{displayName}</Text>
               <VerifiedBadge verified={!!data.photoVerified} size={18} />
             </View>
-            <TouchableOpacity style={s.editBtn} onPress={() => router.push("/edit-profile")} testID="edit-profile">
-              <Edit3 size={14} color="#1a1a1f" />
-              <Text style={s.editText}>{t("editProfile")}</Text>
-            </TouchableOpacity>
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              <TouchableOpacity style={s.editBtn} onPress={() => router.push("/edit-profile")} testID="edit-profile">
+                <Edit3 size={14} color="#1a1a1f" />
+                <Text style={s.editText}>{t("editProfile")}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={s.viewBtn}
+                onPress={() => {
+                  const uid = auth.currentUser?.uid;
+                  if (uid) router.push(`/user/${uid}`);
+                  else Alert.alert("Sign in required", "Sign in to preview your public profile.");
+                }}
+                testID="view-profile"
+              >
+                <Eye size={14} color="#FFF" />
+                <Text style={s.viewBtnText}>View Profile</Text>
+              </TouchableOpacity>
+            </View>
           </View>
           <TouchableOpacity onPress={() => router.push("/settings")} testID="settings-btn">
             <SettingsIcon size={24} color={Colors.dark.text} />
@@ -96,9 +113,6 @@ export default function ProfileScreen() {
         )}
 
         <View style={s.statsRow}>
-          <StatCard icon={<Star size={26} color="#4A90D9" fill="#4A90D9" />} label={t("superLikes")} cta={t("getMore")} color="#4A90D9" onPress={() => router.push({ pathname: "/subscription", params: { focus: "superlikes" } })} testID="stat-superlikes" />
-          <StatCard icon={<Zap size={26} color="#a66cff" fill="#a66cff" />} label={t("myBoosts")} cta={t("getMore")} color="#a66cff" onPress={() => router.push({ pathname: "/subscription", params: { focus: "boosts" } })} testID="stat-boosts" />
-          <StatCard icon={<Flame size={26} color={Colors.primary} fill={Colors.primary} />} label={t("subscriptions")} cta={t("manage").toUpperCase()} color={Colors.primary} onPress={() => router.push("/subscription")} testID="stat-subs" />
         </View>
 
         <TouchableOpacity style={s.goldCard} onPress={() => router.push("/subscription")} activeOpacity={0.9} testID="upgrade-card">
@@ -106,9 +120,24 @@ export default function ProfileScreen() {
             <View style={s.goldBadge}>
               <Flame size={18} color={Colors.accent} fill={Colors.accent} />
               <Text style={s.goldWordmark}>Hmong Date</Text>
-              <View style={s.goldChip}><Text style={s.goldChipText}>UNLIMITED</Text></View>
+              <View style={s.goldChip}><Text style={s.goldChipText}>{isPaid ? "UNLIMITED" : "FREE"}</Text></View>
             </View>
-            <View style={s.upgradeBtn}><Text style={s.upgradeText}>{t("upgrade")}</Text></View>
+            {isPaid ? (
+              <TouchableOpacity
+                style={[s.upgradeBtn, { backgroundColor: "rgba(255,255,255,0.08)", borderWidth: 1, borderColor: "rgba(255,255,255,0.2)" }]}
+                onPress={() => {
+                  Alert.alert("Cancel subscription?", "Your Unlimited access will end immediately. You can re-subscribe anytime.", [
+                    { text: "Keep Unlimited", style: "cancel" },
+                    { text: "Cancel", style: "destructive", onPress: async () => { await upgrade("free"); Alert.alert("Subscription cancelled", "You're back on the Free plan."); } },
+                  ]);
+                }}
+                testID="cancel-sub"
+              >
+                <Text style={[s.upgradeText, { color: "#FFF" }]}>Cancel</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={s.upgradeBtn}><Text style={s.upgradeText}>{t("upgrade")}</Text></View>
+            )}
           </View>
           <View style={s.compareHeader}>
             <Text style={s.compareTitle}>{t("whatsIncluded")}</Text>

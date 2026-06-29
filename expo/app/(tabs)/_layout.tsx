@@ -1,12 +1,14 @@
 import React from "react";
-import { Platform } from "react-native";
+import { Platform, View } from "react-native";
 import { Tabs } from "expo-router";
 import { Heart, MessageCircle, User, Compass, Home } from "lucide-react-native";
 import Colors from "@/constants/colors";
+import InAppNotificationBanner from "@/components/InAppNotificationBanner";
 
 export default function HmongDateTabLayout() {
   return (
-    <Tabs
+    <View style={{ flex: 1 }}>
+      <Tabs
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: Colors.accent,
@@ -28,5 +30,7 @@ export default function HmongDateTabLayout() {
       <Tabs.Screen name="messages" options={{ title: "Chat", tabBarIcon: ({ color, size, focused }) => <MessageCircle size={size} color={color} fill={focused ? color : "transparent"} /> }} />
       <Tabs.Screen name="profile" options={{ title: "Profile", tabBarIcon: ({ color, size }) => <User size={size} color={color} /> }} />
     </Tabs>
+    <InAppNotificationBanner />
+    </View>
   );
 }

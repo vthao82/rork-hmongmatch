@@ -51,11 +51,15 @@ export default function LikesScreen() {
       <RedBackground />
       <HmongMatchHeader />
       <View style={s.tabs}>
-        <TouchableOpacity style={s.tab} onPress={() => setTab("likes")} testID="tab-likes">
-          <Text style={[s.tabText, tab === "likes" && s.tabTextActive]}>{t("likesYou")}</Text>
-          {tab === "likes" && <View style={s.tabBar} />}
-        </TouchableOpacity>
-        <View style={s.tabDivider} />
+        {isPaid && (
+          <>
+            <TouchableOpacity style={s.tab} onPress={() => setTab("likes")} testID="tab-likes">
+              <Text style={[s.tabText, tab === "likes" && s.tabTextActive]}>{t("likesYou")}</Text>
+              {tab === "likes" && <View style={s.tabBar} />}
+            </TouchableOpacity>
+            <View style={s.tabDivider} />
+          </>
+        )}
         <TouchableOpacity style={s.tab} onPress={() => setTab("liked")} testID="tab-liked">
           <Text style={[s.tabText, tab === "liked" && s.tabTextActive]}>{t("youLiked")}</Text>
           {tab === "liked" && <View style={s.tabBar} />}

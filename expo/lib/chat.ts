@@ -105,12 +105,53 @@ export async function sendChatMessage(
       createdAt: serverTimestamp(),
       readBy: [me.uid],
     });
+    // If chatting with a seed-* test profile, schedule an auto-reply so the
+    // user can validate the full chat loop solo. Production users (non-seed
+    // uids) get no auto-reply.
+    if (otherUid.startsWith("seed-")) {
+      scheduleBotReply(otherUid, me.uid);
+    }
     return { ok: true };
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Send failed";
     console.log("[sendChatMessage] error", e);
     return { ok: false, error: msg };
   }
+}
+
+const BOT_REPLIES = [
+  "Hey 😊",
+  "Tell me more about yourself!",
+  "What are you up to today?",
+  "That's interesting — go on?",
+  "Haha I love that. What else?",
+  "Where in Minnesota are you from?",
+  "Same here! Big mood.",
+  "Are you free this weekend?",
+  "I love trying new restaurants — got any favorites?",
+  "What do you do for fun?",
+];
+
+function pickReply(): string {
+  return BOT_REPLIES[Math.floor(Math.random() * BOT_REPLIES.length)];
+}
+
+/** Schedule a single bot reply ~2-5s after a user message. Best-effort. */
+function scheduleBotReply(seedUid: string, myUid: string): void {
+  const delayMs = 1800 + Math.floor(Math.random() * 3000);
+  setTimeout(async () => {
+    try {
+      const matchId = getMatchId(seedUid, myUid);
+      await addDoc(collection(db, "matches", matchId, "messages"), {
+        senderId: seedUid,
+        text: pickReply(),
+        createdAt: serverTimestamp(),
+        readBy: [seedUid],
+      });
+    } catch (e) {
+      console.log("[scheduleBotReply] failed", e);
+    }
+  }, delayMs);
 }
 
 /** Mark a message as read by the current user. Best-effort, non-blocking. */

@@ -1,9 +1,11 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, TextInput, ScrollView, TouchableOpacity, Alert } from "react-native";
+import { View, Text, StyleSheet, TextInput, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { X, Check, AlertTriangle } from "lucide-react-native";
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import Colors from "@/constants/colors";
+import { auth, db } from "@/lib/firebase";
 
 const REASONS = [
   "Harassment or hateful language",
@@ -20,13 +22,34 @@ export default function ReportScreen() {
   const router = useRouter();
   const [reason, setReason] = useState<string | undefined>();
   const [details, setDetails] = useState<string>("");
+  const [busy, setBusy] = useState<boolean>(false);
 
-  const submit = () => {
-    if (!reason) return;
-    console.log("report submitted", { reason, details: details.trim() });
-    Alert.alert("Thanks for reporting", "Our team will review this within 24 hours.", [
-      { text: "OK", onPress: () => router.back() },
-    ]);
+  const submit = async () => {
+    if (!reason || busy) return;
+    const me = auth.currentUser;
+    if (!me) {
+      Alert.alert("Sign in required", "Please sign in to submit a report.");
+      return;
+    }
+    setBusy(true);
+    try {
+      await addDoc(collection(db, "reports"), {
+        reporterUid: me.uid,
+        reporterEmail: me.email ?? null,
+        reason,
+        details: details.trim(),
+        platform: "expo",
+        createdAt: serverTimestamp(),
+      });
+      Alert.alert("Thanks for reporting", "Our team will review this within 24 hours.", [
+        { text: "OK", onPress: () => router.back() },
+      ]);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Submit failed";
+      Alert.alert("Couldn't submit", msg);
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -66,8 +89,8 @@ export default function ReportScreen() {
           testID="report-details"
         />
 
-        <TouchableOpacity style={[s.submit, !reason && s.submitDisabled]} onPress={submit} disabled={!reason} testID="submit-report">
-          <Text style={s.submitText}>Submit report</Text>
+        <TouchableOpacity style={[s.submit, (!reason || busy) && s.submitDisabled]} onPress={submit} disabled={!reason || busy} testID="submit-report">
+          {busy ? <ActivityIndicator color="#FFF" /> : <Text style={s.submitText}>Submit report</Text>}
         </TouchableOpacity>
       </ScrollView>
     </View>

@@ -134,8 +134,19 @@ export default function BrowseScreen() {
 
   const onMessage = useCallback(() => {
     if (!current) return;
+    if (!isPaid) {
+      Alert.alert(
+        "Chat is a paid feature",
+        "You must match with a user to use chat option, or you can upgrade to use this feature freely.",
+        [
+          { text: "Maybe later", style: "cancel" },
+          { text: "Upgrade", onPress: () => router.push("/subscription") },
+        ]
+      );
+      return;
+    }
     router.push(`/chat/${current.id}`);
-  }, [current, router]);
+  }, [current, router, isPaid]);
 
   const onRewind = useCallback(() => {
     if (history.length === 0 || idx === 0) return;
@@ -167,15 +178,15 @@ export default function BrowseScreen() {
       <View style={st.topCounter}>
         <View style={st.counterPill}>
           <Heart size={12} color={Colors.like} fill={Colors.like} />
-          <Text style={st.counterPillTxt}>{isPaid ? "∞" : remaining.likes} {t("likes")}</Text>
+          <Text style={st.counterPillTxt}>{isPaid ? "∞" : remaining.likes} likes</Text>
         </View>
         <View style={st.counterPill}>
           <X size={12} color={Colors.nope} strokeWidth={3} />
-          <Text style={st.counterPillTxt}>{usage.dislikes} {t("dislikes")}</Text>
+          <Text style={st.counterPillTxt}>{isPaid ? "∞" : remaining.dislikes} passes</Text>
         </View>
         <View style={st.counterPill}>
           <RotateCcw size={12} color={Colors.accent} />
-          <Text style={st.counterPillTxt}>{isPaid ? "∞" : remaining.rewinds} {t("rewinds")}</Text>
+          <Text style={st.counterPillTxt}>{isPaid ? "∞" : remaining.rewinds} rewinds</Text>
         </View>
       </View>
 

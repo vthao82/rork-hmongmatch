@@ -60,11 +60,25 @@ service cloud.firestore {
         allow read: if isMatchParticipant(matchId);
 
         // Participants can create a message ONLY if senderId == their own uid
+        // Participants can create a message. Two allowed shapes:
+        //   1) Normal: senderId == auth.uid
+        //   2) Bot reply: senderId is a "seed-*" account that's also a participant
+        //      of this match. Used by the in-app auto-reply tester. Strictly
+        //      scoped: the only user that can write a bot message is the human
+        //      participant in that match.
         allow create: if isMatchParticipant(matchId)
-                      && request.resource.data.senderId == request.auth.uid
                       && request.resource.data.text is string
                       && request.resource.data.text.size() > 0
-                      && request.resource.data.text.size() <= 2000;
+                      && request.resource.data.text.size() <= 2000
+                      && (
+                        request.resource.data.senderId == request.auth.uid
+                        || (
+                          request.resource.data.senderId is string
+                          && request.resource.data.senderId.matches("^seed-.*")
+                          && get(/databases/$(database)/documents/matches/$(matchId))
+                                .data.userIds.hasAny([request.resource.data.senderId])
+                        )
+                      );
 
         // Participants can update messages — used for read receipts (arrayUnion on readBy).
         // We don't restrict the diff here to keep things simple; messages aren't editable
@@ -74,6 +88,16 @@ service cloud.firestore {
         // No deletes from clients
         allow delete: if false;
       }
+    }
+
+    // -------- Reports (user-submitted abuse / bug reports) --------
+    match /reports/{reportId} {
+      // Any signed-in user can create a report. Their uid must be in the doc.
+      allow create: if request.auth != null
+                    && request.resource.data.reporterUid == request.auth.uid;
+      // Read/update/delete only by reporter (admins use Firebase Console / Admin SDK)
+      allow read, update, delete: if request.auth != null
+                                  && resource.data.reporterUid == request.auth.uid;
     }
   }
 }

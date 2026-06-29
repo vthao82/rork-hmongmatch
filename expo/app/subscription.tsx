@@ -14,8 +14,8 @@ export default function SubscriptionScreen() {
   const ins = useSafeAreaInsets();
   const router = useRouter();
   const t = useT();
-  const { isPaid, purchaseUnlimited, restorePurchases } = useTier();
-  const [busy, setBusy] = useState<"buy" | "restore" | null>(null);
+  const { isPaid, purchaseUnlimited } = useTier();
+  const [busy, setBusy] = useState<"buy" | null>(null);
 
   const PERKS: Perk[] = [
     { label: t("unlimitedLikes") },
@@ -44,20 +44,7 @@ export default function SubscriptionScreen() {
     }
   };
 
-  const restore = async () => {
-    if (busy) return;
-    setBusy("restore");
-    try {
-      const res = await restorePurchases();
-      if (res.ok && res.entitled) {
-        Alert.alert("Restored", "Your Unlimited plan is active.");
-      } else {
-        Alert.alert("No purchase found", "We couldn't find an active subscription to restore.");
-      }
-    } finally {
-      setBusy(null);
-    }
-  };
+
 
   return (
     <View style={[s.ct, { paddingTop: ins.top }]}>
@@ -105,8 +92,12 @@ export default function SubscriptionScreen() {
           </View>
         </View>
 
-        <TouchableOpacity onPress={restore} disabled={!!busy} style={s.restoreBtn} testID="restore-purchases">
-          <Text style={s.restoreTxt}>{busy === "restore" ? "Restoring…" : "Restore purchases"}</Text>
+        <TouchableOpacity
+          onPress={() => Alert.alert("Restore purchases", "Available once App Store/Play purchases are live. We'll add this when the store accounts are set up.")}
+          style={[s.restoreBtn, { opacity: 0.5 }]}
+          testID="restore-purchases"
+        >
+          <Text style={s.restoreTxt}>Restore purchases (coming soon)</Text>
         </TouchableOpacity>
 
         <Text style={s.legal}>

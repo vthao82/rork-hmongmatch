@@ -19,6 +19,7 @@ export const UNLIMITED_PRICE_LABEL = "$19.99/mo";
 
 export const FREE_LIMITS = {
   likes: 10,
+  dislikes: 10,
   swipes: 25,
   rewinds: 10,
   messages: 5,
@@ -27,7 +28,7 @@ export const FREE_LIMITS = {
 };
 
 export const UNLIMITED_LIMITS = {
-  boostMin: 60,
+  boostMin: 30,
   boostsPerMonth: 2,
 };
 
@@ -49,14 +50,22 @@ type Usage = {
 };
 
 function today(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+  // Reset at midnight Central Time (America/Chicago).
+  // Note: this handles both CST and CDT automatically via Intl.
+  const fmt = new Intl.DateTimeFormat("en-US", {
+    timeZone: "America/Chicago",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  // Returns e.g. "06/28/2026" — fine as a stable cache key
+  return fmt.format(new Date());
 }
 
-const DISLIKE_START = 10;
+const DISLIKE_START = 0;
 
 function emptyUsage(): Usage {
-  return { date: today(), likes: 0, dislikes: DISLIKE_START, swipes: 0, rewinds: 0, messages: 0, boostHistory: [], seenIds: [] };
+  return { date: today(), likes: 0, dislikes: 0, swipes: 0, rewinds: 0, messages: 0, boostHistory: [], seenIds: [] };
 }
 
 // Migrate any legacy stored tier value ("plus"/"gold") to "unlimited".
@@ -237,6 +246,7 @@ export const [TierProvider, useTier] = createContextHook(() => {
 
   const remaining = {
     likes: isPaid ? Infinity : Math.max(0, FREE_LIMITS.likes - usage.likes),
+    dislikes: isPaid ? Infinity : Math.max(0, FREE_LIMITS.dislikes - usage.dislikes),
     swipes: isPaid ? Infinity : Math.max(0, FREE_LIMITS.swipes - usage.swipes),
     rewinds: isPaid ? Infinity : Math.max(0, FREE_LIMITS.rewinds - usage.rewinds),
     messages: isPaid ? Infinity : Math.max(0, FREE_LIMITS.messages - usage.messages),

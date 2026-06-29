@@ -237,7 +237,7 @@ export default function SettingsScreen() {
           <TouchableOpacity style={s.planCard} onPress={() => router.push("/subscription")} activeOpacity={0.85} testID="plan-card">
             <Crown size={22} color={Colors.accent} />
             <View style={{ flex: 1 }}>
-              <Text style={s.planTitle}>{isPaid ? t("hmongDateGold") : t("freePlan")}</Text>
+              <Text style={s.planTitle}>{isPaid ? "Hmong Date Unlimited" : "Hmong Date Free"}</Text>
               <Text style={s.planSub}>{isPaid ? t("allFeaturesUnlocked") : t("upgradeForUnlimited")}</Text>
             </View>
             <Text style={s.upgradeLink}>{isPaid ? t("manage") : t("upgrade")}</Text>
@@ -295,20 +295,9 @@ export default function SettingsScreen() {
           </View>
         </Section>
 
-        <Section title={t("advancedFilters")}>
-          {savedToast && <View style={s.toast}><Check size={14} color="#FFF" /><Text style={s.toastTxt}>{t("saved")}</Text></View>}
-          {[
-            { label: t("lookingFor"), k: "lookingFor" },
-            { label: t("languages"), k: "languages" },
-            { label: t("education"), k: "education" },
-            { label: t("familyPlans"), k: "family" },
-            { label: t("religion"), k: "religion" },
-            { label: t("dialect"), k: "dialect" },
-            { label: t("pets"), k: "pets" },
-            { label: t("drinking"), k: "drinking" },
-            { label: t("smoking"), k: "smoking" },
-          ].map(r => <Row key={r.k} label={r.label} value={displayValue(r.k)} onPress={() => openPicker(PICKERS[r.k])} testID={`filter-${r.k}`} />)}
-        </Section>
+
+
+
 
         <Section title={t("visibility")}>
           <View style={s.card}>
@@ -322,11 +311,11 @@ export default function SettingsScreen() {
           </View>
         </Section>
 
-        <Section title={t("photoVerification")}>
+        <Section title="Photo Verification">
           <View style={s.card}>
             <View style={s.rowToggle}>
               <View style={{ flex: 1, paddingRight: 10 }}>
-                <Text style={s.rowLabel}>{t("photoVerifiedChat")}</Text>
+                <Text style={s.rowLabel}>Photo Verification</Text>
                 <Text style={s.rowSub}>{t("photoVerifiedChatSub")}</Text>
               </View>
               <Toggle value={photoVerifiedChat} onChange={(v) => { if (v) router.push("/photo-verify"); setPhotoVerifiedChat(v); }} />

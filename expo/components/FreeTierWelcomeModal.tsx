@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet, Modal, TouchableOpacity } from "react-native";
-import { Heart, RefreshCw, MessageCircle, Zap, Crown } from "lucide-react-native";
+import { Heart, RefreshCw, Zap, Crown } from "lucide-react-native";
 import Colors from "@/constants/colors";
 import HmongLogo from "@/components/onboarding/HmongLogo";
 import { useT } from "@/providers/LanguageProvider";
@@ -32,7 +32,6 @@ export default function FreeTierWelcomeModal({ visible, onClose, onUpgrade }: Pr
           <View style={s.list}>
             <Item icon={<Heart size={16} color={Colors.crimson} />} label={t("freeTierLikes")} />
             <Item icon={<RefreshCw size={16} color={Colors.crimson} />} label={t("freeTierRewinds")} />
-            <Item icon={<MessageCircle size={16} color={Colors.crimson} />} label={t("freeTierMessages")} />
             <Item icon={<Zap size={16} color={Colors.accent} />} label={t("freeTierBoost")} />
           </View>
           <TouchableOpacity style={s.cta} onPress={onClose} testID="free-tier-continue">

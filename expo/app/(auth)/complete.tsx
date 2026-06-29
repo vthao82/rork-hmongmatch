@@ -38,9 +38,10 @@ export default function CompleteScreen() {
   };
 
   const finishAndGo = async () => {
-    await finish();
+    // Navigate immediately for snappy UX; sync to Firestore in the background.
     setShowFreeTier(false);
     router.replace("/discover");
+    void finish().catch((e) => console.log("[complete] background sync error", e));
   };
 
   return (
@@ -83,7 +84,7 @@ export default function CompleteScreen() {
           <PillButton label={t("startSwiping")} onPress={go} variant="light" testID="start-swiping" />
         </View>
       </SafeAreaView>
-      <FreeTierWelcomeModal visible={showFreeTier} onClose={finishAndGo} onUpgrade={async () => { await finish(); setShowFreeTier(false); router.replace("/subscription"); }} />
+      <FreeTierWelcomeModal visible={showFreeTier} onClose={finishAndGo} onUpgrade={() => { setShowFreeTier(false); router.replace("/subscription"); void finish().catch((e) => console.log("[complete] background sync error", e)); }} />
     </View>
   );
 }
