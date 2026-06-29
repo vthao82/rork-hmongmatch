@@ -144,7 +144,7 @@ function PickerModal({ visible, config, selected, onClose, onSave, t }: { visibl
 export default function SettingsScreen() {
   const ins = useSafeAreaInsets();
   const router = useRouter();
-  const { isPaid } = useTier();
+  const { isPaid, subEndsAt, cancelSubscription } = useTier();
   const t = useT();
 
   const [worldwide, setWorldwide] = useState<boolean>(false);
@@ -242,10 +242,39 @@ export default function SettingsScreen() {
             <Crown size={22} color={Colors.accent} />
             <View style={{ flex: 1 }}>
               <Text style={s.planTitle}>{isPaid ? "Hmong Date Unlimited" : "Hmong Date Free"}</Text>
-              <Text style={s.planSub}>{isPaid ? t("allFeaturesUnlocked") : t("upgradeForUnlimited")}</Text>
+              <Text style={s.planSub}>{isPaid ? (subEndsAt ? `Ends ${new Date(subEndsAt).toLocaleDateString()}` : t("allFeaturesUnlocked")) : t("upgradeForUnlimited")}</Text>
             </View>
             <Text style={s.upgradeLink}>{isPaid ? t("manage") : t("upgrade")}</Text>
           </TouchableOpacity>
+          {isPaid && (
+            <TouchableOpacity
+              style={[s.card, { marginTop: 8, alignItems: "center" }]}
+              onPress={() => {
+                if (subEndsAt) {
+                  Alert.alert("Already cancelled", `Your Unlimited access will end on ${new Date(subEndsAt).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })}. Re-subscribe anytime.`);
+                  return;
+                }
+                Alert.alert(
+                  "Cancel subscription?",
+                  "You will keep Unlimited until the end of your current billing cycle. After that you'll be on the Free plan.",
+                  [
+                    { text: "Keep Unlimited", style: "cancel" },
+                    {
+                      text: "Cancel subscription",
+                      style: "destructive",
+                      onPress: async () => {
+                        const res = await cancelSubscription();
+                        Alert.alert("Subscription cancelled", `Your Unlimited access will end on ${new Date(res.endsAt).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })}. You can re-subscribe anytime.`);
+                      },
+                    },
+                  ]
+                );
+              }}
+              testID="cancel-sub-settings"
+            >
+              <Text style={[s.link, { color: Colors.primary }]}>{subEndsAt ? "Cancellation pending" : "Cancel subscription"}</Text>
+            </TouchableOpacity>
+          )}
         </Section>
 
         <Section title={t("discoverySettings")}>

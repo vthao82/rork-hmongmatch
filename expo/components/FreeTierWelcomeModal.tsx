@@ -1,6 +1,6 @@
 import React from "react";
 import { View, Text, StyleSheet, Modal, TouchableOpacity } from "react-native";
-import { Heart, RefreshCw, Zap, Crown } from "lucide-react-native";
+import { Heart, X as XIcon, RefreshCw, Zap, Crown } from "lucide-react-native";
 import Colors from "@/constants/colors";
 import HmongLogo from "@/components/onboarding/HmongLogo";
 import { useT } from "@/providers/LanguageProvider";
@@ -31,6 +31,7 @@ export default function FreeTierWelcomeModal({ visible, onClose, onUpgrade }: Pr
           <Text style={s.sub}>{t("freeTierSub")}</Text>
           <View style={s.list}>
             <Item icon={<Heart size={16} color={Colors.crimson} />} label={t("freeTierLikes")} />
+            <Item icon={<XIcon size={16} color={Colors.crimson} />} label="10 dislikes per day" />
             <Item icon={<RefreshCw size={16} color={Colors.crimson} />} label={t("freeTierRewinds")} />
             <Item icon={<Zap size={16} color={Colors.accent} />} label={t("freeTierBoost")} />
           </View>

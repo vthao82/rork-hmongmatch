@@ -49,7 +49,17 @@ export default function SubscriptionScreen() {
   return (
     <View style={[s.ct, { paddingTop: ins.top }]}>
       <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} testID="close-sub">
+        <TouchableOpacity
+          onPress={() => {
+            if (router.canGoBack && router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace("/(tabs)/discover" as never);
+            }
+          }}
+          testID="close-sub"
+          hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        >
           <X size={26} color="#FFF" />
         </TouchableOpacity>
         <Text style={s.title}>{t("mySubscription")}</Text>

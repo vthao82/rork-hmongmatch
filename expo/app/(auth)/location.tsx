@@ -46,7 +46,20 @@ export default function LocationScreen() {
     <OnboardingScreen
       step={19}
       total={19}
-      footer={<PillButton label={t("locationAllow")} onPress={allow} variant="light" testID="allow-location" />}
+      footer={
+        <View style={{ gap: 10 }}>
+          <PillButton label={t("locationAllow")} onPress={allow} variant="light" testID="allow-location" />
+          <Pressable
+            onPress={() => { update({ locationGranted: false }); router.push("/(auth)/complete"); }}
+            style={{ alignItems: "center", paddingVertical: 10 }}
+            testID="skip-location"
+          >
+            <Text style={{ color: Colors.dark.textDim, fontSize: 14, fontWeight: "600" as const, textDecorationLine: "underline" }}>
+              Skip — don&apos;t share location
+            </Text>
+          </Pressable>
+        </View>
+      }
       scroll={false}
     >
       <View style={s.wrap}>

@@ -52,6 +52,27 @@ const CATEGORY_MAP: Record<string, { match: (p: Profile) => boolean; subtitle: s
     subtitle: "Keep it casual",
   },
   "Serious Daters": { match: p => /relationship|marriage|long/i.test(p.lookingFor), subtitle: "Dating with intention" },
+  // Clan cards (one per Hmong clan) — match by Profile.clan exactly
+  ...Object.fromEntries(["Chang","Cheng","Fang","Her","Khang","Kong","Kue","Lee","Lor","Moua","Pha","Thao","Vang","Vue","Xiong","Yang","Hang","Cha"].map((c) => [`${c} Clan`, { match: (p: Profile) => (p.clan ?? "").toLowerCase() === c.toLowerCase(), subtitle: `Members of the ${c} clan` }])),
+  // Work
+  "Full-time job":     { match: p => /full.?time|ft\b/i.test((p as { work?: string }).work ?? ""),       subtitle: "Hustlers" },
+  "Work from home":    { match: p => /wfh|home|remote/i.test((p as { work?: string }).work ?? ""),       subtitle: "Remote workers unite" },
+  "Part-time job":     { match: p => /part.?time|pt\b/i.test((p as { work?: string }).work ?? ""),       subtitle: "Part-timers" },
+  // Education
+  "High School":       { match: p => /high.?school/i.test((p as { education?: string }).education ?? ""), subtitle: "High School" },
+  "College":           { match: p => /college/i.test((p as { education?: string }).education ?? ""),     subtitle: "College students & grads" },
+  "Bachelor":          { match: p => /bachelor/i.test((p as { education?: string }).education ?? ""),    subtitle: "Bachelor's degree" },
+  "Masters":           { match: p => /master/i.test((p as { education?: string }).education ?? ""),      subtitle: "Master's degree" },
+  "PhD":               { match: p => /phd|doctor/i.test((p as { education?: string }).education ?? ""),  subtitle: "PhD holders" },
+  "Trade School":      { match: p => /trade/i.test((p as { education?: string }).education ?? ""),       subtitle: "Trade school" },
+  // Dialect
+  "Green Hmong":       { match: p => /green/i.test((p as { dialect?: string }).dialect ?? ""),           subtitle: "Hmoob Ntsuab speakers" },
+  "White Hmong":       { match: p => /white/i.test((p as { dialect?: string }).dialect ?? ""),           subtitle: "Hmoob Dawb speakers" },
+  // State
+  "Minnesota":         { match: p => /minnesota/i.test((p as { hometownState?: string }).hometownState ?? ""), subtitle: "Minnesotans" },
+  "California":        { match: p => /california/i.test((p as { hometownState?: string }).hometownState ?? ""), subtitle: "Californians" },
+  "Wisconsin":         { match: p => /wisconsin/i.test((p as { hometownState?: string }).hometownState ?? ""),  subtitle: "Wisconsinites" },
+  "North Carolina":    { match: p => /north.?carolina/i.test((p as { hometownState?: string }).hometownState ?? ""), subtitle: "North Carolinians" },
 };
 
 // Maps a Relationship Goals card label to its OnboardingData.lookingFor ID
@@ -100,11 +121,45 @@ export default function CategoryScreen() {
   }, []);
 
   const remaining = isPaid ? Infinity : Math.max(0, CATEGORY_FREE_DAILY_CAP - viewedToday);
-  // The user belongs to a Relationship Goals card if their lookingFor ID matches the cardId.
-  // For other categories we check the interests array against the title.
+  // Determine whether the current user belongs to this category based on
+  // their stored enrollment data (clan, dialect, education, work, state,
+  // religion, lookingFor, interests). This is what makes them appear in
+  // "Thao Clan", "Work from home", "College" etc. without manual self-add.
   const inCategory = (() => {
-    if (groupId === "goals" && cardId) return data.lookingFor === cardId;
-    return (data.interests ?? []).includes(title);
+    if (!cardId || !groupId) {
+      return (data.interests ?? []).includes(title);
+    }
+    const lc = (v: string | undefined) => (v ?? "").toString().toLowerCase();
+    switch (groupId) {
+      case "goals":
+        return data.lookingFor === cardId;
+      case "clan":
+        return lc(data.clan) === cardId;
+      case "dialect":
+        return lc(data.dialect).includes(cardId);
+      case "education":
+        return lc(data.education).includes(cardId) || lc(data.education).replace(/\s/g, "") === cardId;
+      case "work":
+        return lc(data.work).includes(cardId);
+      case "state": {
+        const s = lc((data as { hometownState?: string }).hometownState);
+        if (cardId === "mn") return s.includes("minnesota");
+        if (cardId === "ca") return s.includes("california");
+        if (cardId === "wi") return s.includes("wisconsin");
+        if (cardId === "nc") return s.includes("north carolina");
+        return s === cardId;
+      }
+      case "religion":
+        return lc((data as { religion?: string }).religion).includes(cardId);
+      case "lifestyle":
+        if (cardId === "wants-kids") return /want/i.test((data as { family?: string }).family ?? "");
+        if (cardId === "child-free") return /no|child.?free/i.test((data as { family?: string }).family ?? "");
+        if (cardId === "family") return /family/i.test((data as { family?: string }).family ?? "") || (data.interests ?? []).includes("Family First");
+        return false;
+      default:
+        // Generic fallback: interests array match
+        return (data.interests ?? []).includes(title);
+    }
   })();
 
   const { filtered, subtitle } = useMemo(() => {

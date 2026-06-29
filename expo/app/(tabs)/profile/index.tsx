@@ -52,7 +52,11 @@ export default function ProfileScreen() {
   const router = useRouter();
   const t = useT();
   const { data } = useOnboarding();
-  const { isPaid, upgrade } = useTier();
+  const { isPaid, subEndsAt, cancelSubscription } = useTier();
+
+  function formatEndDate(ts: number): string {
+    return new Date(ts).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
+  }
   const displayName = data.name?.trim() ? data.name : currentUser.name;
   const photo = data.photos && data.photos.length > 0 ? data.photos[0] : currentUser.photos[0];
   const photoCount = data.photos?.length ?? 0;
@@ -126,14 +130,32 @@ export default function ProfileScreen() {
               <TouchableOpacity
                 style={[s.upgradeBtn, { backgroundColor: "rgba(255,255,255,0.08)", borderWidth: 1, borderColor: "rgba(255,255,255,0.2)" }]}
                 onPress={() => {
-                  Alert.alert("Cancel subscription?", "Your Unlimited access will end immediately. You can re-subscribe anytime.", [
-                    { text: "Keep Unlimited", style: "cancel" },
-                    { text: "Cancel", style: "destructive", onPress: async () => { await upgrade("free"); Alert.alert("Subscription cancelled", "You're back on the Free plan."); } },
-                  ]);
+                  if (subEndsAt) {
+                    Alert.alert("Already cancelled", `Your Unlimited access will end on ${formatEndDate(subEndsAt)}. Re-subscribe anytime.`);
+                    return;
+                  }
+                  Alert.alert(
+                    "Cancel subscription?",
+                    "You will keep Unlimited until the end of your current billing cycle. After that you'll be on the Free plan.",
+                    [
+                      { text: "Keep Unlimited", style: "cancel" },
+                      {
+                        text: "Cancel subscription",
+                        style: "destructive",
+                        onPress: async () => {
+                          const res = await cancelSubscription();
+                          Alert.alert(
+                            "Subscription cancelled",
+                            `Your Unlimited access will end on ${formatEndDate(res.endsAt)}. You can re-subscribe anytime.`
+                          );
+                        },
+                      },
+                    ]
+                  );
                 }}
                 testID="cancel-sub"
               >
-                <Text style={[s.upgradeText, { color: "#FFF" }]}>Cancel</Text>
+                <Text style={[s.upgradeText, { color: "#FFF" }]}>{subEndsAt ? "Cancelled" : "Cancel"}</Text>
               </TouchableOpacity>
             ) : (
               <View style={s.upgradeBtn}><Text style={s.upgradeText}>{t("upgrade")}</Text></View>

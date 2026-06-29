@@ -52,15 +52,11 @@ export default function LikesScreen() {
       <RedBackground />
       <HmongMatchHeader />
       <View style={s.tabs}>
-        {isPaid && (
-          <>
-            <TouchableOpacity style={s.tab} onPress={() => setTab("likes")} testID="tab-likes">
-              <Text style={[s.tabText, tab === "likes" && s.tabTextActive]}>{t("likesYou")}</Text>
-              {tab === "likes" && <View style={s.tabBar} />}
-            </TouchableOpacity>
-            <View style={s.tabDivider} />
-          </>
-        )}
+        <TouchableOpacity style={s.tab} onPress={() => setTab("likes")} testID="tab-likes">
+          <Text style={[s.tabText, tab === "likes" && s.tabTextActive]}>{t("likesYou")}</Text>
+          {tab === "likes" && <View style={s.tabBar} />}
+        </TouchableOpacity>
+        <View style={s.tabDivider} />
         <TouchableOpacity style={s.tab} onPress={() => setTab("liked")} testID="tab-liked">
           <Text style={[s.tabText, tab === "liked" && s.tabTextActive]}>{t("youLiked")}</Text>
           {tab === "liked" && <View style={s.tabBar} />}
@@ -128,23 +124,26 @@ export default function LikesScreen() {
 
           <Text style={s.sectionHead}>{t("whoLikedYou")}</Text>
           <View style={s.grid}>
-            {topPicks.slice(0, 4).map(p => (
-              <TouchableOpacity key={p.id} style={[s.pick, { width: CW }]} activeOpacity={0.85} onPress={() => { if (!premium && !isPaid) { setUpgradeOpen(true); return; } setProfileStack(topPicks.slice(0, 4).map(x => x.id), topPicks.slice(0, 4).findIndex(x => x.id === p.id), t("likesYou")); router.push("/profile-stack"); }} testID={`liked-by-${p.id}`}>
-                <Image source={{ uri: p.photos[0] }} style={s.pickImg} contentFit="cover" blurRadius={premium ? 0 : 14} />
+            {topPicks.slice(0, 4).map(p => {
+              const unlocked = isPaid || premium;
+              return (
+              <TouchableOpacity key={p.id} style={[s.pick, { width: CW }]} activeOpacity={0.85} onPress={() => { if (!unlocked) { setUpgradeOpen(true); return; } setProfileStack(topPicks.slice(0, 4).map(x => x.id), topPicks.slice(0, 4).findIndex(x => x.id === p.id), t("likesYou")); router.push("/profile-stack"); }} testID={`liked-by-${p.id}`}>
+                <Image source={{ uri: p.photos[0] }} style={s.pickImg} contentFit="cover" blurRadius={unlocked ? 0 : 14} />
                 <View style={s.pickOverlay} />
                 <View style={s.pickInfo}>
-                  <Text style={s.pickName}>{premium ? `${p.name}, ${p.age}` : "?, ?"}</Text>
+                  <Text style={s.pickName}>{unlocked ? `${p.name}, ${p.age}` : "?, ?"}</Text>
                 </View>
-                {!premium && (
+                {!unlocked && (
                   <View style={s.lockCenter}>
                     <Heart size={28} color={Colors.accent} fill={Colors.accent} />
                   </View>
                 )}
               </TouchableOpacity>
-            ))}
+              );
+            })}
           </View>
 
-          {!premium && (
+          {!isPaid && !premium && (
             <TouchableOpacity style={s.goldBtn} onPress={() => router.push("/subscription")} testID="see-who-likes">
               <Text style={s.goldBtnText}>{t("seeWhoLikesYou")}</Text>
             </TouchableOpacity>

@@ -33,7 +33,8 @@ export const UNLIMITED_LIMITS = {
 };
 
 const KEY = "hmongdate.tier.v1";
-const USAGE_KEY = "hmongdate.usage.v1";
+const SUB_END_KEY = "hmongdate.subEndsAt.v1";
+const USAGE_KEY = "hmongdate.usage.v2";
 
 type Usage = {
   date: string;
@@ -78,6 +79,7 @@ function normalizeTier(raw: string | null): Tier {
 
 export const [TierProvider, useTier] = createContextHook(() => {
   const [tier, setTier] = useState<Tier>("free");
+  const [subEndsAt, setSubEndsAt] = useState<number | null>(null);
   const [usage, setUsage] = useState<Usage>(emptyUsage());
   const [hydrated, setHydrated] = useState<boolean>(false);
   const [showLimitModal, setShowLimitModal] = useState<boolean>(false);
@@ -86,12 +88,19 @@ export const [TierProvider, useTier] = createContextHook(() => {
   useEffect(() => {
     (async () => {
       try {
-        const [t, u] = await Promise.all([AsyncStorage.getItem(KEY), AsyncStorage.getItem(USAGE_KEY)]);
+        const [t, u, e] = await Promise.all([
+          AsyncStorage.getItem(KEY),
+          AsyncStorage.getItem(USAGE_KEY),
+          AsyncStorage.getItem(SUB_END_KEY),
+        ]);
         const normalized = normalizeTier(t);
         setTier(normalized);
-        // If we migrated a legacy value, persist the new canonical name
         if (t && t !== normalized) {
           try { await AsyncStorage.setItem(KEY, normalized); } catch (_e) {}
+        }
+        if (e) {
+          const parsed = parseInt(e, 10);
+          if (!isNaN(parsed) && parsed > 0) setSubEndsAt(parsed);
         }
         if (u && u !== "null") {
           try { const parsed = JSON.parse(u) as Usage; if (parsed?.date === today()) setUsage({ ...emptyUsage(), ...parsed }); else setUsage(emptyUsage()); } catch (_e) { setUsage(emptyUsage()); }
@@ -110,20 +119,40 @@ export const [TierProvider, useTier] = createContextHook(() => {
     try { await AsyncStorage.setItem(KEY, t); } catch (e) { console.log("tier save", e); }
   }, []);
 
-  /**
-   * Stubbed purchase flow. Native RevenueCat will replace this body.
-   * For now we simply mark the user as Unlimited locally so all gated UI unlocks
-   * end-to-end for testing.
-   */
   const purchaseUnlimited = useCallback(async (): Promise<{ ok: boolean; error?: string }> => {
-    // TODO(RevenueCat): replace stub with `Purchases.purchasePackage(...)`.
     await setTierAndPersist("unlimited");
+    // New / renewed subscription — no pending cancellation
+    setSubEndsAt(null);
+    try { await AsyncStorage.removeItem(SUB_END_KEY); } catch (_e) {}
     return { ok: true };
   }, [setTierAndPersist]);
 
+  /**
+   * Cancel the subscription but keep Unlimited active until the next renewal
+   * date. Returns the timestamp until which access remains.
+   */
+  const cancelSubscription = useCallback(async (): Promise<{ ok: boolean; endsAt: number }> => {
+    // 30-day grace by default. When RevenueCat is wired, replace with the
+    // real `expirationDate` from the customer info.
+    const endsAt = Date.now() + 30 * 24 * 60 * 60 * 1000;
+    setSubEndsAt(endsAt);
+    try { await AsyncStorage.setItem(SUB_END_KEY, String(endsAt)); } catch (_e) {}
+    return { ok: true, endsAt };
+  }, []);
+
+  // Effective paid state — flips to free automatically once the subscription
+  // grace period expires (checked once on hydration; UI re-renders normally).
+  useEffect(() => {
+    if (tier === "unlimited" && subEndsAt && subEndsAt < Date.now()) {
+      // Past the end date — downgrade silently
+      setTier("free");
+      setSubEndsAt(null);
+      AsyncStorage.setItem(KEY, "free").catch(() => {});
+      AsyncStorage.removeItem(SUB_END_KEY).catch(() => {});
+    }
+  }, [tier, subEndsAt]);
+
   const restorePurchases = useCallback(async (): Promise<{ ok: boolean; entitled: boolean }> => {
-    // TODO(RevenueCat): replace stub with `Purchases.restorePurchases()` and
-    // inspect `customerInfo.entitlements.active["unlimited"]`.
     return { ok: true, entitled: tier === "unlimited" };
   }, [tier]);
 
@@ -255,6 +284,8 @@ export const [TierProvider, useTier] = createContextHook(() => {
   return {
     tier,
     isPaid,
+    subEndsAt,
+    cancelSubscription,
     upgrade,
     purchaseUnlimited,
     restorePurchases,

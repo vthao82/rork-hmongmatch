@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, Text, TextInput, StyleSheet, Animated, Easing, Platform, Linking, Alert, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, StyleSheet, Animated, Easing, Platform, Linking, Alert, ActivityIndicator, TouchableOpacity } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import Svg, { Path } from "react-native-svg";
-import { Mail, CheckCircle } from "lucide-react-native";
+import { Mail, CheckCircle, Eye, EyeOff } from "lucide-react-native";
 import Colors from "@/constants/colors";
 import PajNtaubPattern from "@/components/onboarding/PajNtaubPattern";
 import PillButton from "@/components/onboarding/PillButton";
@@ -34,6 +34,7 @@ export default function LoginScreen() {
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [emailSent, setEmailSent] = useState<string | null>(null);
+  const [showPassword, setShowPassword] = useState<boolean>(false);
   const [resending, setResending] = useState<boolean>(false);
   const [mfaPending, setMfaPending] = useState<boolean>(false);
   const fade = useRef(new Animated.Value(0)).current;
@@ -234,19 +235,29 @@ export default function LoginScreen() {
               editable={!busy}
               testID="email-input"
             />
-            <TextInput
-              style={s.input}
-              placeholder={t("passwordPlaceholder")}
-              placeholderTextColor="rgba(245,240,235,0.35)"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoCapitalize="none"
-              textContentType="password"
-              autoComplete="password"
-              editable={!busy}
-              testID="password-input"
-            />
+            <View style={s.pwWrap}>
+              <TextInput
+                style={[s.input, { flex: 1, paddingRight: 44 }]}
+                placeholder={t("passwordPlaceholder")}
+                placeholderTextColor="rgba(245,240,235,0.35)"
+                value={password}
+                onChangeText={setPassword}
+                secureTextEntry={!showPassword}
+                autoCapitalize="none"
+                textContentType="password"
+                autoComplete="password"
+                editable={!busy}
+                testID="password-input"
+              />
+              <TouchableOpacity
+                onPress={() => setShowPassword((v) => !v)}
+                style={s.pwEye}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                testID="toggle-password-visibility"
+              >
+                {showPassword ? <EyeOff size={20} color="rgba(245,240,235,0.6)" /> : <Eye size={20} color="rgba(245,240,235,0.6)" />}
+              </TouchableOpacity>
+            </View>
             {mfaPending ? (
               <View style={{ alignItems: "center", gap: 12 }}>
                 <ActivityIndicator size="small" color={Colors.gold} />
@@ -336,6 +347,8 @@ const s = StyleSheet.create({
     color: Colors.offwhite,
     fontWeight: "500" as const,
   },
+  pwWrap: { position: "relative", justifyContent: "center" as const },
+  pwEye: { position: "absolute" as const, right: 14, top: 0, bottom: 0, justifyContent: "center" as const, alignItems: "center" as const, width: 30 },
   toggle: {
     color: Colors.gold,
     fontSize: 13.5,

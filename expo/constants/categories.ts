@@ -62,7 +62,21 @@ export const CATEGORY_GROUPS: CategoryGroup[] = [
     id: "clan",
     title: "Clan",
     freeAccess: false,
-    cards: ["Chang","Cheng","Fang","Her","Khang","Kong","Kue","Lee","Lor","Moua","Pha","Thao","Vang","Vue","Xiong","Yang","Hang","Cha"].map((c, i) => ({ id: c.toLowerCase(), label: `${c} Clan`, members: `${100 + i * 30}`, image: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=600" })),
+    cards: ["Chang","Cheng","Fang","Her","Khang","Kong","Kue","Lee","Lor","Moua","Pha","Thao","Vang","Vue","Xiong","Yang","Hang","Cha"].map((c, i) => {
+      // Rotate through a small pool of family / community / culture images so the
+      // clan grid doesn't show the same woman portrait for every card.
+      const images = [
+        "https://images.unsplash.com/photo-1511895426328-dc8714191300?w=600", // family
+        "https://images.unsplash.com/photo-1488521787991-ed7bbaae773c?w=600", // generations
+        "https://images.unsplash.com/photo-1606214174585-fe31582dc6ee?w=600", // family hands
+        "https://images.unsplash.com/photo-1529390079861-591de354faf5?w=600", // mountains/heritage
+        "https://images.unsplash.com/photo-1545167622-3a6ac756afa4?w=600", // group at table
+        "https://images.unsplash.com/photo-1542038784456-1ea8e935640e?w=600", // textiles
+        "https://images.unsplash.com/photo-1542338347-4fff3276af78?w=600", // crowd
+        "https://images.unsplash.com/photo-1518621736915-f3b1c41bfd00?w=600", // candlelight
+      ];
+      return { id: c.toLowerCase(), label: `${c} Clan`, members: `${100 + i * 30}`, image: images[i % images.length] };
+    }),
   },
   {
     id: "work",
