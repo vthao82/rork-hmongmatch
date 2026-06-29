@@ -8,6 +8,7 @@ import {
   doc,
   getDoc,
   setDoc,
+  deleteDoc,
   serverTimestamp,
   type DocumentData,
 } from "firebase/firestore";
@@ -295,5 +296,20 @@ export async function recordSwipe(
   } catch (e: any) {
     console.log("[discover] recordSwipe error", e);
     return { ok: false, error: e?.message ?? "Swipe failed" };
+  }
+}
+
+/**
+ * Delete a previously recorded swipe (used by Rewind on the paid tier).
+ * This lets the disliked/liked user appear in Discover again later.
+ * Best-effort; failures are logged and ignored.
+ */
+export async function deleteSwipe(targetUserId: string): Promise<void> {
+  const me = auth.currentUser;
+  if (!me || !targetUserId) return;
+  try {
+    await deleteDoc(doc(db, "users", me.uid, "swipes", targetUserId));
+  } catch (e) {
+    console.log("[discover] deleteSwipe error", e);
   }
 }

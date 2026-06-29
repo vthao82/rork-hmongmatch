@@ -8,7 +8,7 @@ import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import Colors from "@/constants/colors";
 import { Profile } from "@/mocks/profiles";
-import { useDiscoverProfiles, recordSwipe } from "@/lib/discoverProfiles";
+import { useDiscoverProfiles, recordSwipe, deleteSwipe } from "@/lib/discoverProfiles";
 import HmongMatchHeader from "@/components/HmongMatchHeader";
 import RedBackground from "@/components/RedBackground";
 import { useTier } from "@/providers/TierProvider";
@@ -153,9 +153,17 @@ export default function BrowseScreen() {
     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     const ok = consumeRewind();
     if (!ok) return;
+    const last = history[history.length - 1];
+    // Paid users get to truly "undo" — we delete the Firestore swipe record so
+    // the user can show up in the queue again. Free users have a session-only
+    // rewind: the swipe stays sticky on disk, so once they leave/refresh the
+    // disliked person doesn't come back.
+    if (isPaid && last?.id) {
+      deleteSwipe(last.id).catch((e) => console.log("[rewind] deleteSwipe", e));
+    }
     setHistory(h => h.slice(0, -1));
     setIdx(i => Math.max(0, i - 1));
-  }, [history, idx, consumeRewind]);
+  }, [history, idx, consumeRewind, isPaid]);
 
   const toggleBoost = useCallback(() => {
     if (boostActive) stopBoost();

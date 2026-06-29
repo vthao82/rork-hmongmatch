@@ -59,13 +59,13 @@ service cloud.firestore {
         // Participants of the parent match can read all messages
         allow read: if isMatchParticipant(matchId);
 
-        // Participants can create a message ONLY if senderId == their own uid
         // Participants can create a message. Two allowed shapes:
         //   1) Normal: senderId == auth.uid
-        //   2) Bot reply: senderId is a "seed-*" account that's also a participant
-        //      of this match. Used by the in-app auto-reply tester. Strictly
-        //      scoped: the only user that can write a bot message is the human
-        //      participant in that match.
+        //   2) 🚨 REMOVE BEFORE PRODUCTION — Bot reply: senderId is a "seed-*"
+        //      account that's also a participant of this match. Used by the
+        //      in-app auto-reply tester (lib/chat.ts scheduleBotReply()). Real
+        //      Firebase Auth UIDs never start with "seed-", so this is dormant
+        //      for genuine users — but delete it before going live.
         allow create: if isMatchParticipant(matchId)
                       && request.resource.data.text is string
                       && request.resource.data.text.size() > 0

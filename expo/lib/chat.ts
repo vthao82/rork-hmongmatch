@@ -132,6 +132,21 @@ const BOT_REPLIES = [
   "What do you do for fun?",
 ];
 
+// ============================================================
+// 🚨 REMOVE BEFORE PRODUCTION
+// ------------------------------------------------------------
+// The block below (BOT_REPLIES, pickReply, scheduleBotReply, and the
+// `if (otherUid.startsWith("seed-")) scheduleBotReply(...)` call inside
+// sendChatMessage) exists ONLY to let the founder solo-test chat against
+// seed accounts. Before App Store / Play submission:
+//   1. Delete the call site inside sendChatMessage()
+//   2. Delete scheduleBotReply() and BOT_REPLIES
+//   3. In firestore.rules, remove the bot-reply OR clause from
+//      `match /matches/{matchId}/messages/{messageId}` so the only
+//      allowed shape is `senderId == request.auth.uid`.
+// Real users have Firebase Auth UIDs that NEVER start with "seed-", so
+// this code is dormant for them — but defense in depth: take it out.
+// ============================================================
 function pickReply(): string {
   return BOT_REPLIES[Math.floor(Math.random() * BOT_REPLIES.length)];
 }
