@@ -7,6 +7,7 @@ import { ArrowLeft, MapPin, ChevronRight, Check, X as XIcon, Crown } from "lucid
 import Colors from "@/constants/colors";
 import { useTier } from "@/providers/TierProvider";
 import { useT } from "@/providers/LanguageProvider";
+import { useOnboarding } from "@/providers/OnboardingProvider";
 
 const ADV_KEY = "hmongdate.adv-filters.v1";
 const PREF_KEY = "hmongdate.discovery.v1";
@@ -151,7 +152,10 @@ export default function SettingsScreen() {
   const [distance, setDistance] = useState<number>(50);
   const [showFurther, setShowFurther] = useState<boolean>(true);
   const [discovery, setDiscovery] = useState<boolean>(true);
-  const [photoVerifiedChat, setPhotoVerifiedChat] = useState<boolean>(false);
+  const { data: onb } = useOnboarding();
+  const [photoVerifiedChat, setPhotoVerifiedChat] = useState<boolean>(!!onb.photoVerified);
+  // Keep local state in sync if OnboardingProvider hydrates later
+  useEffect(() => { setPhotoVerifiedChat(!!onb.photoVerified); }, [onb.photoVerified]);
   const [location, setLocation] = useState<string>("Little Canada, Minnesota");
   const [ageLow, setAgeLow] = useState<number>(21);
   const [ageHigh, setAgeHigh] = useState<number>(45);

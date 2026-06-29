@@ -9,6 +9,7 @@ import {
   type User,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { syncPushToken } from "@/lib/notifications";
 
 export type EmailSignInResult = {
   ok: boolean;
@@ -43,6 +44,12 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
       setLoading(false);
+      // Best-effort: save the device's push token to /users/{uid} so the
+      // Cloud Function can target this device. No-op until native module is
+      // wired — see lib/notifications.ts comment.
+      if (u) {
+        void syncPushToken();
+      }
     });
     return unsub;
   }, []);

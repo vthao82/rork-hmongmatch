@@ -37,6 +37,32 @@ export default function InterestsTab() {
     return t;
   }, [data]);
 
+  // Auto-place: sort groups by how many cards match this user's enrollment.
+  // Groups with at least one matching card float to the top.
+  const sortedGroups = useMemo(() => {
+    const matchScore = (group: typeof CATEGORY_GROUPS[number]) => {
+      return group.cards.reduce((sum, card) => {
+        const lc = card.label.toLowerCase();
+        const hit = userTokens.some(
+          (tok) =>
+            !!tok &&
+            (lc.includes(tok) ||
+              tok.includes(card.id) ||
+              card.id === tok)
+        );
+        return sum + (hit ? 1 : 0);
+      }, 0);
+    };
+    return [...CATEGORY_GROUPS].sort((a, b) => {
+      const sa = matchScore(a);
+      const sb = matchScore(b);
+      if (sb !== sa) return sb - sa;
+      // Tie-break: keep free-access groups before paid ones
+      if (a.freeAccess !== b.freeAccess) return a.freeAccess ? -1 : 1;
+      return 0;
+    });
+  }, [userTokens]);
+
   const goCategory = (groupId: string, cardId: string, freeAccess: boolean) => {
     if (!freeAccess && !isPaid) {
       setLockOpen(true);
@@ -53,7 +79,7 @@ export default function InterestsTab() {
         <Text style={s.heroTitle}>{t("exploreTitle")}</Text>
         <Text style={s.heroSub}>{t("exploreSub")}</Text>
 
-        {CATEGORY_GROUPS.map(group => {
+        {sortedGroups.map(group => {
           const visibleCards = seeAll === group.id ? group.cards : group.cards.slice(0, 4);
           return (
             <View key={group.id} style={s.section}>

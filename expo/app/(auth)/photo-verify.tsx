@@ -1,19 +1,23 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, Pressable, Platform, Alert } from "react-native";
+import { View, Text, StyleSheet, Pressable, Platform, Alert, ActivityIndicator } from "react-native";
 import { router, useLocalSearchParams } from "expo-router";
 import { Camera, ShieldCheck } from "lucide-react-native";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
+import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import Colors from "@/constants/colors";
 import OnboardingScreen from "@/components/onboarding/OnboardingScreen";
 import PillButton from "@/components/onboarding/PillButton";
 import { useOnboarding } from "@/providers/OnboardingProvider";
+import { auth, db } from "@/lib/firebase";
+import { uploadPhotoAsync } from "@/lib/photoUpload";
 
 export default function PhotoVerifyScreen() {
   const { update } = useOnboarding();
   const { mode } = useLocalSearchParams<{ mode?: string }>();
   const onboarding = mode === "onboarding";
   const [selfie, setSelfie] = useState<string | undefined>(undefined);
+  const [busy, setBusy] = useState<boolean>(false);
 
   const advance = () => {
     if (onboarding) {
@@ -50,8 +54,29 @@ export default function PhotoVerifyScreen() {
     }
   };
 
-  const onContinue = () => {
+  const onContinue = async () => {
+    if (busy) return;
     update({ photoVerified: !!selfie });
+    const me = auth.currentUser;
+    // Persist to Firestore so it shows on user's public profile + others see the badge.
+    // During onboarding the bulk profileSync at the end of the flow handles this — but
+    // if invoked from Settings, we need to write directly here.
+    if (selfie && me) {
+      setBusy(true);
+      try {
+        const url = await uploadPhotoAsync(me.uid, selfie, "verification-selfie");
+        await updateDoc(doc(db, "users", me.uid), {
+          photoVerified: true,
+          verificationSelfie: url,
+          verifiedAt: serverTimestamp(),
+        });
+      } catch (e) {
+        console.log("[photo-verify] persist error", e);
+        Alert.alert("Couldn't save verification", "We saved it locally. Try again later from Settings.");
+      } finally {
+        setBusy(false);
+      }
+    }
     advance();
   };
 
@@ -59,7 +84,8 @@ export default function PhotoVerifyScreen() {
     <OnboardingScreen
       footer={
         <View style={{ gap: 10 }}>
-          <PillButton label={selfie ? "Submit verification" : "Take selfie"} onPress={selfie ? onContinue : takeSelfie} variant="light" testID="verify-cta" />
+          <PillButton label={busy ? "Submitting..." : (selfie ? "Submit verification" : "Take selfie")} onPress={selfie ? onContinue : takeSelfie} variant="light" testID="verify-cta" disabled={busy} />
+          {busy && <ActivityIndicator color="#FFF" />}
           <Pressable onPress={advance} style={s.skipBtn} testID="verify-skip">
             <Text style={s.skipText}>Do this later</Text>
           </Pressable>

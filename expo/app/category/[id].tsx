@@ -1,19 +1,28 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from "react-native";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
-import { ArrowLeft, BadgeCheck, MapPin, Users, Plus, Check } from "lucide-react-native";
+import { ArrowLeft, BadgeCheck, MapPin, Users, Plus, Check, Lock } from "lucide-react-native";
 import Colors from "@/constants/colors";
 import { profiles as mockProfiles, currentUser, Profile } from "@/mocks/profiles";
 import { useAllProfiles } from "@/lib/discoverProfiles";
 import { useOnboarding } from "@/providers/OnboardingProvider";
+import { useTier } from "@/providers/TierProvider";
 import { useT } from "@/providers/LanguageProvider";
+import { setProfileStack } from "@/lib/profileStackStore";
 import { auth } from "@/lib/firebase";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { CATEGORY_GROUPS } from "@/constants/categories";
 
 const SW = Dimensions.get("window").width;
 const CW = (SW - 16 * 2 - 12) / 2;
+const CATEGORY_FREE_DAILY_CAP = 10;
+const CAP_STORAGE_KEY = "hmongdate.category.viewed.v1";
+
+function todayCentral(): string {
+  return new Intl.DateTimeFormat("en-US", { timeZone: "America/Chicago", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+}
 
 const CATEGORY_MAP: Record<string, { match: (p: Profile) => boolean; subtitle: string }> = {
   "Foodies": { match: p => p.interests.some(i => /food|cook|pho|bbq/i.test(i)), subtitle: "People who love great food" },
@@ -75,6 +84,22 @@ export default function CategoryScreen() {
 
   const { data, update } = useOnboarding();
   const { byId: liveById } = useAllProfiles();
+  const { isPaid } = useTier();
+  const [viewedToday, setViewedToday] = useState<number>(0);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(CAP_STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw) as { date: string; count: number };
+          if (parsed.date === todayCentral()) setViewedToday(parsed.count);
+        }
+      } catch (_e) { /* non-fatal */ }
+    })();
+  }, []);
+
+  const remaining = isPaid ? Infinity : Math.max(0, CATEGORY_FREE_DAILY_CAP - viewedToday);
   // The user belongs to a Relationship Goals card if their lookingFor ID matches the cardId.
   // For other categories we check the interests array against the title.
   const inCategory = (() => {
@@ -128,6 +153,12 @@ export default function CategoryScreen() {
         </View>
       </View>
       <Text style={s.sub}>{subtitle}</Text>
+      {!isPaid && (
+        <View style={s.capBar}>
+          <Lock size={11} color={Colors.accent} />
+          <Text style={s.capTxt}>{remaining} of {CATEGORY_FREE_DAILY_CAP} free views today</Text>
+        </View>
+      )}
       <TouchableOpacity
         onPress={() => {
           if (groupId === "goals" && cardId) {
@@ -155,8 +186,26 @@ export default function CategoryScreen() {
           </View>
         ) : (
           <View style={s.grid}>
-            {filtered.map(p => (
-              <TouchableOpacity key={p.id} style={[s.card, { width: CW }]} activeOpacity={0.85} onPress={() => router.push(`/user/${p.id}`)} testID={`cat-profile-${p.id}`}>
+            {filtered.map((p, i) => (
+              <TouchableOpacity
+                key={p.id}
+                style={[s.card, { width: CW }]}
+                activeOpacity={0.85}
+                onPress={async () => {
+                  if (!isPaid && remaining <= 0) {
+                    router.push("/subscription");
+                    return;
+                  }
+                  if (!isPaid) {
+                    const next = viewedToday + 1;
+                    setViewedToday(next);
+                    try { await AsyncStorage.setItem(CAP_STORAGE_KEY, JSON.stringify({ date: todayCentral(), count: next })); } catch (_e) {}
+                  }
+                  setProfileStack(filtered.map((x) => x.id), i, title);
+                  router.push("/profile-stack");
+                }}
+                testID={`cat-profile-${p.id}`}
+              >
                 <Image source={{ uri: p.photos[0] }} style={s.img} contentFit="cover" />
                 {p.isOnline && <View style={s.onlineDot} />}
                 <View style={s.info}>
@@ -187,6 +236,8 @@ const s = StyleSheet.create({
   metaRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 },
   meta: { color: Colors.accent, fontSize: 12, fontWeight: "700" as const },
   sub: { color: "rgba(255,255,255,0.55)", fontSize: 13, paddingHorizontal: 16, paddingTop: 8, paddingBottom: 14 },
+  capBar: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 6, paddingVertical: 8, marginHorizontal: 16, marginBottom: 10, borderRadius: 999, backgroundColor: "rgba(212,168,67,0.12)", borderWidth: 1, borderColor: "rgba(212,168,67,0.3)" },
+  capTxt: { color: Colors.accent, fontSize: 12, fontWeight: "700" as const },
   scroll: { paddingHorizontal: 16 },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
   card: { height: CW * 1.4, borderRadius: 16, overflow: "hidden", backgroundColor: "#111" },
