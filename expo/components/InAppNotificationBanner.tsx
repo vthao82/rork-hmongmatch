@@ -2,9 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter, usePathname } from "expo-router";
-import { Heart, MessageCircle, Sparkles, X } from "lucide-react-native";
+import { MessageCircle, Sparkles, X } from "lucide-react-native";
 import Colors from "@/constants/colors";
-import { useLikes } from "@/providers/LikesProvider";
 import { useMyMatches } from "@/lib/discoverProfiles";
 import { useChatThreads } from "@/lib/chat";
 
@@ -20,7 +19,6 @@ export default function InAppNotificationBanner() {
   const router = useRouter();
   const pathname = usePathname();
   const ins = useSafeAreaInsets();
-  const { likedIds } = useLikes();
   const { matchIds } = useMyMatches();
   const { threads } = useChatThreads();
   const [dismissed, setDismissed] = useState<boolean>(false);
@@ -33,7 +31,8 @@ export default function InAppNotificationBanner() {
   );
 
   const summary = useMemo(() => {
-    // Priority: messages > matches > likes
+    // Priority: messages > matches. We intentionally do NOT show a banner
+    // for outgoing likes — that fires on every swipe and feels spammy.
     if (totalUnread > 0) {
       return {
         icon: <MessageCircle size={18} color="#FFF" />,
@@ -48,15 +47,8 @@ export default function InAppNotificationBanner() {
         onTap: () => router.push("/(tabs)/matches" as never),
       };
     }
-    if (likedIds.length > 0) {
-      return {
-        icon: <Heart size={18} color="#FFF" fill="#FFF" />,
-        text: `You have ${likedIds.length} like${likedIds.length === 1 ? "" : "s"}`,
-        onTap: () => router.push("/(tabs)/matches" as never),
-      };
-    }
     return null;
-  }, [totalUnread, matchIds.length, likedIds.length, router]);
+  }, [totalUnread, matchIds.length, router]);
 
   // Show banner once per app-foreground burst, only on top-level tabs
   const onTab = pathname?.startsWith("/(tabs)") || pathname === "/" || (pathname?.split("/").filter(Boolean).length ?? 0) <= 1;

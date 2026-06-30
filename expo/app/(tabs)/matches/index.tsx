@@ -151,7 +151,7 @@ export default function LikesScreen() {
         </ScrollView>
       ) : (
         <ScrollView contentContainerStyle={s.topGrid} showsVerticalScrollIndicator={false}>
-          <Text style={s.topPrompt}>{t("upgradeTopPicks")}</Text>
+          {!isPaid && <Text style={s.topPrompt}>{t("upgradeTopPicks")}</Text>}
           <View style={s.grid}>
             {topPicks.slice(0, 4).map(p => (
               <TouchableOpacity key={p.id} style={[s.pick, { width: CW }]} activeOpacity={0.85} onPress={() => { if (!isPaid) { setUpgradeOpen(true); return; } setProfileStack(topPicks.slice(0, 4).map(x => x.id), topPicks.slice(0, 4).findIndex(x => x.id === p.id), t("topPicks")); router.push("/profile-stack"); }} testID={`top-${p.id}`}>

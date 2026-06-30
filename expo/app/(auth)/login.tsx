@@ -236,20 +236,42 @@ export default function LoginScreen() {
               testID="email-input"
             />
             <View style={s.pwWrap}>
-              <TextInput
-                style={[s.input, { flex: 1, paddingRight: 44 }]}
-                placeholder={t("passwordPlaceholder")}
-                placeholderTextColor="rgba(245,240,235,0.35)"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!showPassword}
-                autoCapitalize="none"
-                textContentType={showPassword ? "none" : "password"}
-                autoComplete={showPassword ? "off" : "password"}
-                keyboardType={showPassword ? "visible-password" : "default"}
-                editable={!busy}
-                testID="password-input"
-              />
+              {showPassword ? (
+                // Visible mode: a plain text input with NO password hints,
+                // NO autofill, NO textContentType. Android cannot mask this.
+                <TextInput
+                  key="pw-visible"
+                  style={[s.input, { flex: 1, paddingRight: 44 }]}
+                  placeholder={t("passwordPlaceholder")}
+                  placeholderTextColor="rgba(245,240,235,0.35)"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={false}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  spellCheck={false}
+                  autoComplete="off"
+                  textContentType="none"
+                  importantForAutofill="no"
+                  editable={!busy}
+                  testID="password-input"
+                />
+              ) : (
+                <TextInput
+                  key="pw-secure"
+                  style={[s.input, { flex: 1, paddingRight: 44 }]}
+                  placeholder={t("passwordPlaceholder")}
+                  placeholderTextColor="rgba(245,240,235,0.35)"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  textContentType="password"
+                  autoComplete="password"
+                  editable={!busy}
+                  testID="password-input"
+                />
+              )}
               <TouchableOpacity
                 onPress={() => setShowPassword((v) => !v)}
                 style={s.pwEye}
