@@ -234,21 +234,19 @@ export default function LoginScreen() {
               editable={!busy}
               testID="email-input"
             />
-            <View style={s.pwWrap}>
-              <TextInput
-                style={[s.input, { flex: 1 }]}
-                placeholder={t("passwordPlaceholder")}
-                placeholderTextColor="rgba(245,240,235,0.35)"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-                autoCapitalize="none"
-                textContentType="password"
-                autoComplete="password"
-                editable={!busy}
-                testID="password-input"
-              />
-            </View>
+            <TextInput
+              style={s.input}
+              placeholder={t("passwordPlaceholder")}
+              placeholderTextColor="rgba(245,240,235,0.35)"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+              autoCapitalize="none"
+              textContentType="password"
+              autoComplete="password"
+              editable={!busy}
+              testID="password-input"
+            />
             {mfaPending ? (
               <View style={{ alignItems: "center", gap: 12 }}>
                 <ActivityIndicator size="small" color={Colors.gold} />
