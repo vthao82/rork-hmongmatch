@@ -78,34 +78,32 @@ export default function BrowseScreen() {
   const ins = useSafeAreaInsets();
   const router = useRouter();
   const t = useT();
-  const { isPaid, remaining, consumeLike, consumeDislike, consumeRewind, startBoost, stopBoost, boostActive, showLimitModal, setShowLimitModal, show75Modal, setShow75Modal, usage, markSeen } = useTier();
+  const { isPaid, remaining, consumeLike, consumeDislike, consumeRewind, startBoost, stopBoost, boostActive, showLimitModal, setShowLimitModal, show75Modal, setShow75Modal } = useTier();
   const { consume: addLike } = useLikes();
   const { profiles: liveProfiles, loading: loadingProfiles, error: profilesError, reload: reloadProfiles } = useDiscoverProfiles();
-  const [idx, setIdx] = useState<number>(0);
+  // Local session-only dismissed set. The Firestore swipes doc is the
+  // source of truth across sessions (filtered in useDiscoverProfiles); this
+  // set only prevents showing the same person twice within a single screen
+  // session. Importantly we DON'T touch usage.seenIds anymore — that was
+  // causing the queue to shift under us after every swipe so the user saw
+  // a different person on rewind.
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [history, setHistory] = useState<{ id: string; liked: boolean }[]>([]);
   const [matchedProfile, setMatchedProfile] = useState<Profile | null>(null);
   const cardHeight = W.height - ins.top - ins.bottom - 220;
 
-  // Filter out already-seen users to avoid showing same person again
-  const queue = useMemo(() => {
-    const seen = new Set(usage.seenIds ?? []);
-    const filtered = liveProfiles.filter(p => !seen.has(p.id));
-    console.log(`[Discover] live=${liveProfiles.length} seen=${seen.size} queue=${filtered.length}`);
-    return filtered;
-  }, [usage.seenIds, liveProfiles]);
+  // Queue is liveProfiles minus session dismissals. We always look at queue[0]
+  // — after a swipe the dismissed card drops out and the next person slides
+  // into position 0. No idx math, no skipping.
+  const queue = useMemo(() => liveProfiles.filter(p => !dismissedIds.has(p.id)), [liveProfiles, dismissedIds]);
 
-  useEffect(() => {
-    if (idx >= queue.length && queue.length > 0) setIdx(0);
-  }, [queue.length, idx]);
-
-  const current = queue[idx];
+  const current = queue[0];
 
   const advance = useCallback((liked: boolean) => {
     if (!current) return;
-    markSeen?.(current.id);
     setHistory(h => [...h, { id: current.id, liked }]);
-    setIdx(i => i + 1);
-  }, [current, markSeen]);
+    setDismissedIds(prev => { const next = new Set(prev); next.add(current.id); return next; });
+  }, [current]);
 
   const onLike = useCallback(() => {
     if (!current) return;
@@ -149,21 +147,20 @@ export default function BrowseScreen() {
   }, [current, router, isPaid]);
 
   const onRewind = useCallback(() => {
-    if (history.length === 0 || idx === 0) return;
+    if (history.length === 0) return;
     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     const ok = consumeRewind();
     if (!ok) return;
     const last = history[history.length - 1];
-    // Paid users get to truly "undo" — we delete the Firestore swipe record so
-    // the user can show up in the queue again. Free users have a session-only
-    // rewind: the swipe stays sticky on disk, so once they leave/refresh the
-    // disliked person doesn't come back.
+    // Paid users get a true undo — also wipe the Firestore swipe doc so the
+    // person can re-appear in future sessions. Free users keep sticky dislike.
     if (isPaid && last?.id) {
       deleteSwipe(last.id).catch((e) => console.log("[rewind] deleteSwipe", e));
     }
+    // Restore the dismissed person to the front of the queue
+    setDismissedIds(prev => { const next = new Set(prev); next.delete(last.id); return next; });
     setHistory(h => h.slice(0, -1));
-    setIdx(i => Math.max(0, i - 1));
-  }, [history, idx, consumeRewind, isPaid]);
+  }, [history, consumeRewind, isPaid]);
 
   const toggleBoost = useCallback(() => {
     if (boostActive) stopBoost();
@@ -241,7 +238,7 @@ export default function BrowseScreen() {
           </View>
         )}
 
-        <TouchableOpacity onPress={onRewind} disabled={history.length === 0 || idx === 0} style={[st.rewindBtn, (history.length === 0 || idx === 0) && { opacity: 0.4 }]} testID="rewind-button">
+        <TouchableOpacity onPress={onRewind} disabled={history.length === 0} style={[st.rewindBtn, history.length === 0 && { opacity: 0.4 }]} testID="rewind-button">
           <RotateCcw size={18} color={Colors.accent} />
           <Text style={st.rewindTxt}>{isPaid ? t("rewind") : `${t("rewind")} (${remaining.rewinds})`}</Text>
         </TouchableOpacity>

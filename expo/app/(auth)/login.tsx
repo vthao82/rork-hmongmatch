@@ -244,8 +244,9 @@ export default function LoginScreen() {
                 onChangeText={setPassword}
                 secureTextEntry={!showPassword}
                 autoCapitalize="none"
-                textContentType="password"
-                autoComplete="password"
+                textContentType={showPassword ? "none" : "password"}
+                autoComplete={showPassword ? "off" : "password"}
+                keyboardType={showPassword ? "visible-password" : "default"}
                 editable={!busy}
                 testID="password-input"
               />

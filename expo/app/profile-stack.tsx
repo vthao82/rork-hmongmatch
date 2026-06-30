@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Pressable } from "react-native";
 import { Stack, useRouter } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
 import { Image } from "expo-image";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MapPin, Globe, Heart, MessageCircle, X, ChevronUp, ChevronDown } from "lucide-react-native";
@@ -99,7 +100,12 @@ export default function ProfileStackScreen() {
       <ScrollView style={s.ct} contentContainerStyle={{ paddingBottom: 80 }} showsVerticalScrollIndicator={false}>
         <View style={s.ph}>
           <Image source={{ uri: profile.photos[0] }} style={s.pi} contentFit="cover" transition={250} />
-          <View style={s.po} />
+          {/* Subtle bottom-only gradient so the name/clan text stays readable on bright photos */}
+          <LinearGradient
+            colors={["transparent", "rgba(0,0,0,0.55)"]}
+            style={s.po}
+            pointerEvents="none"
+          />
           <View style={s.counter}>
             <Text style={s.counterTxt}>{idx + 1} / {total}</Text>
           </View>
@@ -179,9 +185,9 @@ const s = StyleSheet.create({
   ct: { flex: 1, backgroundColor: Colors.background },
   cen: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: Colors.background, padding: 20 },
   err: { fontSize: 16, color: Colors.textSecondary, textAlign: "center" as const },
-  ph: { height: 460, position: "relative" },
-  pi: { width: "100%", height: "100%" },
-  po: { position: "absolute", bottom: 0, left: 0, right: 0, height: "45%", backgroundColor: "rgba(0,0,0,0.35)" },
+  ph: { height: 460, position: "relative", backgroundColor: "#1f1419" },
+  pi: { width: "100%", height: "100%", backgroundColor: "#2a1a20" },
+  po: { position: "absolute", bottom: 0, left: 0, right: 0, height: "40%" },
   counter: { position: "absolute", top: 60, right: 16, backgroundColor: "rgba(0,0,0,0.55)", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999 },
   counterTxt: { color: "#FFF", fontSize: 12, fontWeight: "700" as const },
   pf: { position: "absolute", bottom: 24, left: 20, right: 20 },
