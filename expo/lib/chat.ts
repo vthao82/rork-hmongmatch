@@ -9,6 +9,7 @@ import {
   addDoc,
   serverTimestamp,
   updateDoc,
+  setDoc,
   arrayUnion,
   type Timestamp,
   type DocumentData,
@@ -19,6 +20,31 @@ import { useMyMatches } from "@/lib/discoverProfiles";
 /** Deterministic match id for two users (sorted, joined by `_`). */
 export function getMatchId(uidA: string, uidB: string): string {
   return [uidA, uidB].sort().join("_");
+}
+
+/**
+ * Ensure a /matches/{matchId} doc exists for the current user + otherUid.
+ * Only fires for seed-* test profiles (real users get a match doc only via
+ * a mutual swipe — see recordSwipe()). Idempotent via setDoc + merge.
+ * 🚨 REMOVE BEFORE PRODUCTION — see banner below scheduleBotReply().
+ */
+async function ensureSeedMatch(otherUid: string): Promise<void> {
+  if (!otherUid.startsWith("seed-")) return;
+  const me = auth.currentUser;
+  if (!me) return;
+  const matchId = getMatchId(me.uid, otherUid);
+  try {
+    await setDoc(
+      doc(db, "matches", matchId),
+      {
+        userIds: [me.uid, otherUid].sort(),
+        createdAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+  } catch (e) {
+    console.log("[ensureSeedMatch] failed", e);
+  }
 }
 
 export type ChatMessage = {
@@ -63,27 +89,42 @@ export function useChatMessages(otherUid: string | undefined | null) {
       return;
     }
     setLoading(true);
-    const q = query(
-      collection(db, "matches", matchId, "messages"),
-      orderBy("createdAt", "asc"),
-      fbLimit(200)
-    );
-    const unsub = onSnapshot(
-      q,
-      (snap) => {
-        const list: ChatMessage[] = [];
-        snap.forEach((d) => list.push(rowToMessage(d.id, d.data(), me.uid)));
-        setMessages(list);
-        setLoading(false);
-      },
-      (err) => {
-        console.log("[useChatMessages] error", err);
-        setMessages([]);
-        setLoading(false);
+    // For seed-* test profiles, create the parent match doc first — otherwise
+    // Firestore rules deny the read subscription (isMatchParticipant() fails
+    // when the match doc doesn't exist).
+    let cancelled = false;
+    let unsub: (() => void) | null = null;
+    const start = async () => {
+      if (otherUid && otherUid.startsWith("seed-")) {
+        await ensureSeedMatch(otherUid);
       }
-    );
-    return () => unsub();
-  }, [matchId, me?.uid]);
+      if (cancelled) return;
+      const q = query(
+        collection(db, "matches", matchId, "messages"),
+        orderBy("createdAt", "asc"),
+        fbLimit(200)
+      );
+      unsub = onSnapshot(
+        q,
+        (snap) => {
+          const list: ChatMessage[] = [];
+          snap.forEach((d) => list.push(rowToMessage(d.id, d.data(), me.uid)));
+          setMessages(list);
+          setLoading(false);
+        },
+        (err) => {
+          console.log("[useChatMessages] error", err);
+          setMessages([]);
+          setLoading(false);
+        }
+      );
+    };
+    void start();
+    return () => {
+      cancelled = true;
+      if (unsub) unsub();
+    };
+  }, [matchId, me?.uid, otherUid]);
 
   return { messages, matchId, loading };
 }
@@ -99,6 +140,12 @@ export async function sendChatMessage(
   if (!trimmed) return { ok: false, error: "Empty message" };
   try {
     const matchId = getMatchId(me.uid, otherUid);
+    // For seed-* test profiles, make sure the parent /matches/{matchId} doc
+    // exists so Firestore rules allow the message write. No-op for real users
+    // (they get a match doc via mutual swipe in recordSwipe()).
+    if (otherUid.startsWith("seed-")) {
+      await ensureSeedMatch(otherUid);
+    }
     await addDoc(collection(db, "matches", matchId, "messages"), {
       senderId: me.uid,
       text: trimmed,
