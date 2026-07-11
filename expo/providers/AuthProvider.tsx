@@ -10,6 +10,11 @@ import {
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { syncPushToken } from "@/lib/notifications";
+import {
+  initRevenueCat,
+  identifyRevenueCatUser,
+  forgetRevenueCatUser,
+} from "@/lib/revenuecat";
 
 export type EmailSignInResult = {
   ok: boolean;
@@ -41,6 +46,8 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
 
   // Listen for Firebase auth state changes
   useEffect(() => {
+    // Configure RevenueCat once — safe to call multiple times, no-ops after first.
+    initRevenueCat();
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
       setLoading(false);
@@ -49,6 +56,9 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
       // wired — see lib/notifications.ts comment.
       if (u) {
         void syncPushToken();
+        void identifyRevenueCatUser(u.uid);
+      } else {
+        void forgetRevenueCatUser();
       }
     });
     return unsub;

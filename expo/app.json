@@ -58,7 +58,8 @@
         {
           "origin": "https://rork.com/"
         }
-      ]
+      ],
+      "react-native-purchases"
     ],
     "experiments": {},
     "extra": {

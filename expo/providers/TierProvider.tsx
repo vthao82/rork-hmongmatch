@@ -1,16 +1,25 @@
 import createContextHook from "@nkzw/create-context-hook";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useCallback, useEffect, useState } from "react";
+import {
+  fetchCurrentOffering,
+  fetchCustomerInfo,
+  hasUnlimitedEntitlement,
+  onCustomerInfoUpdate,
+  purchasePackage as rcPurchasePackage,
+  restorePurchases as rcRestorePurchases,
+} from "@/lib/revenuecat";
 
 /**
  * Two-tier subscription model:
  *   - "free"      : everyone starts here
  *   - "unlimited" : single paid tier ($19.99/mo) that unlocks all premium gates
  *
- * NOTE: RevenueCat is not wired in production yet — `purchaseUnlimited()` is a
- * stubbed promise that resolves true. When RevenueCat is hooked up natively
- * (post-App-Store accounts) replace the body of `purchaseUnlimited` with the
- * real entitlement check; the rest of the app already trusts `tier`.
+ * The tier state is now sourced primarily from RevenueCat's "unlimited"
+ * entitlement (see lib/revenuecat.ts). AsyncStorage is still used as a
+ * write-through cache so the UI doesn't flash to "free" while RevenueCat
+ * boots. `purchaseUnlimited()` opens the store sheet through RevenueCat and
+ * flips `tier` on success.
  */
 export type Tier = "free" | "unlimited";
 
@@ -119,9 +128,57 @@ export const [TierProvider, useTier] = createContextHook(() => {
     try { await AsyncStorage.setItem(KEY, t); } catch (e) { console.log("tier save", e); }
   }, []);
 
-  const purchaseUnlimited = useCallback(async (): Promise<{ ok: boolean; error?: string }> => {
+  // ---- RevenueCat sync ----
+  // Once the AsyncStorage cache has hydrated, ask RevenueCat for the source of
+  // truth. If the "unlimited" entitlement is active there, we're paid — no
+  // matter what the cache said. Also subscribes to live updates so a renewal
+  // or store-side cancellation flips the tier in-app.
+  useEffect(() => {
+    if (!hydrated) return;
+    let disposed = false;
+    (async () => {
+      const info = await fetchCustomerInfo();
+      if (disposed) return;
+      if (info) {
+        const entitled = hasUnlimitedEntitlement(info);
+        setTier(entitled ? "unlimited" : "free");
+        try { await AsyncStorage.setItem(KEY, entitled ? "unlimited" : "free"); } catch (_e) {}
+      }
+    })();
+    const unsub = onCustomerInfoUpdate((info) => {
+      const entitled = hasUnlimitedEntitlement(info);
+      setTier(entitled ? "unlimited" : "free");
+      AsyncStorage.setItem(KEY, entitled ? "unlimited" : "free").catch(() => {});
+    });
+    return () => {
+      disposed = true;
+      unsub();
+    };
+  }, [hydrated]);
+
+  const purchaseUnlimited = useCallback(async (): Promise<{ ok: boolean; error?: string; cancelled?: boolean }> => {
+    // 1. Grab the current offering from RevenueCat
+    const offering = await fetchCurrentOffering();
+    if (!offering) {
+      return { ok: false, error: "Store is unavailable right now. Please try again later." };
+    }
+
+    // 2. Prefer the monthly package; fall back to the first available.
+    const pkg = offering.monthly ?? offering.availablePackages[0];
+    if (!pkg) {
+      return { ok: false, error: "No subscription plans are available yet." };
+    }
+
+    // 3. Open the native purchase sheet
+    const res = await rcPurchasePackage(pkg);
+    if (res.cancelled) return { ok: false, cancelled: true };
+    if (!res.ok) return { ok: false, error: res.error ?? "Purchase failed." };
+    if (!res.entitled) {
+      return { ok: false, error: "Purchase completed but entitlement not yet active. Try Restore Purchases in a moment." };
+    }
+
+    // 4. Success — flip tier and clear any pending cancellation
     await setTierAndPersist("unlimited");
-    // New / renewed subscription — no pending cancellation
     setSubEndsAt(null);
     try { await AsyncStorage.removeItem(SUB_END_KEY); } catch (_e) {}
     return { ok: true };
@@ -152,9 +209,16 @@ export const [TierProvider, useTier] = createContextHook(() => {
     }
   }, [tier, subEndsAt]);
 
-  const restorePurchases = useCallback(async (): Promise<{ ok: boolean; entitled: boolean }> => {
-    return { ok: true, entitled: tier === "unlimited" };
-  }, [tier]);
+  const restorePurchases = useCallback(async (): Promise<{ ok: boolean; entitled: boolean; error?: string }> => {
+    const res = await rcRestorePurchases();
+    if (!res.ok) return { ok: false, entitled: false, error: res.error };
+    if (res.entitled) {
+      await setTierAndPersist("unlimited");
+      setSubEndsAt(null);
+      try { await AsyncStorage.removeItem(SUB_END_KEY); } catch (_e) {}
+    }
+    return { ok: true, entitled: res.entitled };
+  }, [setTierAndPersist]);
 
   // Legacy alias used by older screens. Still expects a tier argument but we now
   // coerce to "unlimited" regardless of input.
