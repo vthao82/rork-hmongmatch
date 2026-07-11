@@ -70,10 +70,15 @@ export async function identifyRevenueCatUser(firebaseUid: string): Promise<void>
 export async function forgetRevenueCatUser(): Promise<void> {
   if (!configured) return;
   try {
+    // Only call logOut if there's a non-anonymous user to log out.
+    // On app boot, Firebase's onAuthStateChanged fires with null before
+    // hydration completes, which would otherwise trigger a "Called logOut but
+    // the current user is anonymous" error from RC's native side.
+    const currentId = await Purchases.getAppUserID();
+    if (currentId.startsWith("$RCAnonymousID:")) return;
     await Purchases.logOut();
   } catch (e) {
-    // logOut throws if already anonymous — safe to ignore
-    console.log("[revenuecat] logOut noop/error", e);
+    console.log("[revenuecat] logOut error", e);
   }
 }
 
