@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Platform, Modal, TextInput, Alert } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Platform, Modal, TextInput, Alert, Linking } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Stack, useRouter } from "expo-router";
@@ -8,6 +8,13 @@ import Colors from "@/constants/colors";
 import { useTier } from "@/providers/TierProvider";
 import { useT } from "@/providers/LanguageProvider";
 import { useOnboarding } from "@/providers/OnboardingProvider";
+import { deleteMyAccount } from "@/lib/deleteAccount";
+
+/** Legal pages hosted on GitHub Pages — update if the domain ever changes. */
+const LEGAL_URL = "https://vthao82.github.io/rork-hmongmatch";
+const PRIVACY_URL = `${LEGAL_URL}/privacy.html`;
+const TERMS_URL = `${LEGAL_URL}/terms.html`;
+const DELETE_ACCOUNT_URL = `${LEGAL_URL}/delete-account.html`;
 
 const ADV_KEY = "hmongdate.adv-filters.v1";
 const PREF_KEY = "hmongdate.discovery.v1";
@@ -386,6 +393,70 @@ export default function SettingsScreen() {
             <Text style={[s.rowLabel, { color: Colors.primary }]}>{t("logout")}</Text>
           </TouchableOpacity>
         </Section>
+
+        <Section title="Legal">
+          <Row
+            label="Privacy Policy"
+            onPress={() => Linking.openURL(PRIVACY_URL).catch(() => Alert.alert("Couldn't open link", PRIVACY_URL))}
+            testID="privacy-row"
+          />
+          <Row
+            label="Terms of Service"
+            onPress={() => Linking.openURL(TERMS_URL).catch(() => Alert.alert("Couldn't open link", TERMS_URL))}
+            testID="terms-row"
+          />
+        </Section>
+
+        <Section title="Danger zone">
+          <TouchableOpacity
+            style={s.row}
+            onPress={() => {
+              Alert.alert(
+                "Delete account?",
+                "This will permanently delete your profile, photos, matches, and messages. This cannot be undone.",
+                [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Delete forever",
+                    style: "destructive",
+                    onPress: async () => {
+                      const res = await deleteMyAccount();
+                      if (res.ok) {
+                        Alert.alert("Account deleted", "Your account and data have been permanently removed.", [
+                          { text: "OK", onPress: () => router.replace("/(auth)/login" as never) },
+                        ]);
+                        return;
+                      }
+                      if (res.code === "requires-recent-login") {
+                        Alert.alert(
+                          "Please sign in again",
+                          "For your security, we need you to sign in again before deleting your account. You'll be logged out now — sign back in and try again.",
+                          [{ text: "OK", onPress: () => router.replace("/(auth)/login" as never) }]
+                        );
+                        return;
+                      }
+                      if (res.code === "not-signed-in") {
+                        router.replace("/(auth)/login" as never);
+                        return;
+                      }
+                      Alert.alert("Couldn't delete account", res.message ?? "Please try again later, or email support@hmongdate.com.");
+                    },
+                  },
+                ]
+              );
+            }}
+            testID="delete-account-row"
+          >
+            <Text style={[s.rowLabel, { color: Colors.crimson ?? "#ff5c78" }]}>Delete my account</Text>
+          </TouchableOpacity>
+          <Text style={s.dangerNote}>
+            Removes your profile, photos, matches, and messages. This can't be undone.{"\n"}
+            Prefer email? <Text
+              style={s.dangerLink}
+              onPress={() => Linking.openURL(DELETE_ACCOUNT_URL).catch(() => {})}
+            >Use the web form.</Text>
+          </Text>
+        </Section>
       </ScrollView>
 
       <PickerModal visible={picker !== null} config={picker} selected={picker ? values[picker.key] ?? [] : []} onClose={() => setPicker(null)} onSave={savePicker} t={t} />
@@ -444,4 +515,16 @@ const s = StyleSheet.create({
   upgradeLink: { color: Colors.accent, fontSize: 14, fontWeight: "700" as const },
   toast: { flexDirection: "row", alignItems: "center", gap: 6, alignSelf: "flex-end", backgroundColor: "rgba(47,192,113,0.2)", borderColor: Colors.like, borderWidth: 1, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 999, marginBottom: 8 },
   toastTxt: { color: Colors.like, fontSize: 12, fontWeight: "700" as const },
+  dangerNote: {
+    color: "rgba(255,255,255,0.5)",
+    fontSize: 12,
+    lineHeight: 17,
+    marginTop: 4,
+    paddingHorizontal: 4,
+  },
+  dangerLink: {
+    color: Colors.primary,
+    fontWeight: "700" as const,
+    textDecorationLine: "underline",
+  },
 });

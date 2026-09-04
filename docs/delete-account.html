@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Delete My Account — Hmong Date</title>
+  <meta name="description" content="Request permanent deletion of your Hmong Date account and data." />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="wrap">
+    <header class="top"><a href="index.html">&larr; Hmong Date</a></header>
+
+    <span class="stamp">Account Deletion</span>
+    <h1>Delete My Account</h1>
+    <p>We're sorry to see you go. This page lets you permanently delete your Hmong Date account and personal data.</p>
+
+    <div class="warning">
+      <strong>Fastest way:</strong> if you still have the app installed, tap <em>Settings &rarr; Delete Account</em>. Deletion is instant.
+    </div>
+
+    <h2>What gets deleted</h2>
+    <ul>
+      <li>Your profile (name, age, photos, bio, preferences).</li>
+      <li>Your swipes, likes, and matches.</li>
+      <li>Your uploaded photos and verification selfie (if any).</li>
+      <li>Your account login credentials.</li>
+      <li>Your push notification token.</li>
+    </ul>
+
+    <h2>What we retain (and for how long)</h2>
+    <ul>
+      <li>Messages you already sent may remain visible to the recipient, labeled as from a "deleted user".</li>
+      <li>A minimal record (email hash + deletion date) is kept for up to <strong>12 months</strong> to prevent abuse and comply with legal obligations.</li>
+      <li>Backups are purged on a rolling <strong>90-day</strong> cycle.</li>
+    </ul>
+
+    <h2>Request deletion by email</h2>
+    <p>If you can't access the app, email us at <a href="mailto:support@hmongdate.com?subject=Delete%20my%20Hmong%20Date%20account">support@hmongdate.com</a> with:</p>
+    <ul>
+      <li>The email address associated with your Hmong Date account.</li>
+      <li>The subject line: <em>"Delete my Hmong Date account"</em>.</li>
+    </ul>
+    <p>We will confirm deletion within <strong>30 days</strong>.</p>
+
+    <h2>Or fill out this form</h2>
+    <p>We'll email you a confirmation link and process the deletion once verified.</p>
+
+    <form action="mailto:support@hmongdate.com" method="post" enctype="text/plain">
+      <label for="email">Your Hmong Date email address <span style="color:var(--crimson)">*</span></label>
+      <input id="email" name="email" type="email" required placeholder="you@example.com" />
+
+      <label for="reason">Reason (optional)</label>
+      <select id="reason" name="reason">
+        <option value="">Prefer not to say</option>
+        <option value="found-partner">I found someone</option>
+        <option value="not-interested">No longer interested in dating</option>
+        <option value="not-enough-matches">Not enough matches</option>
+        <option value="privacy">Privacy concerns</option>
+        <option value="bad-experience">Bad experience with another user</option>
+        <option value="switching-app">Switching to another app</option>
+        <option value="other">Other</option>
+      </select>
+
+      <label for="details">Anything else you'd like us to know? (optional)</label>
+      <textarea id="details" name="details" rows="4" placeholder="Feedback helps us improve. Thanks."></textarea>
+
+      <button type="submit">Send deletion request</button>
+    </form>
+
+    <p style="margin-top:20px; font-size:13px;">By submitting this form, an email will be sent from your device's default mail app to our support team. If you don't have a mail app configured, please write directly to <a href="mailto:support@hmongdate.com">support@hmongdate.com</a>.</p>
+
+    <footer>
+      <p><a href="index.html">Home</a> &middot; <a href="privacy.html">Privacy Policy</a> &middot; <a href="terms.html">Terms of Service</a> &middot; <a href="support.html">Support</a></p>
+    </footer>
+  </div>
+</body>
+</html>
