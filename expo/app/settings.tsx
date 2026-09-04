@@ -14,6 +14,7 @@ import { deleteMyAccount } from "@/lib/deleteAccount";
 const LEGAL_URL = "https://vthao82.github.io/rork-hmongmatch";
 const PRIVACY_URL = `${LEGAL_URL}/privacy.html`;
 const TERMS_URL = `${LEGAL_URL}/terms.html`;
+const COOKIES_URL = `${LEGAL_URL}/cookies.html`;
 const DELETE_ACCOUNT_URL = `${LEGAL_URL}/delete-account.html`;
 
 const ADV_KEY = "hmongdate.adv-filters.v1";
@@ -404,6 +405,11 @@ export default function SettingsScreen() {
             label="Terms of Service"
             onPress={() => Linking.openURL(TERMS_URL).catch(() => Alert.alert("Couldn't open link", TERMS_URL))}
             testID="terms-row"
+          />
+          <Row
+            label="Cookie Policy"
+            onPress={() => Linking.openURL(COOKIES_URL).catch(() => Alert.alert("Couldn't open link", COOKIES_URL))}
+            testID="cookies-row"
           />
         </Section>
 

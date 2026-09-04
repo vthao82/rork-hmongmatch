@@ -14,6 +14,12 @@ import { useOnboarding } from "@/providers/OnboardingProvider";
 import { useT } from "@/providers/LanguageProvider";
 import { useAuth } from "@/providers/AuthProvider";
 
+/** Public legal pages hosted on GitHub Pages. */
+const LEGAL_BASE = "https://vthao82.github.io/rork-hmongmatch";
+const TERMS_URL = `${LEGAL_BASE}/terms.html`;
+const PRIVACY_URL = `${LEGAL_BASE}/privacy.html`;
+const COOKIES_URL = `${LEGAL_BASE}/cookies.html`;
+
 function GoogleG() {
   return (
     <Svg width={18} height={18} viewBox="0 0 48 48">
@@ -288,11 +294,11 @@ export default function LoginScreen() {
           />
           <Text style={s.fine}>
             By tapping Continue you agree to our{" "}
-            <Text style={s.link} onPress={() => Platform.OS !== "web" && Linking.openURL("https://example.com/terms")}>Terms</Text>
+            <Text style={s.link} onPress={() => Linking.openURL(TERMS_URL).catch(() => {})}>Terms</Text>
             . Learn how we process your data in our{" "}
-            <Text style={s.link} onPress={() => Platform.OS !== "web" && Linking.openURL("https://example.com/privacy")}>Privacy Policy</Text>
+            <Text style={s.link} onPress={() => Linking.openURL(PRIVACY_URL).catch(() => {})}>Privacy Policy</Text>
             {" "}and{" "}
-            <Text style={s.link}>Cookie Policy</Text>.
+            <Text style={s.link} onPress={() => Linking.openURL(COOKIES_URL).catch(() => {})}>Cookie Policy</Text>.
           </Text>
         </Animated.View>
       </SafeAreaView>
