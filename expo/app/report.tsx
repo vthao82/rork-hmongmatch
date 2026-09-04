@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet, TextInput, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
-import { Stack, useRouter } from "expo-router";
+import { Stack, useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { X, Check, AlertTriangle } from "lucide-react-native";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
@@ -20,6 +20,12 @@ const REASONS = [
 export default function ReportScreen() {
   const ins = useSafeAreaInsets();
   const router = useRouter();
+  // `userId` (target of the report) + `userName` (for display) are optional —
+  // they come from a profile detail or chat overflow menu. If missing, this
+  // becomes a general problem-report screen.
+  const params = useLocalSearchParams<{ userId?: string; userName?: string }>();
+  const reportedUid = typeof params.userId === "string" ? params.userId : undefined;
+  const reportedName = typeof params.userName === "string" ? params.userName : undefined;
   const [reason, setReason] = useState<string | undefined>();
   const [details, setDetails] = useState<string>("");
   const [busy, setBusy] = useState<boolean>(false);
@@ -36,6 +42,8 @@ export default function ReportScreen() {
       await addDoc(collection(db, "reports"), {
         reporterUid: me.uid,
         reporterEmail: me.email ?? null,
+        reportedUid: reportedUid ?? null,
+        reportedName: reportedName ?? null,
         reason,
         details: details.trim(),
         platform: "expo",
@@ -57,7 +65,7 @@ export default function ReportScreen() {
       <Stack.Screen options={{ headerShown: false }} />
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()}><X size={22} color="#FFF" /></TouchableOpacity>
-        <Text style={s.title}>Report a problem</Text>
+        <Text style={s.title}>{reportedName ? `Report ${reportedName}` : "Report a problem"}</Text>
         <View style={{ width: 22 }} />
       </View>
       <ScrollView contentContainerStyle={s.scroll}>

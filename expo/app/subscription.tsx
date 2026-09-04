@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, ActivityIndicator, Alert } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, ActivityIndicator, Alert, Linking } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { X, Check, Flame, Crown, Sparkles } from "lucide-react-native";
@@ -8,14 +8,22 @@ import Colors from "@/constants/colors";
 import { useT } from "@/providers/LanguageProvider";
 import { useTier, UNLIMITED_PRICE, UNLIMITED_PRICE_LABEL } from "@/providers/TierProvider";
 
+/** Play Store product ID — must match the SKU created in Google Play Console. */
+const PRODUCT_ID = "unlimited_monthly";
+const PACKAGE_NAME = "app.rork.hmongmatch";
+
+/** Deep-link URLs for managing the subscription in the platform store. */
+const MANAGE_URL_IOS = "itms-apps://apps.apple.com/account/subscriptions";
+const MANAGE_URL_ANDROID = `https://play.google.com/store/account/subscriptions?sku=${PRODUCT_ID}&package=${PACKAGE_NAME}`;
+
 type Perk = { label: string; desc?: string };
 
 export default function SubscriptionScreen() {
   const ins = useSafeAreaInsets();
   const router = useRouter();
   const t = useT();
-  const { isPaid, purchaseUnlimited } = useTier();
-  const [busy, setBusy] = useState<"buy" | null>(null);
+  const { isPaid, purchaseUnlimited, restorePurchases } = useTier();
+  const [busy, setBusy] = useState<"buy" | "restore" | null>(null);
 
   const PERKS: Perk[] = [
     { label: t("unlimitedLikes") },
@@ -32,16 +40,45 @@ export default function SubscriptionScreen() {
       const res = await purchaseUnlimited();
       if (res.ok) {
         Alert.alert(
-          t("hmongDateGold") /* reused string: "You're in!" not present, fall back */,
+          "You're in!",
           "Unlimited unlocked! Enjoy 💛",
           [{ text: "OK", onPress: () => router.back() }]
         );
-      } else {
+      } else if (!res.cancelled) {
         Alert.alert("Purchase failed", res.error ?? "Please try again.");
       }
     } finally {
       setBusy(null);
     }
+  };
+
+  const restore = async () => {
+    if (busy) return;
+    setBusy("restore");
+    try {
+      const res = await restorePurchases();
+      if (!res.ok) {
+        Alert.alert("Restore failed", res.error ?? "Please try again later.");
+      } else if (res.entitled) {
+        Alert.alert("Restored!", "Your Unlimited subscription is active again.");
+      } else {
+        Alert.alert("Nothing to restore", "No active Unlimited subscription was found on this store account.");
+      }
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const manageInStore = () => {
+    const url = Platform.OS === "ios" ? MANAGE_URL_IOS : MANAGE_URL_ANDROID;
+    Linking.openURL(url).catch(() =>
+      Alert.alert(
+        "Couldn't open store",
+        Platform.OS === "ios"
+          ? "Open Settings → [Your Name] → Subscriptions to manage Hmong Date Unlimited."
+          : "Open the Google Play Store → Menu → Subscriptions to manage Hmong Date Unlimited."
+      )
+    );
   };
 
 
@@ -102,17 +139,50 @@ export default function SubscriptionScreen() {
           </View>
         </View>
 
-        <TouchableOpacity
-          onPress={() => Alert.alert("Restore purchases", "Available once App Store/Play purchases are live. We'll add this when the store accounts are set up.")}
-          style={[s.restoreBtn, { opacity: 0.5 }]}
-          testID="restore-purchases"
-        >
-          <Text style={s.restoreTxt}>Restore purchases (coming soon)</Text>
-        </TouchableOpacity>
+        <View style={s.footerActions}>
+          <TouchableOpacity
+            onPress={restore}
+            style={s.restoreBtn}
+            disabled={busy === "restore"}
+            testID="restore-purchases"
+          >
+            {busy === "restore" ? (
+              <ActivityIndicator color="rgba(255,255,255,0.7)" />
+            ) : (
+              <Text style={s.restoreTxt}>Restore purchases</Text>
+            )}
+          </TouchableOpacity>
+          {isPaid && (
+            <TouchableOpacity
+              onPress={manageInStore}
+              style={s.restoreBtn}
+              testID="manage-subscription"
+            >
+              <Text style={s.restoreTxt}>
+                Manage subscription in {Platform.OS === "ios" ? "App Store" : "Google Play"}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
 
         <Text style={s.legal}>
-          Subscription auto-renews monthly until cancelled. Cancel anytime in your store account settings.
+          Hmong Date Unlimited auto-renews monthly at {UNLIMITED_PRICE} until cancelled. Payment
+          is charged to your {Platform.OS === "ios" ? "Apple ID" : "Google Play"} account at
+          confirmation of purchase. Your subscription renews within 24 hours before the end of the
+          current period unless auto-renewal is turned off at least 24 hours before that. You can
+          manage or cancel anytime in your {Platform.OS === "ios" ? "Apple ID" : "Google Play"}{" "}
+          account settings — uninstalling the app does not cancel it.
         </Text>
+
+        <View style={s.legalLinks}>
+          <TouchableOpacity onPress={() => Linking.openURL("https://vthao82.github.io/rork-hmongmatch/terms.html").catch(() => {})}>
+            <Text style={s.legalLink}>Terms of Service</Text>
+          </TouchableOpacity>
+          <Text style={s.legalDivider}>·</Text>
+          <TouchableOpacity onPress={() => Linking.openURL("https://vthao82.github.io/rork-hmongmatch/privacy.html").catch(() => {})}>
+            <Text style={s.legalLink}>Privacy Policy</Text>
+          </TouchableOpacity>
+        </View>
       </ScrollView>
 
       <View style={[s.ctaWrap, { paddingBottom: Math.max(ins.bottom, 16) }]}>
@@ -163,6 +233,10 @@ const s = StyleSheet.create({
   featureDesc: { color: "rgba(255,255,255,0.55)", fontSize: 13, marginTop: 4, lineHeight: 18 },
   restoreBtn: { alignSelf: "center", marginTop: 24, paddingVertical: 8, paddingHorizontal: 14 },
   restoreTxt: { color: "rgba(255,255,255,0.7)", fontSize: 13, fontWeight: "600" as const, textDecorationLine: "underline" },
+  footerActions: { flexDirection: "column", alignItems: "center", gap: 6 },
+  legalLinks: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 10, marginTop: 12 },
+  legalLink: { color: "rgba(255,255,255,0.55)", fontSize: 12, fontWeight: "600" as const, textDecorationLine: "underline" },
+  legalDivider: { color: "rgba(255,255,255,0.3)", fontSize: 12 },
   legal: { color: "rgba(255,255,255,0.4)", fontSize: 11, textAlign: "center" as const, marginTop: 18, marginHorizontal: 28, lineHeight: 16 },
   ctaWrap: { position: "absolute", left: 0, right: 0, bottom: 0, paddingHorizontal: 20, paddingTop: 12, backgroundColor: "#000" },
   cta: { borderRadius: 999, paddingVertical: 18, alignItems: "center", justifyContent: "center", flexDirection: "row", ...Platform.select({ ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.25, shadowRadius: 8 }, default: {} }) },

@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, Keyboard
 import { useLocalSearchParams, Stack, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
-import { Send, Video } from "lucide-react-native";
+import { Send, Video, MoreVertical } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { profiles as mockProfiles } from "@/mocks/profiles";
@@ -88,6 +88,46 @@ export default function ChatScreen() {
     );
   };
 
+  const openSafetyMenu = () => {
+    if (!pr) return;
+    Alert.alert(
+      pr.name,
+      "What would you like to do?",
+      [
+        {
+          text: "Report this user",
+          style: "destructive",
+          onPress: () =>
+            router.push({
+              pathname: "/report",
+              params: { userId: pr.id, userName: pr.name },
+            }),
+        },
+        {
+          text: "Block this user",
+          style: "destructive",
+          onPress: () =>
+            Alert.alert(
+              `Block ${pr.name}?`,
+              "You won't see them again and they won't see you.",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Block",
+                  style: "destructive",
+                  onPress: () => {
+                    Alert.alert("Blocked", `${pr.name} has been blocked.`);
+                    router.back();
+                  },
+                },
+              ]
+            ),
+        },
+        { text: "Cancel", style: "cancel" },
+      ]
+    );
+  };
+
   return (
     <>
       <Stack.Screen options={{
@@ -96,6 +136,9 @@ export default function ChatScreen() {
           <View style={s.headerRight}>
             <TouchableOpacity onPress={onVideo} style={s.headerVideo} testID="header-video">
               <Video size={20} color={Colors.accent} />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={openSafetyMenu} style={s.headerVideo} testID="header-safety">
+              <MoreVertical size={20} color={Colors.text} />
             </TouchableOpacity>
             <Image source={{ uri: pr.photos[0] }} style={s.ha} contentFit="cover" />
           </View>

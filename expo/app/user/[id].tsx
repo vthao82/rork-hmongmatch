@@ -1,8 +1,8 @@
 import React from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from "react-native";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { Image } from "expo-image";
-import { MapPin, Globe, Heart, MessageCircle, X } from "lucide-react-native";
+import { MapPin, Globe, Heart, MessageCircle, X, MoreVertical } from "lucide-react-native";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
@@ -55,9 +55,64 @@ export default function UserProfileScreen() {
 
   const isMe = id === myUid;
 
+  const openSafetyMenu = () => {
+    if (!p || isMe) return;
+    Alert.alert(
+      p.name,
+      "What would you like to do?",
+      [
+        {
+          text: "Report this user",
+          style: "destructive",
+          onPress: () =>
+            router.push({
+              pathname: "/report",
+              params: { userId: p.id, userName: p.name },
+            }),
+        },
+        {
+          text: "Block this user",
+          style: "destructive",
+          onPress: () =>
+            Alert.alert(
+              `Block ${p.name}?`,
+              "You won't see them again and they won't see you.",
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Block",
+                  style: "destructive",
+                  onPress: () => {
+                    Alert.alert("Blocked", `${p.name} has been blocked.`);
+                    router.back();
+                  },
+                },
+              ]
+            ),
+        },
+        { text: "Cancel", style: "cancel" },
+      ]
+    );
+  };
+
   return (
     <>
-      <Stack.Screen options={{ title: isMe ? "Your Profile" : p.name }} />
+      <Stack.Screen
+        options={{
+          title: isMe ? "Your Profile" : p.name,
+          headerRight: !isMe
+            ? () => (
+                <TouchableOpacity
+                  onPress={openSafetyMenu}
+                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                  testID="safety-menu-btn"
+                >
+                  <MoreVertical size={22} color={Colors.text} />
+                </TouchableOpacity>
+              )
+            : undefined,
+        }}
+      />
       <ScrollView style={s.ct} showsVerticalScrollIndicator={false}>
         <View style={s.ph}>
           <Image source={{ uri: p.photos[0] }} style={s.pi} contentFit="cover" transition={300} />
