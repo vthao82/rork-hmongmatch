@@ -9,7 +9,6 @@ import {
   addDoc,
   serverTimestamp,
   updateDoc,
-  setDoc,
   arrayUnion,
   type Timestamp,
   type DocumentData,
@@ -20,31 +19,6 @@ import { useMyMatches } from "@/lib/discoverProfiles";
 /** Deterministic match id for two users (sorted, joined by `_`). */
 export function getMatchId(uidA: string, uidB: string): string {
   return [uidA, uidB].sort().join("_");
-}
-
-/**
- * Ensure a /matches/{matchId} doc exists for the current user + otherUid.
- * Only fires for seed-* test profiles (real users get a match doc only via
- * a mutual swipe — see recordSwipe()). Idempotent via setDoc + merge.
- * 🚨 REMOVE BEFORE PRODUCTION — see banner below scheduleBotReply().
- */
-async function ensureSeedMatch(otherUid: string): Promise<void> {
-  if (!otherUid.startsWith("seed-")) return;
-  const me = auth.currentUser;
-  if (!me) return;
-  const matchId = getMatchId(me.uid, otherUid);
-  try {
-    await setDoc(
-      doc(db, "matches", matchId),
-      {
-        userIds: [me.uid, otherUid].sort(),
-        createdAt: serverTimestamp(),
-      },
-      { merge: true }
-    );
-  } catch (e) {
-    console.log("[ensureSeedMatch] failed", e);
-  }
 }
 
 export type ChatMessage = {
@@ -89,42 +63,27 @@ export function useChatMessages(otherUid: string | undefined | null) {
       return;
     }
     setLoading(true);
-    // For seed-* test profiles, create the parent match doc first — otherwise
-    // Firestore rules deny the read subscription (isMatchParticipant() fails
-    // when the match doc doesn't exist).
-    let cancelled = false;
-    let unsub: (() => void) | null = null;
-    const start = async () => {
-      if (otherUid && otherUid.startsWith("seed-")) {
-        await ensureSeedMatch(otherUid);
+    const q = query(
+      collection(db, "matches", matchId, "messages"),
+      orderBy("createdAt", "asc"),
+      fbLimit(200)
+    );
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        const list: ChatMessage[] = [];
+        snap.forEach((d) => list.push(rowToMessage(d.id, d.data(), me.uid)));
+        setMessages(list);
+        setLoading(false);
+      },
+      (err) => {
+        console.log("[useChatMessages] error", err);
+        setMessages([]);
+        setLoading(false);
       }
-      if (cancelled) return;
-      const q = query(
-        collection(db, "matches", matchId, "messages"),
-        orderBy("createdAt", "asc"),
-        fbLimit(200)
-      );
-      unsub = onSnapshot(
-        q,
-        (snap) => {
-          const list: ChatMessage[] = [];
-          snap.forEach((d) => list.push(rowToMessage(d.id, d.data(), me.uid)));
-          setMessages(list);
-          setLoading(false);
-        },
-        (err) => {
-          console.log("[useChatMessages] error", err);
-          setMessages([]);
-          setLoading(false);
-        }
-      );
-    };
-    void start();
-    return () => {
-      cancelled = true;
-      if (unsub) unsub();
-    };
-  }, [matchId, me?.uid, otherUid]);
+    );
+    return () => unsub();
+  }, [matchId, me?.uid]);
 
   return { messages, matchId, loading };
 }
@@ -140,80 +99,18 @@ export async function sendChatMessage(
   if (!trimmed) return { ok: false, error: "Empty message" };
   try {
     const matchId = getMatchId(me.uid, otherUid);
-    // For seed-* test profiles, make sure the parent /matches/{matchId} doc
-    // exists so Firestore rules allow the message write. No-op for real users
-    // (they get a match doc via mutual swipe in recordSwipe()).
-    if (otherUid.startsWith("seed-")) {
-      await ensureSeedMatch(otherUid);
-    }
     await addDoc(collection(db, "matches", matchId, "messages"), {
       senderId: me.uid,
       text: trimmed,
       createdAt: serverTimestamp(),
       readBy: [me.uid],
     });
-    // If chatting with a seed-* test profile, schedule an auto-reply so the
-    // user can validate the full chat loop solo. Production users (non-seed
-    // uids) get no auto-reply.
-    if (otherUid.startsWith("seed-")) {
-      scheduleBotReply(otherUid, me.uid);
-    }
     return { ok: true };
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Send failed";
     console.log("[sendChatMessage] error", e);
     return { ok: false, error: msg };
   }
-}
-
-const BOT_REPLIES = [
-  "Hey 😊",
-  "Tell me more about yourself!",
-  "What are you up to today?",
-  "That's interesting — go on?",
-  "Haha I love that. What else?",
-  "Where in Minnesota are you from?",
-  "Same here! Big mood.",
-  "Are you free this weekend?",
-  "I love trying new restaurants — got any favorites?",
-  "What do you do for fun?",
-];
-
-// ============================================================
-// 🚨 REMOVE BEFORE PRODUCTION
-// ------------------------------------------------------------
-// The block below (BOT_REPLIES, pickReply, scheduleBotReply, and the
-// `if (otherUid.startsWith("seed-")) scheduleBotReply(...)` call inside
-// sendChatMessage) exists ONLY to let the founder solo-test chat against
-// seed accounts. Before App Store / Play submission:
-//   1. Delete the call site inside sendChatMessage()
-//   2. Delete scheduleBotReply() and BOT_REPLIES
-//   3. In firestore.rules, remove the bot-reply OR clause from
-//      `match /matches/{matchId}/messages/{messageId}` so the only
-//      allowed shape is `senderId == request.auth.uid`.
-// Real users have Firebase Auth UIDs that NEVER start with "seed-", so
-// this code is dormant for them — but defense in depth: take it out.
-// ============================================================
-function pickReply(): string {
-  return BOT_REPLIES[Math.floor(Math.random() * BOT_REPLIES.length)];
-}
-
-/** Schedule a single bot reply ~2-5s after a user message. Best-effort. */
-function scheduleBotReply(seedUid: string, myUid: string): void {
-  const delayMs = 1800 + Math.floor(Math.random() * 3000);
-  setTimeout(async () => {
-    try {
-      const matchId = getMatchId(seedUid, myUid);
-      await addDoc(collection(db, "matches", matchId, "messages"), {
-        senderId: seedUid,
-        text: pickReply(),
-        createdAt: serverTimestamp(),
-        readBy: [seedUid],
-      });
-    } catch (e) {
-      console.log("[scheduleBotReply] failed", e);
-    }
-  }, delayMs);
 }
 
 /** Mark a message as read by the current user. Best-effort, non-blocking. */

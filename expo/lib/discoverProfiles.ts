@@ -154,6 +154,11 @@ export function useDiscoverProfiles() {
       const list: Profile[] = [];
       usersSnap.forEach((d) => {
         if (seen.has(d.id)) return;
+        // Hide dev-only seed profiles from real users (their uids start with
+        // "seed-"). Firebase Auth uids never start with "seed-", so real users
+        // are unaffected. Delete these docs from Firestore before launch if
+        // you want a fully clean database — see docs/DELETE_SEEDS.md.
+        if (d.id.startsWith("seed-")) return;
         const row = d.data();
         // Require at least one photo so swipe cards look right
         const hasPhotos = Array.isArray(row.photos) && row.photos.length > 0;
