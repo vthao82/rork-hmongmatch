@@ -14,8 +14,8 @@ import { useOnboarding } from "@/providers/OnboardingProvider";
 import { useT } from "@/providers/LanguageProvider";
 import { useAuth } from "@/providers/AuthProvider";
 
-/** Public legal pages hosted on GitHub Pages. */
-const LEGAL_BASE = "https://vthao82.github.io/rork-hmongmatch";
+/** Public legal pages hosted on our custom domain. */
+const LEGAL_BASE = "https://hmongdate.com";
 const TERMS_URL = `${LEGAL_BASE}/terms.html`;
 const PRIVACY_URL = `${LEGAL_BASE}/privacy.html`;
 const COOKIES_URL = `${LEGAL_BASE}/cookies.html`;

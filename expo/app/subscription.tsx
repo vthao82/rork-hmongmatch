@@ -175,11 +175,11 @@ export default function SubscriptionScreen() {
         </Text>
 
         <View style={s.legalLinks}>
-          <TouchableOpacity onPress={() => Linking.openURL("https://vthao82.github.io/rork-hmongmatch/terms.html").catch(() => {})}>
+          <TouchableOpacity onPress={() => Linking.openURL("https://hmongdate.com/terms.html").catch(() => {})}>
             <Text style={s.legalLink}>Terms of Service</Text>
           </TouchableOpacity>
           <Text style={s.legalDivider}>·</Text>
-          <TouchableOpacity onPress={() => Linking.openURL("https://vthao82.github.io/rork-hmongmatch/privacy.html").catch(() => {})}>
+          <TouchableOpacity onPress={() => Linking.openURL("https://hmongdate.com/privacy.html").catch(() => {})}>
             <Text style={s.legalLink}>Privacy Policy</Text>
           </TouchableOpacity>
         </View>

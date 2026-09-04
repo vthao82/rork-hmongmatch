@@ -10,8 +10,8 @@ import { useT } from "@/providers/LanguageProvider";
 import { useOnboarding } from "@/providers/OnboardingProvider";
 import { deleteMyAccount } from "@/lib/deleteAccount";
 
-/** Legal pages hosted on GitHub Pages — update if the domain ever changes. */
-const LEGAL_URL = "https://vthao82.github.io/rork-hmongmatch";
+/** Legal pages hosted on our custom domain — update if the domain ever changes. */
+const LEGAL_URL = "https://hmongdate.com";
 const PRIVACY_URL = `${LEGAL_URL}/privacy.html`;
 const TERMS_URL = `${LEGAL_URL}/terms.html`;
 const COOKIES_URL = `${LEGAL_URL}/cookies.html`;
