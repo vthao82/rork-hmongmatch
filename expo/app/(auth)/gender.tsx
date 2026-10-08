@@ -31,7 +31,7 @@ export default function GenderScreen() {
 
   const onNext = () => {
     update({ genders: selected });
-    router.push("/(auth)/clan");
+    router.push("/(auth)/dialect");
   };
 
   return (

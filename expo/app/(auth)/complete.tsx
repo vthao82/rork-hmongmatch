@@ -76,11 +76,6 @@ export default function CompleteScreen() {
         <View style={s.bottom}>
           <Text style={s.head}>{t("allSet")}</Text>
           <Text style={s.sub}>{t("allSetSub")}</Text>
-          <View style={s.dots}>
-            <View style={[s.dot, s.dotOn]} />
-            <View style={s.dot} />
-            <View style={s.dot} />
-          </View>
           <PillButton label={t("startSwiping")} onPress={go} variant="light" testID="start-swiping" />
         </View>
       </SafeAreaView>

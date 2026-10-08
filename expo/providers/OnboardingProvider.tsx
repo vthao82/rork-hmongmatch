@@ -29,6 +29,7 @@ export type OnboardingData = {
   phone?: string;
   phoneE164?: string;
   name?: string;
+  lastName?: string;
   birthday?: string;
   genders: GenderId[];
   genderDetail?: string;

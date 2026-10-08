@@ -10,6 +10,13 @@ export type ProfileRow = {
   id: string;
   email: string | null;
   name: string | null;
+  lastName: string | null;
+  /**
+   * Convenience field: `name` + " " + `lastName`, trimmed.
+   * Written by profileSync so Firebase Console moderators can search users
+   * by their full real name rather than scanning random UIDs.
+   */
+  fullName: string | null;
   birthday: string | null;
   bio: string | null;
   genders: string[];
@@ -45,10 +52,15 @@ export type ProfileRow = {
 };
 
 function toProfileRow(userId: string, d: OnboardingData): Omit<ProfileRow, "updatedAt" | "createdAt"> {
+  const first = (d.name ?? "").trim();
+  const last = (d.lastName ?? "").trim();
+  const full = [first, last].filter(Boolean).join(" ") || null;
   return {
     id: userId,
     email: d.email ?? null,
     name: d.name ?? null,
+    lastName: d.lastName ?? null,
+    fullName: full,
     birthday: d.birthday ?? null,
     bio: d.bio ?? null,
     genders: d.genders ?? [],

@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from "react";
-import { View, Text, TextInput, StyleSheet, Animated, Easing, Platform, Linking, Alert, ActivityIndicator } from "react-native";
+import { View, Text, TextInput, StyleSheet, Animated, Easing, Platform, Linking, Alert, ActivityIndicator, KeyboardAvoidingView, Pressable, ScrollView } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import Svg, { Path } from "react-native-svg";
-import { Mail, CheckCircle } from "lucide-react-native";
+import { Mail, CheckCircle, Check } from "lucide-react-native";
 import Colors from "@/constants/colors";
 import PajNtaubPattern from "@/components/onboarding/PajNtaubPattern";
 import PillButton from "@/components/onboarding/PillButton";
@@ -39,6 +39,7 @@ export default function LoginScreen() {
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
+  const [showPassword, setShowPassword] = useState<boolean>(false);
   const [emailSent, setEmailSent] = useState<string | null>(null);
   const [resending, setResending] = useState<boolean>(false);
   const [mfaPending, setMfaPending] = useState<boolean>(false);
@@ -191,6 +192,7 @@ export default function LoginScreen() {
             <Text style={s.verifyTitle}>{t("checkEmailTitle")}</Text>
             <Text style={s.verifySub}>{subText}</Text>
             <Text style={s.verifyHint}>{t("checkEmailHint")}</Text>
+            <Text style={s.verifySpamNote}>{t("checkEmailSpamNote")}</Text>
             <View style={s.verifyWaiting}>
               <ActivityIndicator size="small" color={Colors.gold} />
               <Text style={s.verifyWaitingText}>{t("checkingVerification")}</Text>
@@ -216,91 +218,132 @@ export default function LoginScreen() {
       <LinearGradient colors={[Colors.indigo, "#3c0a24", Colors.crimson]} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
       <PajNtaubPattern opacity={0.08} color={Colors.gold} />
       <SafeAreaView style={s.safe}>
-        <View style={s.backRow}>
-          <BackButton tint="light" />
-        </View>
-        <Animated.View style={[s.top, { opacity: fade, transform: [{ translateY: rise }] }]}>
-          <HmongLogo fullWidth />
-          <Text style={s.tag}>Where Hmong Hearts Meet and Real Connections Begin</Text>
-        </Animated.View>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          style={{ flex: 1 }}
+          keyboardVerticalOffset={0}
+        >
+          <ScrollView
+            contentContainerStyle={{ flexGrow: 1, paddingBottom: 24 }}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={s.backRow}>
+              <BackButton tint="light" />
+            </View>
+            <Animated.View style={[s.top, { opacity: fade, transform: [{ translateY: rise }] }]}>
+              <HmongLogo fullWidth />
+              <Text
+                style={s.tag}
+                numberOfLines={2}
+                adjustsFontSizeToFit
+                minimumFontScale={0.7}
+              >
+                Where Hmong Hearts Meet and Real Connections Begin
+              </Text>
+            </Animated.View>
 
-        <View style={s.middle}>
-          <Animated.View style={[s.emailBox, { opacity: fade }]}>
-            <TextInput
-              style={s.input}
-              placeholder={t("emailPlaceholder")}
-              placeholderTextColor="rgba(245,240,235,0.35)"
-              value={email}
-              onChangeText={setEmail}
-              autoCapitalize="none"
-              autoCorrect={false}
-              keyboardType="email-address"
-              textContentType="emailAddress"
-              autoComplete="email"
-              editable={!busy}
-              testID="email-input"
-            />
-            <TextInput
-              style={s.input}
-              placeholder={t("passwordPlaceholder")}
-              placeholderTextColor="rgba(245,240,235,0.35)"
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              autoCapitalize="none"
-              textContentType="password"
-              autoComplete="password"
-              editable={!busy}
-              testID="password-input"
-            />
-            {mfaPending ? (
-              <View style={{ alignItems: "center", gap: 12 }}>
-                <ActivityIndicator size="small" color={Colors.gold} />
-                <Text style={{ color: "rgba(245,240,235,0.8)", fontSize: 15, textAlign: "center" }}>
-                  Complete two-factor verification in your browser, then return here.
-                </Text>
+            <View style={s.middle}>
+              <Animated.View style={[s.emailBox, { opacity: fade }]}>
+                <TextInput
+                  style={s.input}
+                  placeholder={t("emailPlaceholder")}
+                  placeholderTextColor="rgba(245,240,235,0.35)"
+                  value={email}
+                  onChangeText={setEmail}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  keyboardType="email-address"
+                  textContentType="emailAddress"
+                  autoComplete="email"
+                  editable={!busy}
+                  testID="email-input"
+                />
+                {/*
+                  Password field. Mounts a fresh TextInput each time showPassword
+                  toggles — the `key` forces React to tear down the previous node
+                  so Android's keyboard autofill never masks typed text in the
+                  "visible" state.
+                */}
+                <TextInput
+                  key={showPassword ? "pw-visible" : "pw-secure"}
+                  style={s.input}
+                  placeholder={t("passwordPlaceholder")}
+                  placeholderTextColor="rgba(245,240,235,0.35)"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  spellCheck={false}
+                  textContentType={showPassword ? "none" : "password"}
+                  autoComplete={showPassword ? "off" : "password"}
+                  importantForAutofill={showPassword ? "no" : "yes"}
+                  editable={!busy}
+                  testID="password-input"
+                />
+                <Pressable
+                  style={s.showPwRow}
+                  onPress={() => setShowPassword((v) => !v)}
+                  hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                  testID="toggle-show-password"
+                >
+                  <View style={[s.checkbox, showPassword && s.checkboxOn]}>
+                    {showPassword && <Check size={13} color="#fff" />}
+                  </View>
+                  <Text style={s.showPwLabel}>{t("showPassword")}</Text>
+                </Pressable>
+                {mfaPending ? (
+                  <View style={{ alignItems: "center", gap: 12 }}>
+                    <ActivityIndicator size="small" color={Colors.gold} />
+                    <Text style={{ color: "rgba(245,240,235,0.8)", fontSize: 15, textAlign: "center" }}>
+                      Complete two-factor verification in your browser, then return here.
+                    </Text>
+                  </View>
+                ) : (
+                  <>
+                    <PillButton
+                      label={busy ? "Please wait…" : mode === "signin" ? t("loginEmail") : t("registerEmail")}
+                      onPress={onEmail}
+                      variant="primary"
+                      left={busy ? <ActivityIndicator size="small" color="#FFF" /> : <Mail size={18} color="#FFF" />}
+                      testID="continue-email"
+                    />
+                    <PillButton
+                      label={mode === "signin" ? t("newHereRegister") : t("haveAccount")}
+                      onPress={toggleMode}
+                      variant="dark"
+                      testID="toggle-mode"
+                    />
+                  </>
+                )}
+              </Animated.View>
+            </View>
+
+            <Animated.View style={[s.bottom, { opacity: fade }]}>
+              <View style={s.dividerRow}>
+                <View style={s.dividerLine} />
+                <Text style={s.dividerText}>or</Text>
+                <View style={s.dividerLine} />
               </View>
-            ) : (
-              <>
-                <PillButton
-                  label={busy ? "Please wait…" : mode === "signin" ? t("continueWithEmail") : t("signUpWithEmail")}
-                  onPress={onEmail}
-                  variant="primary"
-                  left={busy ? <ActivityIndicator size="small" color="#FFF" /> : <Mail size={18} color="#FFF" />}
-                  testID="continue-email"
-                />
-                <PressableText
-                  label={mode === "signin" ? t("noAccount") : t("haveAccount")}
-                  onPress={toggleMode}
-                  disabled={busy}
-                />
-              </>
-            )}
-          </Animated.View>
-        </View>
-
-        <Animated.View style={[s.bottom, { opacity: fade }]}>
-          <View style={s.dividerRow}>
-            <View style={s.dividerLine} />
-            <Text style={s.dividerText}>or</Text>
-            <View style={s.dividerLine} />
-          </View>
-          <PillButton
-            label={busy ? "Signing in…" : t("continueWithGoogle")}
-            onPress={onGoogle}
-            variant="dark"
-            left={busy ? <ActivityIndicator size="small" color={Colors.offwhite} /> : <GoogleG />}
-            testID="continue-google"
-          />
-          <Text style={s.fine}>
-            By tapping Continue you agree to our{" "}
-            <Text style={s.link} onPress={() => Linking.openURL(TERMS_URL).catch(() => {})}>Terms</Text>
-            . Learn how we process your data in our{" "}
-            <Text style={s.link} onPress={() => Linking.openURL(PRIVACY_URL).catch(() => {})}>Privacy Policy</Text>
-            {" "}and{" "}
-            <Text style={s.link} onPress={() => Linking.openURL(COOKIES_URL).catch(() => {})}>Cookie Policy</Text>.
-          </Text>
-        </Animated.View>
+              <PillButton
+                label={busy ? "Signing in…" : t("continueWithGoogle")}
+                onPress={onGoogle}
+                variant="dark"
+                left={busy ? <ActivityIndicator size="small" color={Colors.offwhite} /> : <GoogleG />}
+                testID="continue-google"
+              />
+              <Text style={s.fine}>
+                By tapping Continue you agree to our{" "}
+                <Text style={s.link} onPress={() => Linking.openURL(TERMS_URL).catch(() => {})}>Terms</Text>
+                . Learn how we process your data in our{" "}
+                <Text style={s.link} onPress={() => Linking.openURL(PRIVACY_URL).catch(() => {})}>Privacy Policy</Text>
+                {" "}and{" "}
+                <Text style={s.link} onPress={() => Linking.openURL(COOKIES_URL).catch(() => {})}>Cookie Policy</Text>.
+              </Text>
+            </Animated.View>
+          </ScrollView>
+        </KeyboardAvoidingView>
       </SafeAreaView>
     </View>
   );
@@ -325,9 +368,19 @@ const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.indigo },
   safe: { flex: 1, paddingHorizontal: 24 },
   backRow: { paddingTop: 4, marginLeft: -4 },
-  top: { alignItems: "center", paddingTop: 20, gap: 0 },
-  tag: { fontSize: 16, color: "rgba(245,240,235,0.85)", fontStyle: "italic" as const, marginTop: -40, textAlign: "center" as const, paddingHorizontal: 16 },
-  middle: { flex: 1, justifyContent: "center", paddingBottom: 20 },
+  top: { alignItems: "center", paddingTop: 10, gap: 0, paddingHorizontal: 8 },
+  // Responsive: numberOfLines=2 + adjustsFontSizeToFit shrink the line on small
+  // phones so the tagline never collides with the email field below it.
+  tag: {
+    fontSize: 15,
+    color: "rgba(245,240,235,0.85)",
+    fontStyle: "italic" as const,
+    marginTop: -32,
+    textAlign: "center" as const,
+    paddingHorizontal: 20,
+    lineHeight: 20,
+  },
+  middle: { paddingTop: 20, paddingBottom: 20 },
   emailBox: {
     gap: 12,
   },
@@ -341,6 +394,32 @@ const s = StyleSheet.create({
     fontSize: 16,
     color: Colors.offwhite,
     fontWeight: "500" as const,
+  },
+  showPwRow: {
+    flexDirection: "row" as const,
+    alignItems: "center" as const,
+    gap: 10,
+    paddingVertical: 2,
+    marginTop: -4,
+    marginBottom: 2,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 5,
+    borderWidth: 1.5,
+    borderColor: "rgba(245,240,235,0.5)",
+    alignItems: "center" as const,
+    justifyContent: "center" as const,
+  },
+  checkboxOn: {
+    backgroundColor: Colors.gold,
+    borderColor: Colors.gold,
+  },
+  showPwLabel: {
+    color: "rgba(245,240,235,0.78)",
+    fontSize: 13.5,
+    fontWeight: "600" as const,
   },
   pwWrap: { position: "relative", justifyContent: "center" as const },
   toggle: {
@@ -404,6 +483,15 @@ const s = StyleSheet.create({
     textAlign: "center",
     lineHeight: 20,
     paddingHorizontal: 8,
+  },
+  verifySpamNote: {
+    fontSize: 13,
+    color: Colors.gold,
+    textAlign: "center" as const,
+    lineHeight: 18,
+    paddingHorizontal: 20,
+    fontStyle: "italic" as const,
+    marginTop: 2,
   },
   verifyWaiting: {
     flexDirection: "row",

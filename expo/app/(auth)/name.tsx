@@ -6,11 +6,13 @@ import OnboardingScreen from "@/components/onboarding/OnboardingScreen";
 import PillButton from "@/components/onboarding/PillButton";
 import { useOnboarding } from "@/providers/OnboardingProvider";
 import { useT } from "@/providers/LanguageProvider";
+import { clanFromLastName } from "@/lib/clanFromLastName";
 
 export default function NameScreen() {
   const { update } = useOnboarding();
   const t = useT();
-  const [name, setName] = useState<string>("");
+  const [firstName, setFirstName] = useState<string>("");
+  const [lastName, setLastName] = useState<string>("");
   const [showWelcome, setShowWelcome] = useState<boolean>(false);
   const cursor = useRef(new Animated.Value(1)).current;
   const modalScale = useRef(new Animated.Value(0.9)).current;
@@ -46,12 +48,16 @@ export default function NameScreen() {
     }
   }, [showWelcome, modalScale, modalOpacity, wave]);
 
-  const trimmed = name.trim();
-  const ok = trimmed.length >= 2;
+  const first = firstName.trim();
+  const last = lastName.trim();
+  const ok = first.length >= 2 && last.length >= 2;
 
   const onNext = () => {
     if (!ok) return;
-    update({ name: trimmed });
+    // Auto-detect Hmong clan from last name. Falls back to the raw last name
+    // when it doesn't match one of the 18 recognized clans (non-Hmong users).
+    const autoClan = clanFromLastName(last) ?? last;
+    update({ name: first, lastName: last, clan: autoClan });
     setShowWelcome(true);
   };
 
@@ -76,28 +82,46 @@ export default function NameScreen() {
       <View style={s.row}>
         <TextInput
           style={s.input}
-          value={name}
-          onChangeText={setName}
+          value={firstName}
+          onChangeText={setFirstName}
           placeholder=""
           placeholderTextColor="rgba(245,240,235,0.22)"
           autoFocus
           autoCapitalize="words"
           autoCorrect={false}
           maxLength={40}
-          returnKeyType="done"
-          onSubmitEditing={onNext}
+          returnKeyType="next"
           testID="name-input"
         />
-        {!name && <Animated.View style={[s.cursor, { opacity: cursor }]} pointerEvents="none" />}
+        {!firstName && <Animated.View style={[s.cursor, { opacity: cursor }]} pointerEvents="none" />}
       </View>
       <View style={s.line} />
       <Text style={s.note}>{t("firstNameNote")}</Text>
+
+      <Text style={[s.head, { marginTop: 32 }]}>{t("lastNameQ")}</Text>
+      <View style={s.row}>
+        <TextInput
+          style={s.input}
+          value={lastName}
+          onChangeText={setLastName}
+          placeholder=""
+          placeholderTextColor="rgba(245,240,235,0.22)"
+          autoCapitalize="words"
+          autoCorrect={false}
+          maxLength={40}
+          returnKeyType="done"
+          onSubmitEditing={onNext}
+          testID="lastname-input"
+        />
+      </View>
+      <View style={s.line} />
+      <Text style={s.note}>{t("lastNameNote")}</Text>
 
       <Modal visible={showWelcome} transparent animationType="fade" onRequestClose={onEditName}>
         <View style={s.backdrop}>
           <Animated.View style={[s.card, { opacity: modalOpacity, transform: [{ scale: modalScale }] }]} testID="welcome-card">
             <Animated.Text style={[s.wave, { transform: [{ rotate: waveRotate }] }]}>👋</Animated.Text>
-            <Text style={s.welcomeTitle}>{t("welcomeName", { name: trimmed })}</Text>
+            <Text style={s.welcomeTitle}>{t("welcomeName", { name: first })}</Text>
             <Text style={s.welcomeBody}>{t("welcomeBody")}</Text>
             <View style={{ height: 18 }} />
             <PillButton label={t("letsGo")} onPress={onLetsGo} variant="light" testID="welcome-go" />
@@ -112,12 +136,12 @@ export default function NameScreen() {
 }
 
 const s = StyleSheet.create({
-  head: { fontSize: 34, fontWeight: "800" as const, color: Colors.dark.text, letterSpacing: -0.5, marginTop: 10, lineHeight: 40 },
-  row: { marginTop: 40, flexDirection: "row" },
-  input: { fontSize: 32, fontWeight: "700" as const, color: Colors.dark.text, flex: 1, paddingVertical: 6 },
-  cursor: { position: "absolute", left: 2, bottom: 12, width: 2, height: 34, backgroundColor: Colors.crimson },
+  head: { fontSize: 28, fontWeight: "800" as const, color: Colors.dark.text, letterSpacing: -0.5, marginTop: 6, lineHeight: 34 },
+  row: { marginTop: 24, flexDirection: "row" },
+  input: { fontSize: 28, fontWeight: "700" as const, color: Colors.dark.text, flex: 1, paddingVertical: 6 },
+  cursor: { position: "absolute", left: 2, bottom: 12, width: 2, height: 30, backgroundColor: Colors.crimson },
   line: { height: 2, backgroundColor: Colors.crimson, marginTop: 4, borderRadius: 1 },
-  note: { color: Colors.dark.textDim, fontSize: 13, marginTop: 14, lineHeight: 20 },
+  note: { color: Colors.dark.textDim, fontSize: 13, marginTop: 10, lineHeight: 19 },
   backdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.72)", justifyContent: "center", alignItems: "center", paddingHorizontal: 28 },
   card: { width: "100%", backgroundColor: "#14102a", borderRadius: 22, paddingVertical: 28, paddingHorizontal: 22, alignItems: "center", borderWidth: 1, borderColor: Colors.dark.border },
   wave: { fontSize: 56, marginBottom: 14 },
