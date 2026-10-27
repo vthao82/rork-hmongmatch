@@ -9,7 +9,7 @@ import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import { useProfileStack, clearProfileStack } from "@/lib/profileStackStore";
-import { useAllProfiles } from "@/lib/discoverProfiles";
+import { useAllProfiles, useMyMatches, recordSwipe } from "@/lib/discoverProfiles";
 import { profiles as mockProfiles, type Profile } from "@/mocks/profiles";
 import { useTier } from "@/providers/TierProvider";
 import { useLikes } from "@/providers/LikesProvider";
@@ -28,6 +28,7 @@ export default function ProfileStackScreen() {
   const { byId } = useAllProfiles();
   const { isPaid } = useTier();
   const { consume: addLike } = useLikes();
+  const { matchIds } = useMyMatches();
   const [idx, setIdx] = useState<number>(stack?.startIndex ?? 0);
 
   useEffect(() => () => clearProfileStack(), []);
@@ -75,7 +76,7 @@ export default function ProfileStackScreen() {
   }
 
   const onMessage = () => {
-    if (!isPaid) {
+    if (!isPaid && !matchIds.includes(profile.id)) {
       Alert.alert("Chat is a paid feature", "You must match with a user to chat, or upgrade to message anyone.", [
         { text: "Maybe later", style: "cancel" },
         { text: "Upgrade", onPress: () => router.push("/subscription") },
@@ -89,6 +90,15 @@ export default function ProfileStackScreen() {
   const onLike = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     addLike(profile.id);
+    const liked = profile;
+    recordSwipe(liked.id, true).then((res) => {
+      if (res.ok && res.isMatch) {
+        Alert.alert("It's a Match!", `You and ${liked.name} liked each other.`, [
+          { text: "Keep browsing", style: "cancel" },
+          { text: "Send a message", onPress: () => router.push(`/chat/${liked.id}`) },
+        ]);
+      }
+    });
     // Move to next on like so they can keep going through the list
     if (idx < total - 1) setIdx((i) => i + 1);
     else router.back();

@@ -3,6 +3,7 @@ import {
   collection,
   query,
   where,
+  onSnapshot,
   limit,
   getDocs,
   doc,
@@ -15,7 +16,7 @@ import {
 import { db, auth } from "@/lib/firebase";
 import type { Profile } from "@/mocks/profiles";
 
-const QUEUE_LIMIT = 50;
+const QUEUE_LIMIT = 500;
 
 function calcAge(birthday: string | null | undefined): number {
   if (!birthday) return 0;
@@ -69,7 +70,19 @@ function rowToProfile(id: string, row: DocumentData): Profile {
     verified: !!row.photoVerified,
     hometownCity: (row.hometownCity as string) ?? null,
     hometownState: (row.hometownState as string) ?? null,
+    genders: Array.isArray(row.genders) ? (row.genders as string[]) : [],
+    seeking: Array.isArray(row.seeking) ? (row.seeking as string[]) : [],
   };
+}
+
+const SEEK_TO_GENDER: Record<string, string> = { men: "man", women: "woman", beyond: "beyond" };
+
+/** True if someone with `theirGenders` fits the viewer's `mySeeking` choice. Empty/"everyone" = show all. */
+export function fitsSeeking(mySeeking: string[] | undefined, theirGenders: string[] | undefined): boolean {
+  const seek = (mySeeking ?? []).map((x) => x.toLowerCase());
+  if (seek.length === 0 || seek.includes("everyone")) return true;
+  const genders = (theirGenders ?? []).map((x) => x.toLowerCase());
+  return seek.some((s) => genders.includes(SEEK_TO_GENDER[s] ?? s));
 }
 
 function norm(v: string | null | undefined): string {
@@ -137,12 +150,14 @@ export function useDiscoverProfiles() {
       // Load my own profile so we can sort others by location proximity
       let myCity: string | null = null;
       let myState: string | null = null;
+      let mySeeking: string[] = [];
       try {
         const meSnap = await getDoc(doc(db, "users", me.uid));
         if (meSnap.exists()) {
           const r = meSnap.data();
           myCity = (r.hometownCity as string) ?? null;
           myState = (r.hometownState as string) ?? null;
+          mySeeking = Array.isArray(r.seeking) ? (r.seeking as string[]) : [];
         }
       } catch (e) {
         console.log("[discover] my profile fetch failed (continuing)", e);
@@ -163,6 +178,7 @@ export function useDiscoverProfiles() {
         // Require at least one photo so swipe cards look right
         const hasPhotos = Array.isArray(row.photos) && row.photos.length > 0;
         if (!hasPhotos) return;
+        if (!fitsSeeking(mySeeking, row.genders as string[])) return;
         list.push(rowToProfile(d.id, row));
       });
 
@@ -223,37 +239,62 @@ export function useAllProfiles() {
 export function useMyMatches() {
   const [matchIds, setMatchIds] = useState<string[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const me = auth.currentUser;
-      if (!me) {
-        setMatchIds([]);
-        return;
-      }
-      const q = query(collection(db, "matches"), where("userIds", "array-contains", me.uid));
-      const snap = await getDocs(q);
-      const ids: string[] = [];
-      snap.forEach((d) => {
-        const ids2 = d.data().userIds as string[];
-        const otherId = ids2.find((x) => x !== me.uid);
-        if (otherId) ids.push(otherId);
-      });
-      setMatchIds(ids);
-    } catch (e) {
-      console.log("[useMyMatches] error", e);
-      setMatchIds([]);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const uid = auth.currentUser?.uid;
 
   useEffect(() => {
-    load();
-  }, [load]);
+    if (!uid) {
+      setMatchIds([]);
+      setLoading(false);
+      return;
+    }
+    const q = query(collection(db, "matches"), where("userIds", "array-contains", uid));
+    const unsub = onSnapshot(
+      q,
+      (snap) => {
+        const ids: string[] = [];
+        snap.forEach((d) => {
+          const otherId = (d.data().userIds as string[]).find((x) => x !== uid);
+          if (otherId) ids.push(otherId);
+        });
+        setMatchIds(ids);
+        setLoading(false);
+      },
+      (e) => {
+        console.log("[useMyMatches] error", e);
+        setLoading(false);
+      }
+    );
+    return () => unsub();
+  }, [uid]);
 
-  return { matchIds, loading, reload: load };
+  return { matchIds, loading };
+}
+
+/** Hook: live list of user ids who liked the current user and haven't been swiped on yet. */
+export function useLikedMe() {
+  const [likerIds, setLikerIds] = useState<string[]>([]);
+  const [mySwiped, setMySwiped] = useState<Set<string>>(new Set());
+  const uid = auth.currentUser?.uid;
+
+  useEffect(() => {
+    if (!uid) return;
+    const unsubLikes = onSnapshot(
+      collection(db, "users", uid, "likesReceived"),
+      (snap) => setLikerIds(snap.docs.map((d) => d.id)),
+      (e) => console.log("[useLikedMe] error", e)
+    );
+    const unsubMine = onSnapshot(
+      collection(db, "users", uid, "swipes"),
+      (snap) => setMySwiped(new Set(snap.docs.map((d) => d.id))),
+      (e) => console.log("[useLikedMe] my swipes error", e)
+    );
+    return () => {
+      unsubLikes();
+      unsubMine();
+    };
+  }, [uid]);
+
+  return { likerIds: likerIds.filter((id) => !mySwiped.has(id)) };
 }
 
 /**
@@ -273,8 +314,15 @@ export async function recordSwipe(
     const mySwipeRef = doc(db, "users", me.uid, "swipes", targetUserId);
     await setDoc(mySwipeRef, {
       liked,
+      likerId: me.uid,
+      targetId: targetUserId,
       createdAt: serverTimestamp(),
     });
+
+    // Mirror likes into the target's inbox so their "Likes You" list is live
+    const inboxRef = doc(db, "users", targetUserId, "likesReceived", me.uid);
+    if (liked) await setDoc(inboxRef, { likerId: me.uid, createdAt: serverTimestamp() });
+    else await deleteDoc(inboxRef).catch(() => {});
 
     if (!liked) return { ok: true, isMatch: false };
 
@@ -314,6 +362,7 @@ export async function deleteSwipe(targetUserId: string): Promise<void> {
   if (!me || !targetUserId) return;
   try {
     await deleteDoc(doc(db, "users", me.uid, "swipes", targetUserId));
+    await deleteDoc(doc(db, "users", targetUserId, "likesReceived", me.uid)).catch(() => {});
   } catch (e) {
     console.log("[discover] deleteSwipe error", e);
   }

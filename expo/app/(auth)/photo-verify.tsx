@@ -4,7 +4,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { Camera, ShieldCheck } from "lucide-react-native";
 import { Image } from "expo-image";
 import * as ImagePicker from "expo-image-picker";
-import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 import Colors from "@/constants/colors";
 import OnboardingScreen from "@/components/onboarding/OnboardingScreen";
 import PillButton from "@/components/onboarding/PillButton";
@@ -45,39 +45,41 @@ export default function PhotoVerifyScreen() {
         cameraType: ImagePicker.CameraType.front,
         quality: 0.85,
         allowsEditing: false,
+        mediaTypes: ["images"],
       });
       if (!res.canceled && res.assets[0]) {
         setSelfie(res.assets[0].uri);
       }
     } catch (e) {
       console.log("verify error", e);
+      Alert.alert("Camera unavailable", "We couldn't open your camera. Please try again.");
     }
   };
 
   const onContinue = async () => {
-    if (busy) return;
-    update({ photoVerified: !!selfie });
+    if (busy || !selfie) return;
     const me = auth.currentUser;
-    // Persist to Firestore so it shows on user's public profile + others see the badge.
-    // During onboarding the bulk profileSync at the end of the flow handles this — but
-    // if invoked from Settings, we need to write directly here.
-    if (selfie && me) {
-      setBusy(true);
-      try {
-        const url = await uploadPhotoAsync(me.uid, selfie, "verification-selfie");
-        await updateDoc(doc(db, "users", me.uid), {
-          photoVerified: true,
-          verificationSelfie: url,
-          verifiedAt: serverTimestamp(),
-        });
-      } catch (e) {
-        console.log("[photo-verify] persist error", e);
-        Alert.alert("Couldn't save verification", "We saved it locally. Try again later from Settings.");
-      } finally {
-        setBusy(false);
-      }
+    if (!me) {
+      Alert.alert("Not signed in", "Please sign in again to verify your photos.");
+      return;
     }
-    advance();
+    setBusy(true);
+    try {
+      const url = await uploadPhotoAsync(me.uid, selfie, "verification-selfie");
+      // merge: works during onboarding before the profile doc exists
+      await setDoc(
+        doc(db, "users", me.uid),
+        { photoVerified: true, verificationSelfie: url, verifiedAt: serverTimestamp() },
+        { merge: true }
+      );
+      update({ photoVerified: true });
+      Alert.alert("You're verified", "Your blue verified badge is now on your profile.", [{ text: "OK", onPress: advance }]);
+    } catch (e) {
+      console.log("[photo-verify] persist error", e);
+      Alert.alert("Couldn't submit verification", "Check your connection and tap Submit again, or choose Do this later.");
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -86,7 +88,7 @@ export default function PhotoVerifyScreen() {
         <View style={{ gap: 10 }}>
           <PillButton label={busy ? "Submitting..." : (selfie ? "Submit verification" : "Take selfie")} onPress={selfie ? onContinue : takeSelfie} variant="light" testID="verify-cta" disabled={busy} />
           {busy && <ActivityIndicator color="#FFF" />}
-          <Pressable onPress={advance} style={s.skipBtn} testID="verify-skip">
+          <Pressable onPress={advance} style={s.skipBtn} testID="verify-skip" disabled={busy}>
             <Text style={s.skipText}>Do this later</Text>
           </Pressable>
         </View>
@@ -105,7 +107,7 @@ export default function PhotoVerifyScreen() {
       </View>
 
       {selfie && (
-        <Pressable onPress={takeSelfie} style={{ marginTop: 14 }}>
+        <Pressable onPress={takeSelfie} style={{ marginTop: 14 }} testID="verify-retake" disabled={busy}>
           <Text style={s.retake}>Re-take selfie</Text>
         </Pressable>
       )}

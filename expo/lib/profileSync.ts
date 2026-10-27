@@ -113,7 +113,9 @@ export async function syncProfile(
       ...row,
       updatedAt: serverTimestamp(),
     };
-    if (!existing.exists()) {
+    // Never downgrade a verification saved directly by the selfie screen.
+    if (!row.photoVerified) delete payload.photoVerified;
+    if (!existing.exists() || !existing.data()?.createdAt) {
       payload.createdAt = serverTimestamp();
     }
 

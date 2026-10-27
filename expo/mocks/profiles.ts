@@ -15,6 +15,8 @@ export interface Profile {
   verified: boolean;
   hometownCity?: string | null;
   hometownState?: string | null;
+  genders?: string[];
+  seeking?: string[];
 }
 
 export interface Match {

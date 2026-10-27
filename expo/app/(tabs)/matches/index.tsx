@@ -8,7 +8,8 @@ import Colors from "@/constants/colors";
 import HmongMatchHeader from "@/components/HmongMatchHeader";
 import RedBackground from "@/components/RedBackground";
 import { profiles as mockProfiles } from "@/mocks/profiles";
-import { useAllProfiles } from "@/lib/discoverProfiles";
+import { useAllProfiles, useLikedMe, fitsSeeking } from "@/lib/discoverProfiles";
+import { auth } from "@/lib/firebase";
 import { useLikes, DAILY_LIMIT } from "@/providers/LikesProvider";
 import { useTier } from "@/providers/TierProvider";
 import { useT } from "@/providers/LanguageProvider";
@@ -25,6 +26,9 @@ export default function LikesScreen() {
   const { used, premium, likedIds } = useLikes();
   const { isPaid } = useTier();
   const { byId: liveById } = useAllProfiles();
+  const { likerIds } = useLikedMe();
+  const myUid = auth.currentUser?.uid ?? "";
+  const mySeeking = liveById[myUid]?.seeking;
   const [tab, setTab] = useState<"likes" | "liked" | "top">("liked");
   const [blocked, setBlocked] = useState<string[]>([]);
   const [upgradeOpen, setUpgradeOpen] = useState<boolean>(false);
@@ -35,8 +39,14 @@ export default function LikesScreen() {
     .filter((p): p is NonNullable<typeof p> => !!p);
   // "Top Picks" — show all other live profiles (excluding self & already-liked)
   const topPicks = Object.values(liveById)
+    .filter((p) => p.id !== myUid && !p.id.startsWith("seed-") && p.photos.length > 0)
+    .filter((p) => fitsSeeking(mySeeking, p.genders))
     .filter((p) => !likedIds.includes(p.id) && !blocked.includes(p.id))
     .slice(0, 12);
+  // "Likes You" — real people whose swipe on me is a like and I haven't answered yet
+  const likedMe = likerIds
+    .map((id) => liveById[id])
+    .filter((p): p is NonNullable<typeof p> => !!p && !blocked.includes(p.id));
 
   const blockUser = (id: string, name: string) => {
     Alert.alert(t("blockTitle", { name }), t("blockBody"), [
@@ -123,11 +133,14 @@ export default function LikesScreen() {
           </View>
 
           <Text style={s.sectionHead}>{t("whoLikedYou")}</Text>
+          {likedMe.length === 0 && (
+            <Text style={s.emptySub} testID="likes-you-empty">No new likes yet. Keep swiping!</Text>
+          )}
           <View style={s.grid}>
-            {topPicks.slice(0, 4).map(p => {
+            {likedMe.map(p => {
               const unlocked = isPaid || premium;
               return (
-              <TouchableOpacity key={p.id} style={[s.pick, { width: CW }]} activeOpacity={0.85} onPress={() => { if (!unlocked) { setUpgradeOpen(true); return; } setProfileStack(topPicks.slice(0, 4).map(x => x.id), topPicks.slice(0, 4).findIndex(x => x.id === p.id), t("likesYou")); router.push("/profile-stack"); }} testID={`liked-by-${p.id}`}>
+              <TouchableOpacity key={p.id} style={[s.pick, { width: CW }]} activeOpacity={0.85} onPress={() => { if (!unlocked) { setUpgradeOpen(true); return; } setProfileStack(likedMe.map(x => x.id), likedMe.findIndex(x => x.id === p.id), t("likesYou")); router.push("/profile-stack"); }} testID={`liked-by-${p.id}`}>
                 <Image source={{ uri: p.photos[0] }} style={s.pickImg} contentFit="cover" blurRadius={unlocked ? 0 : 14} />
                 <View style={s.pickOverlay} />
                 <View style={s.pickInfo}>

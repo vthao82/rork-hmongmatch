@@ -38,9 +38,16 @@ service cloud.firestore {
       // the recordSwipe() flow. To allow that read we relax read on swipes to any
       // signed-in user (write stays owner-only).
       match /swipes/{otherUid} {
-        allow read: if request.auth != null;
+        allow read: if request.auth != null
+                    && (request.auth.uid == uid || request.auth.uid == otherUid);
         allow create, update, delete: if request.auth != null && request.auth.uid == uid;
       }
+    }
+
+    // Inbox of likes I've received — I can read it, only the liker can write their own entry
+    match /users/{uid}/likesReceived/{likerUid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create, update, delete: if request.auth != null && request.auth.uid == likerUid;
     }
 
     // -------- Matches --------
@@ -49,10 +56,15 @@ service cloud.firestore {
       // their uid in userIds (prevents creating matches for other people).
       allow create: if request.auth != null
                     && request.resource.data.userIds is list
+                    && request.resource.data.userIds.size() == 2
                     && request.resource.data.userIds.hasAny([request.auth.uid]);
-      // Read & update & delete: must be a participant
-      allow read, update, delete: if request.auth != null
-                                  && resource.data.userIds.hasAny([request.auth.uid]);
+      // Read & delete: must be a participant
+      allow read, delete: if request.auth != null
+                          && resource.data.userIds.hasAny([request.auth.uid]);
+      // Update: participant, and the participant list can't change
+      allow update: if request.auth != null
+                    && resource.data.userIds.hasAny([request.auth.uid])
+                    && request.resource.data.userIds == resource.data.userIds;
 
       // -------- Messages (chat) --------
       match /messages/{messageId} {

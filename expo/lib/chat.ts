@@ -7,6 +7,7 @@ import {
   limit as fbLimit,
   onSnapshot,
   addDoc,
+  setDoc,
   serverTimestamp,
   updateDoc,
   arrayUnion,
@@ -99,6 +100,12 @@ export async function sendChatMessage(
   if (!trimmed) return { ok: false, error: "Empty message" };
   try {
     const matchId = getMatchId(me.uid, otherUid);
+    // Ensure the conversation doc exists (paid direct messages) so the recipient sees the thread.
+    await setDoc(
+      doc(db, "matches", matchId),
+      { userIds: [me.uid, otherUid].sort(), lastMessageAt: serverTimestamp() },
+      { merge: true }
+    );
     await addDoc(collection(db, "matches", matchId, "messages"), {
       senderId: me.uid,
       text: trimmed,

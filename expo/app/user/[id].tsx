@@ -7,8 +7,10 @@ import VerifiedBadge from "@/components/VerifiedBadge";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { profiles as mockProfiles, currentUser, type Profile } from "@/mocks/profiles";
-import { useAllProfiles } from "@/lib/discoverProfiles";
+import { useAllProfiles, useMyMatches, recordSwipe } from "@/lib/discoverProfiles";
 import { useOnboarding } from "@/providers/OnboardingProvider";
+import { useTier } from "@/providers/TierProvider";
+import { useLikes } from "@/providers/LikesProvider";
 import { auth } from "@/lib/firebase";
 
 export default function UserProfileScreen() {
@@ -17,6 +19,9 @@ export default function UserProfileScreen() {
   const { byId } = useAllProfiles();
   const { data } = useOnboarding();
   const myUid = auth.currentUser?.uid;
+  const { isPaid } = useTier();
+  const { consume: addLike } = useLikes();
+  const { matchIds } = useMyMatches();
 
   // 1) Live Firestore lookup
   // 2) Mock fallback (during loading or for legacy mocked IDs)
@@ -54,6 +59,34 @@ export default function UserProfileScreen() {
   }
 
   const isMe = id === myUid;
+  const profile = p;
+
+  const onMessage = () => {
+    if (!isPaid && !matchIds.includes(profile.id)) {
+      Alert.alert("Chat is a paid feature", "You must match with a user to chat, or upgrade to message anyone.", [
+        { text: "Maybe later", style: "cancel" },
+        { text: "Upgrade", onPress: () => router.push("/subscription") },
+      ]);
+      return;
+    }
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    router.push(`/chat/${profile.id}`);
+  };
+
+  const onLike = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    addLike(profile.id);
+    recordSwipe(profile.id, true).then((res) => {
+      if (res.ok && res.isMatch) {
+        Alert.alert("It's a Match!", `You and ${profile.name} liked each other.`, [
+          { text: "Later", style: "cancel" },
+          { text: "Send a message", onPress: () => router.push(`/chat/${profile.id}`) },
+        ]);
+      } else if (res.ok) {
+        Alert.alert("Liked", `We'll let you know if ${profile.name} likes you back.`);
+      }
+    });
+  };
 
   const openSafetyMenu = () => {
     if (!p || isMe) return;
@@ -133,14 +166,15 @@ export default function UserProfileScreen() {
             {!isMe && (
               <TouchableOpacity
                 style={s.mb}
-                onPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light); router.push(`/chat/${p?.id}`); }}
+                onPress={onMessage}
+                testID="profile-message-btn"
               >
                 <MessageCircle size={24} color="#FFF" />
                 <Text style={s.mt}>Message</Text>
               </TouchableOpacity>
             )}
             {!isMe && (
-              <TouchableOpacity style={s.lb}>
+              <TouchableOpacity style={s.lb} onPress={onLike} testID="profile-like-btn">
                 <Heart size={24} color={Colors.like} />
               </TouchableOpacity>
             )}
