@@ -10,6 +10,8 @@ import { profiles as mockProfiles } from "@/mocks/profiles";
 import { useAllProfiles } from "@/lib/discoverProfiles";
 import { useChatMessages, sendChatMessage, markMessageRead, formatRelative, type ChatMessage } from "@/lib/chat";
 import { auth } from "@/lib/firebase";
+import { blockUser } from "@/providers/BlockProvider";
+import { useActiveLabel } from "@/lib/presence";
 import { useTier } from "@/providers/TierProvider";
 import { useT } from "@/providers/LanguageProvider";
 
@@ -24,6 +26,7 @@ export default function ChatScreen() {
   // Prefer live Firestore profile; fall back to mocks during loading or for legacy IDs
   const pr = (id ? liveById[id] : null) ?? mockProfiles.find(x => x.id === id);
   const { messages, matchId } = useChatMessages(id);
+  const activeText = useActiveLabel(id);
   const [tx, setTx] = useState<string>("");
   const lr = useRef<FlatList<ChatMessage>>(null);
 
@@ -120,8 +123,11 @@ export default function ChatScreen() {
                 {
                   text: "Block",
                   style: "destructive",
-                  onPress: () => {
-                    Alert.alert("Blocked", `${pr.name} has been blocked.`);
+                  onPress: async () => {
+                    if (!me) return;
+                    const ok = await blockUser(me.uid, pr);
+                    if (!ok) { Alert.alert("Couldn't block", "Please try again."); return; }
+                    Alert.alert("Blocked", `${pr.name} has been blocked. You can unblock them in Settings.`);
                     router.back();
                   },
                 },
@@ -140,6 +146,7 @@ export default function ChatScreen() {
         headerTitle: () => (
           <TouchableOpacity onPress={openProfile} testID="header-name">
             <Text style={s.htitle} numberOfLines={1}>{pr.name}</Text>
+            {activeText ? <Text style={[s.hsub, activeText === "Active now" && { color: Colors.online }]} testID="chat-active-status">{activeText}</Text> : null}
           </TouchableOpacity>
         ),
         headerRight: () => (
@@ -211,6 +218,7 @@ const s = StyleSheet.create({
   lockOverlay: { position: "absolute", bottom: 4, right: 4 },
   ha: { width: 32, height: 32, borderRadius: 16 },
   htitle: { fontSize: 17, fontWeight: "700" as const, color: Colors.text },
+  hsub: { fontSize: 12, color: Colors.textSecondary, marginTop: 1 },
   ml: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
   mr: { flexDirection: "row", marginBottom: 12, alignItems: "flex-end", gap: 8 },
   my: { justifyContent: "flex-end" },

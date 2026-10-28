@@ -12,6 +12,8 @@ import { useOnboarding } from "@/providers/OnboardingProvider";
 import { useTier } from "@/providers/TierProvider";
 import { useLikes } from "@/providers/LikesProvider";
 import { auth } from "@/lib/firebase";
+import { blockUser } from "@/providers/BlockProvider";
+import { useActiveLabel } from "@/lib/presence";
 
 export default function UserProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -22,6 +24,7 @@ export default function UserProfileScreen() {
   const { isPaid } = useTier();
   const { consume: addLike } = useLikes();
   const { matchIds } = useMyMatches();
+  const activeText = useActiveLabel(id);
 
   // 1) Live Firestore lookup
   // 2) Mock fallback (during loading or for legacy mocked IDs)
@@ -77,12 +80,7 @@ export default function UserProfileScreen() {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     addLike(profile.id);
     recordSwipe(profile.id, true).then((res) => {
-      if (res.ok && res.isMatch) {
-        Alert.alert("It's a Match!", `You and ${profile.name} liked each other.`, [
-          { text: "Later", style: "cancel" },
-          { text: "Send a message", onPress: () => router.push(`/chat/${profile.id}`) },
-        ]);
-      } else if (res.ok) {
+      if (res.ok && !res.isMatch) {
         Alert.alert("Liked", `We'll let you know if ${profile.name} likes you back.`);
       }
     });
@@ -115,8 +113,11 @@ export default function UserProfileScreen() {
                 {
                   text: "Block",
                   style: "destructive",
-                  onPress: () => {
-                    Alert.alert("Blocked", `${p.name} has been blocked.`);
+                  onPress: async () => {
+                    if (!myUid) return;
+                    const ok = await blockUser(myUid, p);
+                    if (!ok) { Alert.alert("Couldn't block", "Please try again."); return; }
+                    Alert.alert("Blocked", `${p.name} has been blocked. You can unblock them in Settings.`);
                     router.back();
                   },
                 },
@@ -148,13 +149,19 @@ export default function UserProfileScreen() {
       />
       <ScrollView style={s.ct} showsVerticalScrollIndicator={false}>
         <View style={s.ph}>
-          <PhotoCarousel key={p.id} photos={p.photos} height={400} />
+          <PhotoCarousel key={p.id} photos={p.photos} />
           <View style={s.pf} pointerEvents="none">
             <View style={s.nr}>
               <Text style={s.nm}>{p.name}{p.age ? `, ${p.age}` : ""}</Text>
               <VerifiedBadge verified={!!p.verified} size={22} />
             </View>
             {p.clan ? <Text style={s.cl}>{p.clan} Clan</Text> : null}
+            {!isMe && activeText ? (
+              <View style={s.activeRow} testID="profile-active-status">
+                {activeText === "Active now" && <View style={s.activeDot} />}
+                <Text style={s.activeTxt}>{activeText}</Text>
+              </View>
+            ) : null}
           </View>
         </View>
         <View style={s.cn}>
@@ -225,12 +232,15 @@ const s = StyleSheet.create({
   ct: { flex: 1, backgroundColor: Colors.background },
   cen: { flex: 1, justifyContent: "center" as const, alignItems: "center" as const, backgroundColor: Colors.background },
   err: { fontSize: 16, color: Colors.textSecondary },
-  ph: { height: 400, position: "relative" as const },
+  ph: { position: "relative" as const, backgroundColor: "#000" },
   pf: { position: "absolute" as const, bottom: 20, left: 20, right: 20 },
   nr: { flexDirection: "row" as const, alignItems: "center" as const, gap: 8 },
   nm: { fontSize: 30, fontWeight: "700" as const, color: "#FFF", textShadowColor: "rgba(0,0,0,0.75)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },
   cl: { fontSize: 16, fontWeight: "600" as const, color: Colors.accentLight, marginTop: 4, textShadowColor: "rgba(0,0,0,0.75)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },
   cn: { paddingHorizontal: 20, paddingTop: 16 },
+  activeRow: { flexDirection: "row" as const, alignItems: "center" as const, gap: 6, marginTop: 6 },
+  activeDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: Colors.online },
+  activeTxt: { color: "#FFF", fontSize: 13, fontWeight: "600" as const, textShadowColor: "rgba(0,0,0,0.75)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },
   ab: { flexDirection: "row" as const, justifyContent: "center" as const, alignItems: "center" as const, gap: 16, marginBottom: 24 },
   pb: { width: 52, height: 52, borderRadius: 26, backgroundColor: "#FFF", justifyContent: "center" as const, alignItems: "center" as const },
   mb: { flexDirection: "row" as const, alignItems: "center" as const, gap: 8, backgroundColor: Colors.primary, paddingHorizontal: 28, paddingVertical: 14, borderRadius: 28 },

@@ -41,6 +41,7 @@ export type ProfileRow = {
   photos: string[];
   mainPhotoIndex: number;
   photoVerified: boolean;
+  showActiveStatus: boolean;
   distance: number | null;
   distanceWorldwide: boolean;
   distanceUSOnly: boolean;
@@ -85,6 +86,7 @@ function toProfileRow(userId: string, d: OnboardingData): Omit<ProfileRow, "upda
     photos: d.photos ?? [],
     mainPhotoIndex: d.mainPhotoIndex ?? 0,
     photoVerified: d.photoVerified ?? false,
+    showActiveStatus: d.showActiveStatus ?? true,
     distance: d.distance ?? null,
     distanceWorldwide: d.distanceWorldwide ?? false,
     distanceUSOnly: d.distanceUSOnly ?? false,

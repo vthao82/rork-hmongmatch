@@ -11,6 +11,7 @@ import { LikesProvider } from "@/providers/LikesProvider";
 import { LanguageProvider } from "@/providers/LanguageProvider";
 import { TierProvider } from "@/providers/TierProvider";
 import { AuthProvider } from "@/providers/AuthProvider";
+import { BlockProvider } from "@/providers/BlockProvider";
 
 try { SplashScreen.preventAutoHideAsync(); } catch (e) { console.log("[splash] preventAutoHideAsync error", e); }
 const qc = new QueryClient();
@@ -29,6 +30,7 @@ function RootLayoutNav() {
       <Stack.Screen name="category/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="report" options={{ headerShown: false, presentation: "modal" }} />
       <Stack.Screen name="photo-verify" options={{ headerShown: false, presentation: "modal" }} />
+      <Stack.Screen name="blocked" options={{ title: "Blocked users" }} />
       <Stack.Screen name="+not-found" />
     </Stack>
   );
@@ -47,6 +49,7 @@ export default function AppContent() {
       <SafeAreaProvider>
         <LanguageProvider>
           <AuthProvider>
+          <BlockProvider>
           <OnboardingProvider>
             <TierProvider>
               <LikesProvider>
@@ -57,6 +60,7 @@ export default function AppContent() {
               </LikesProvider>
             </TierProvider>
           </OnboardingProvider>
+          </BlockProvider>
           </AuthProvider>
         </LanguageProvider>
       </SafeAreaProvider>

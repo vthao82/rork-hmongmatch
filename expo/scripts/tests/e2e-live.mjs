@@ -7,7 +7,7 @@ import { initializeApp } from "firebase/app";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import {
   getFirestore, doc, setDoc, getDoc, getDocs, collection, query, where, onSnapshot,
-  addDoc, updateDoc, arrayUnion, serverTimestamp, orderBy, deleteDoc,
+  addDoc, updateDoc, arrayUnion, arrayRemove, serverTimestamp, orderBy, deleteDoc,
 } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { readFileSync } from "node:fs";
@@ -56,7 +56,7 @@ async function cleanup() {
   const db = adminDb();
   const uids = Object.values(C).map((c) => c.uid);
   for (const uid of uids) {
-    for (const sub of ["swipes", "likesReceived", "private"]) {
+    for (const sub of ["swipes", "likesReceived", "private", "blocked", "blockedBy"]) {
       const s = await db.collection(`users/${uid}/${sub}`).get();
       for (const d of s.docs) await d.ref.delete();
     }
@@ -179,6 +179,36 @@ async function main() {
   ok("other users cannot overwrite the draft", await denied(setDoc(draftRef(m, e), { data: {} })));
   await deleteDoc(draftRef(e, e));
   ok("owner can delete draft after finishing", !(await getDoc(draftRef(e, e))).exists());
+
+  console.log("\n[9] Blocking");
+  const blk = async (me, other) => {
+    await setDoc(doc(me.db, "users", me.uid, "blocked", other.uid), { name: "x", createdAt: serverTimestamp() });
+    await setDoc(doc(me.db, "users", other.uid, "blockedBy", me.uid), { createdAt: serverTimestamp() });
+    await updateDoc(doc(me.db, "matches", [me.uid, other.uid].sort().join("_")), { blockedBy: arrayUnion(me.uid) });
+  };
+  await blk(w, m);
+  const mSeesBlockedBy = await getDocs(collection(m.db, "users", m.uid, "blockedBy"));
+  ok("blocked person's app can see who blocked them (to hide them)", mSeesBlockedBy.docs.some((d) => d.id === w.uid));
+  ok("nobody else can read my blocked list", await denied(getDocs(collection(m.db, "users", w.uid, "blocked"))));
+  ok("blocked person cannot message the blocker", await denied(addDoc(collection(m.db, "matches", matchId, "messages"), { senderId: m.uid, text: "hey", createdAt: serverTimestamp() })));
+  ok("blocker cannot message while block is on", await denied(addDoc(collection(w.db, "matches", matchId, "messages"), { senderId: w.uid, text: "hey", createdAt: serverTimestamp() })));
+  ok("third user cannot fake a block on someone", await denied(setDoc(doc(e.db, "users", m.uid, "blockedBy", w.uid), { x: 1 })));
+  // Unblock
+  await deleteDoc(doc(w.db, "users", w.uid, "blocked", m.uid));
+  await deleteDoc(doc(w.db, "users", m.uid, "blockedBy", w.uid));
+  await updateDoc(doc(w.db, "matches", matchId), { blockedBy: arrayRemove(w.uid) });
+  let afterUnblock = true;
+  try { await addDoc(collection(m.db, "matches", matchId, "messages"), { senderId: m.uid, text: "back", createdAt: serverTimestamp() }); } catch { afterUnblock = false; }
+  ok("after unblock, messaging works again", afterUnblock);
+
+  console.log("\n[10] Match celebration shown once + presence");
+  await updateDoc(doc(m.db, "matches", matchId), { celebratedBy: arrayUnion(m.uid) });
+  const md = (await getDoc(doc(m.db, "matches", matchId))).data();
+  ok("celebration recorded on match (won't show again)", md.celebratedBy.includes(m.uid) && !md.celebratedBy.includes(w.uid));
+  await setDoc(doc(m.db, "users", m.uid), { lastActiveAt: serverTimestamp() }, { merge: true });
+  const pres = (await getDoc(doc(w.db, "users", m.uid))).data();
+  ok("active status saved and visible to others", !!pres.lastActiveAt && Date.now() - pres.lastActiveAt.toMillis() < 60000);
+  ok("cannot write someone else's active status", await denied(setDoc(doc(w.db, "users", m.uid), { lastActiveAt: serverTimestamp() }, { merge: true })));
 
   unsubInbox(); unsubM(); unsubMsgs(); unsubW2();
 }

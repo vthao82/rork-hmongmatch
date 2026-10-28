@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import {
   collection,
   query,
@@ -15,6 +15,8 @@ import {
 } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
 import type { Profile } from "@/mocks/profiles";
+import { useBlocks } from "@/providers/BlockProvider";
+import { tsToMillis, isActiveNow, activeLabel } from "@/lib/presence";
 
 const QUEUE_LIMIT = 500;
 
@@ -53,6 +55,8 @@ function locationLabel(row: DocumentData): string {
 }
 
 function rowToProfile(id: string, row: DocumentData): Profile {
+  const lastActiveAt = tsToMillis(row.lastActiveAt);
+  const showActiveStatus = row.showActiveStatus !== false;
   return {
     id,
     name: (row.name as string) ?? "Anonymous",
@@ -65,8 +69,10 @@ function rowToProfile(id: string, row: DocumentData): Profile {
     interests: Array.isArray(row.interests) ? (row.interests as string[]) : [],
     languages: row.dialect ? [row.dialect as string] : [],
     lookingFor: (row.lookingFor as string) ?? "",
-    isOnline: false,
-    lastActive: "",
+    isOnline: isActiveNow(lastActiveAt, showActiveStatus),
+    lastActive: activeLabel(lastActiveAt, showActiveStatus),
+    lastActiveAt,
+    showActiveStatus,
     verified: !!row.photoVerified,
     hometownCity: (row.hometownCity as string) ?? null,
     hometownState: (row.hometownState as string) ?? null,
@@ -113,6 +119,7 @@ function sortByLocation(list: Profile[], myCity: string | null, myState: string 
  * Excludes self and anyone the current user has already swiped on.
  */
 export function useDiscoverProfiles() {
+  const { hidden } = useBlocks();
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
@@ -197,7 +204,8 @@ export function useDiscoverProfiles() {
     load();
   }, [load]);
 
-  return { profiles, loading, error, reload: load };
+  const visible = useMemo(() => profiles.filter((p) => !hidden.has(p.id)), [profiles, hidden]);
+  return { profiles: visible, loading, error, reload: load };
 }
 
 /**
@@ -205,6 +213,7 @@ export function useDiscoverProfiles() {
  * Used by Likes/Chat tabs to look up names + photos by user id.
  */
 export function useAllProfiles() {
+  const { hidden } = useBlocks();
   const [byId, setById] = useState<Record<string, Profile>>({});
   const [loading, setLoading] = useState<boolean>(true);
 
@@ -229,21 +238,31 @@ export function useAllProfiles() {
     load();
   }, [load]);
 
-  return { byId, loading, reload: load };
+  // Blocked people (either direction) disappear from every lookup in the app
+  const visible = useMemo(() => {
+    if (hidden.size === 0) return byId;
+    const out: Record<string, Profile> = {};
+    Object.entries(byId).forEach(([k, v]) => { if (!hidden.has(k)) out[k] = v; });
+    return out;
+  }, [byId, hidden]);
+  return { byId: visible, loading, reload: load };
 }
 
 /**
  * Hook: subscribe to matches involving the current user.
  * Each match doc lives at /matches/{sortedUid1_sortedUid2} with userIds: string[].
  */
+export type MatchInfo = { matchId: string; otherId: string; createdAt: number | null; celebratedBy: string[] };
+
 export function useMyMatches() {
-  const [matchIds, setMatchIds] = useState<string[]>([]);
+  const { hidden } = useBlocks();
+  const [all, setAll] = useState<MatchInfo[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const uid = auth.currentUser?.uid;
 
   useEffect(() => {
     if (!uid) {
-      setMatchIds([]);
+      setAll([]);
       setLoading(false);
       return;
     }
@@ -251,12 +270,20 @@ export function useMyMatches() {
     const unsub = onSnapshot(
       q,
       (snap) => {
-        const ids: string[] = [];
+        const list: MatchInfo[] = [];
         snap.forEach((d) => {
-          const otherId = (d.data().userIds as string[]).find((x) => x !== uid);
-          if (otherId) ids.push(otherId);
+          const r = d.data();
+          const otherId = (r.userIds as string[]).find((x) => x !== uid);
+          if (otherId) {
+            list.push({
+              matchId: d.id,
+              otherId,
+              createdAt: tsToMillis(r.createdAt),
+              celebratedBy: Array.isArray(r.celebratedBy) ? (r.celebratedBy as string[]) : [],
+            });
+          }
         });
-        setMatchIds(ids);
+        setAll(list);
         setLoading(false);
       },
       (e) => {
@@ -267,7 +294,9 @@ export function useMyMatches() {
     return () => unsub();
   }, [uid]);
 
-  return { matchIds, loading };
+  const matches = useMemo(() => all.filter((m) => !hidden.has(m.otherId)), [all, hidden]);
+  const matchIds = useMemo(() => matches.map((m) => m.otherId), [matches]);
+  return { matchIds, matches, loading };
 }
 
 /** Hook: live list of user ids who liked the current user and haven't been swiped on yet. */

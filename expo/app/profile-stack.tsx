@@ -89,15 +89,7 @@ export default function ProfileStackScreen() {
   const onLike = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     addLike(profile.id);
-    const liked = profile;
-    recordSwipe(liked.id, true).then((res) => {
-      if (res.ok && res.isMatch) {
-        Alert.alert("It's a Match!", `You and ${liked.name} liked each other.`, [
-          { text: "Keep browsing", style: "cancel" },
-          { text: "Send a message", onPress: () => router.push(`/chat/${liked.id}`) },
-        ]);
-      }
-    });
+    void recordSwipe(profile.id, true);
     // Move to next on like so they can keep going through the list
     if (idx < total - 1) setIdx((i) => i + 1);
     else router.back();
@@ -108,7 +100,7 @@ export default function ProfileStackScreen() {
       <Stack.Screen options={{ title: stack.title ?? profile.name }} />
       <ScrollView style={s.ct} contentContainerStyle={{ paddingBottom: 80 }} showsVerticalScrollIndicator={false}>
         <View style={s.ph}>
-          <PhotoCarousel key={profile.id} photos={profile.photos} height={460} counterTop={ins.top + 12} />
+          <PhotoCarousel key={profile.id} photos={profile.photos} counterTop={ins.top + 12} />
           <View style={[s.counterWrap, { top: ins.top + 12 }]} pointerEvents="none" testID="profile-position">
             <View style={s.counter}><Text style={s.counterTxt}>Profile {idx + 1} of {total}</Text></View>
           </View>
@@ -180,7 +172,7 @@ const s = StyleSheet.create({
   ct: { flex: 1, backgroundColor: Colors.background },
   cen: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: Colors.background, padding: 20 },
   err: { fontSize: 16, color: Colors.textSecondary, textAlign: "center" as const },
-  ph: { height: 460, position: "relative", backgroundColor: "#1f1419" },
+  ph: { position: "relative", backgroundColor: "#000" },
   counterWrap: { position: "absolute", left: 0, right: 0, alignItems: "center" },
   counter: { backgroundColor: "rgba(0,0,0,0.55)", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999 },
   counterTxt: { color: "#FFF", fontSize: 12, fontWeight: "700" as const },

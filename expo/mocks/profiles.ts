@@ -17,6 +17,8 @@ export interface Profile {
   hometownState?: string | null;
   genders?: string[];
   seeking?: string[];
+  lastActiveAt?: number | null;
+  showActiveStatus?: boolean;
 }
 
 export interface Match {

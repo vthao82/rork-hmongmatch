@@ -86,6 +86,7 @@ export async function deleteMyAccount(): Promise<DeleteAccountResult> {
   // 3. Firestore: known subcollections under /users/{uid}
   await safeDeleteSubcollection(uid, "swipes");
   await safeDeleteSubcollection(uid, "private");
+  await safeDeleteSubcollection(uid, "blocked");
 
   // 4. Firestore: push token document
   try {

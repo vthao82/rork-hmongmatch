@@ -67,6 +67,8 @@ export type OnboardingData = {
   locationGranted?: boolean;
   /** Last enrollment screen reached — used to resume an unfinished sign-up. */
   resumeStep?: string;
+  /** Show "Active now" / "Active 2h ago" to others (default on). */
+  showActiveStatus?: boolean;
 };
 
 const LEGACY_KEY = "hmongmatch.onboarding.v1";

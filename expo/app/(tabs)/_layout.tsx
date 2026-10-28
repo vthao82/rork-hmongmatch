@@ -5,9 +5,16 @@ import { Heart, MessageCircle, User, Compass, Home } from "lucide-react-native";
 import Colors from "@/constants/colors";
 import InAppNotificationBanner from "@/components/InAppNotificationBanner";
 import { useChatThreads } from "@/lib/chat";
+import MatchCelebration from "@/components/MatchCelebration";
+import { usePresenceHeartbeat } from "@/lib/presence";
+import { useAuth } from "@/providers/AuthProvider";
+import { useOnboarding } from "@/providers/OnboardingProvider";
 
 export default function HmongDateTabLayout() {
   const { threads } = useChatThreads();
+  const { user } = useAuth();
+  const { data: onb } = useOnboarding();
+  usePresenceHeartbeat(user?.uid, onb.showActiveStatus !== false);
   // Number of chats (not messages) that have unread messages
   const unread = useMemo(
     () => threads.filter((t) => (t.unreadCount ?? 0) > 0).length,
@@ -49,6 +56,7 @@ export default function HmongDateTabLayout() {
       <Tabs.Screen name="profile" options={{ title: "Profile", tabBarIcon: ({ color, size }) => <User size={size} color={color} /> }} />
     </Tabs>
     <InAppNotificationBanner />
+    <MatchCelebration />
     </View>
   );
 }

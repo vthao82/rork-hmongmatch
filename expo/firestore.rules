@@ -44,6 +44,15 @@ service cloud.firestore {
       }
     }
 
+    // Blocks: my list is private to me; the mirror lets the blocked person's app hide me
+    match /users/{uid}/blocked/{otherUid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+    match /users/{uid}/blockedBy/{blockerUid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create, update, delete: if request.auth != null && request.auth.uid == blockerUid;
+    }
+
     // Private owner-only docs (e.g. unfinished sign-up draft)
     match /users/{uid}/private/{docId} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
@@ -78,6 +87,7 @@ service cloud.firestore {
 
         // Participants can create a message. Sender must be the authed user.
         allow create: if isMatchParticipant(matchId)
+                      && get(/databases/$(database)/documents/matches/$(matchId)).data.get('blockedBy', []).size() == 0
                       && request.resource.data.text is string
                       && request.resource.data.text.size() > 0
                       && request.resource.data.text.size() <= 2000

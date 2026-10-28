@@ -161,7 +161,7 @@ export default function SettingsScreen() {
   const [distance, setDistance] = useState<number>(50);
   const [showFurther, setShowFurther] = useState<boolean>(true);
   const [discovery, setDiscovery] = useState<boolean>(true);
-  const { data: onb, reset: resetOnboarding } = useOnboarding();
+  const { data: onb, update: updateOnb, reset: resetOnboarding } = useOnboarding();
   const { signOut, user: authUser } = useAuth();
   const logOut = async () => {
     await signOut();
@@ -356,6 +356,15 @@ export default function SettingsScreen() {
               <Toggle value={discovery} onChange={setDiscovery} testID="discovery-toggle" />
             </View>
           </View>
+          <View style={s.card}>
+            <View style={s.rowToggle}>
+              <View style={{ flex: 1, paddingRight: 8 }}>
+                <Text style={s.rowLabel}>Show my active status</Text>
+                <Text style={s.rowSub}>Let others see when you're active, like "Active now" or "Active 2h ago".</Text>
+              </View>
+              <Toggle value={onb.showActiveStatus !== false} onChange={(v) => updateOnb({ showActiveStatus: v })} testID="active-status-toggle" />
+            </View>
+          </View>
         </Section>
 
         <Section title="Photo Verification">
@@ -393,6 +402,7 @@ export default function SettingsScreen() {
           <Row label={t("editProfile")} onPress={() => router.push("/edit-profile")} testID="edit-profile-row" />
           <Row label={t("manageSubscription")} onPress={() => router.push("/subscription")} testID="manage-sub-row" />
           <Row label={t("reportProblem")} onPress={() => router.push("/report")} testID="report-row" />
+          <Row label="Blocked users" onPress={() => router.push("/blocked" as never)} testID="blocked-users-row" />
           <TouchableOpacity style={s.row} onPress={() => Alert.alert(t("logout"), t("logoutConfirm"), [
             { text: t("cancel"), style: "cancel" },
             { text: t("logout"), style: "destructive", onPress: () => { void logOut(); } },

@@ -89,7 +89,6 @@ export default function BrowseScreen() {
   // a different person on rewind.
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [history, setHistory] = useState<{ id: string; liked: boolean }[]>([]);
-  const [matchedProfile, setMatchedProfile] = useState<Profile | null>(null);
   const cardHeight = W.height - ins.top - ins.bottom - 220;
 
   // Queue is liveProfiles minus session dismissals. We always look at queue[0]
@@ -113,12 +112,8 @@ export default function BrowseScreen() {
     addLike(current.id);
     const liked = current;
     advance(true);
-    // Persist swipe + check for match in the background
-    recordSwipe(liked.id, true).then((res) => {
-      if (res.ok && res.isMatch) {
-        setMatchedProfile(liked);
-      }
-    });
+    // Persist swipe; a mutual like triggers the global "It's a Match!" screen
+    void recordSwipe(liked.id, true);
   }, [current, consumeLike, addLike, advance]);
 
   const onDislike = useCallback(() => {
@@ -274,32 +269,6 @@ export default function BrowseScreen() {
         </View>
       </Modal>
 
-      {/* It's a Match! */}
-      <Modal visible={!!matchedProfile} transparent animationType="fade" onRequestClose={() => setMatchedProfile(null)}>
-        <View style={st.modal}>
-          <View style={st.matchCard}>
-            <Text style={st.matchTitle}>It’s a Match! 💞</Text>
-            <Text style={st.matchSub}>You and {matchedProfile?.name} liked each other.</Text>
-            {!!matchedProfile?.photos?.[0] && (
-              <Image source={{ uri: matchedProfile.photos[0] }} style={st.matchPhoto} contentFit="cover" transition={200} />
-            )}
-            <TouchableOpacity
-              style={st.cta}
-              onPress={() => {
-                const p = matchedProfile;
-                setMatchedProfile(null);
-                if (p) router.push(`/chat/${p.id}`);
-              }}
-              testID="match-message-btn"
-            >
-              <Text style={st.ctaTxt}>Send a message</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setMatchedProfile(null)} testID="match-keep-swiping">
-              <Text style={st.later}>Keep swiping</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
     </View>
   );
 }
