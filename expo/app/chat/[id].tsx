@@ -1,14 +1,16 @@
 import React, { useState, useRef, useEffect } from "react";
-import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert } from "react-native";
+import { View, Text, StyleSheet, FlatList, TextInput, TouchableOpacity, KeyboardAvoidingView, Platform, Alert, ActivityIndicator } from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import { PhotoViewer } from "@/components/PhotoViewer";
 import { useLocalSearchParams, Stack, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
-import { Send, Video, MoreVertical } from "lucide-react-native";
+import { Send, Video, MoreVertical, ImagePlus } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { profiles as mockProfiles } from "@/mocks/profiles";
 import { useAllProfiles } from "@/lib/discoverProfiles";
-import { useChatMessages, sendChatMessage, markMessageRead, formatRelative, type ChatMessage } from "@/lib/chat";
+import { useChatMessages, sendChatMessage, sendChatPhoto, markMessageRead, formatRelative, type ChatMessage } from "@/lib/chat";
 import { auth } from "@/lib/firebase";
 import { blockUser } from "@/providers/BlockProvider";
 import { useActiveLabel } from "@/lib/presence";
@@ -33,6 +35,8 @@ export default function ChatScreen() {
   const pingTyping = useTypingPinger(matchId, me?.uid);
   const { matchIds } = useMyMatches();
   const [tx, setTx] = useState<string>("");
+  const [sendingPhoto, setSendingPhoto] = useState<boolean>(false);
+  const [viewerUrl, setViewerUrl] = useState<string | null>(null);
   const lr = useRef<FlatList<ChatMessage>>(null);
 
   // Mark unread incoming messages as read once we open the chat
@@ -61,8 +65,19 @@ export default function ChatScreen() {
             <Image source={{ uri: pr.photos[0] }} style={s.ma} contentFit="cover" />
           </TouchableOpacity>
         )}
-        <View style={[s.bb, mine ? s.mb2 : s.tb]}>
-          <Text style={[s.bt2, mine ? s.mbt : s.tbt]}>{item.text}</Text>
+        <View style={[s.bb, mine ? s.mb2 : s.tb, item.image && s.imgBubble]}>
+          {item.image ? (
+            <TouchableOpacity onPress={() => setViewerUrl(item.image!.url)} activeOpacity={0.85} testID={`msg-photo-${item.id}`}>
+              <Image
+                source={{ uri: item.image.url }}
+                style={[s.msgImg, { aspectRatio: Math.min(1.6, Math.max(0.6, item.image.width / item.image.height)) }]}
+                contentFit="cover"
+                transition={200}
+              />
+            </TouchableOpacity>
+          ) : (
+            <Text style={[s.bt2, mine ? s.mbt : s.tbt]}>{item.text}</Text>
+          )}
           <Text style={[s.tt, mine ? s.mtt : s.ttt]}>{formatRelative(item.createdAt)}</Text>
         </View>
       </View>
@@ -92,6 +107,40 @@ export default function ChatScreen() {
       Alert.alert("Couldn't send", res.error ?? "Please try again.");
       setTx(trimmed); // restore so user doesn't lose draft
     }
+  };
+
+  const pickAndSend = async (source: "camera" | "library") => {
+    if (!id || sendingPhoto) return;
+    try {
+      const perm = source === "camera"
+        ? await ImagePicker.requestCameraPermissionsAsync()
+        : await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (!perm.granted) {
+        Alert.alert("Permission needed", source === "camera" ? "Allow camera access to take a photo." : "Allow photo access to share a picture.");
+        return;
+      }
+      const opts: ImagePicker.ImagePickerOptions = { mediaTypes: ["images"], quality: 0.7, allowsEditing: false };
+      const res = source === "camera" ? await ImagePicker.launchCameraAsync(opts) : await ImagePicker.launchImageLibraryAsync(opts);
+      if (res.canceled || !res.assets?.[0]) return;
+      if (!consumeMessage()) return;
+      const a = res.assets[0];
+      setSendingPhoto(true);
+      const out = await sendChatPhoto(id, { uri: a.uri, width: a.width, height: a.height });
+      if (!out.ok) Alert.alert("Couldn't send photo", "Please check your connection and try again.");
+    } catch (e) {
+      console.log("[chat] photo error", e);
+      Alert.alert("Couldn't send photo", "Please try again.");
+    } finally {
+      setSendingPhoto(false);
+    }
+  };
+
+  const onAttach = () => {
+    Alert.alert("Send a photo", undefined, [
+      { text: "Take photo", onPress: () => { void pickAndSend("camera"); } },
+      { text: "Choose from library", onPress: () => { void pickAndSend("library"); } },
+      { text: "Cancel", style: "cancel" },
+    ]);
   };
 
   const onVideo = () => {
@@ -215,8 +264,8 @@ export default function ChatScreen() {
           />
         )}
         <View style={[s.ir, { paddingBottom: Math.max(ins.bottom, 12) + 24 }]}>
-          <TouchableOpacity style={s.videoBtn} onPress={onVideo} testID="video-btn">
-            <Video size={20} color={Colors.accent} />
+          <TouchableOpacity style={s.videoBtn} onPress={onAttach} disabled={sendingPhoto} testID="attach-photo-btn">
+            {sendingPhoto ? <ActivityIndicator size="small" color={Colors.accent} /> : <ImagePlus size={20} color={Colors.accent} />}
           </TouchableOpacity>
           <TextInput
             style={s.ip}
@@ -234,6 +283,7 @@ export default function ChatScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+      <PhotoViewer photos={viewerUrl ? [viewerUrl] : []} startIndex={0} visible={!!viewerUrl} onClose={() => setViewerUrl(null)} />
     </>
   );
 }
@@ -257,6 +307,8 @@ const s = StyleSheet.create({
   mb2: { backgroundColor: Colors.primary, borderBottomRightRadius: 4 },
   tb: { backgroundColor: Colors.surface, borderBottomLeftRadius: 4, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 },
   bt2: { fontSize: 15, lineHeight: 21 },
+  imgBubble: { paddingHorizontal: 4, paddingTop: 4, paddingBottom: 6 },
+  msgImg: { width: 220, borderRadius: 14, backgroundColor: Colors.surfaceAlt },
   mbt: { color: "#FFF" },
   tbt: { color: Colors.text },
   tt: { fontSize: 11, marginTop: 4 },

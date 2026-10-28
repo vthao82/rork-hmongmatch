@@ -16,6 +16,7 @@ import {
 } from "firebase/firestore";
 import { db, auth } from "@/lib/firebase";
 import { useMyMatches } from "@/lib/discoverProfiles";
+import { uploadPhotoAsync, newPhotoId } from "@/lib/photoUpload";
 
 /** Deterministic match id for two users (sorted, joined by `_`). */
 export function getMatchId(uidA: string, uidB: string): string {
@@ -28,6 +29,7 @@ export type ChatMessage = {
   text: string;
   createdAt: number | null; // ms timestamp, may be null while server resolves
   read: boolean;
+  image?: { url: string; width: number; height: number } | null;
 };
 
 function tsToMs(t: unknown): number | null {
@@ -46,6 +48,9 @@ function rowToMessage(id: string, row: DocumentData, myUid: string): ChatMessage
     text: (row.text as string) ?? "",
     createdAt: tsToMs(row.createdAt),
     read: readBy.includes(myUid),
+    image: typeof row.imageUrl === "string"
+      ? { url: row.imageUrl as string, width: Number(row.imageW) || 3, height: Number(row.imageH) || 4 }
+      : null,
   };
 }
 
@@ -120,6 +125,37 @@ export async function sendChatMessage(
   }
 }
 
+/** Upload a photo and send it as a chat message. */
+export async function sendChatPhoto(
+  otherUid: string,
+  photo: { uri: string; width: number; height: number }
+): Promise<{ ok: boolean; error?: string }> {
+  const me = auth.currentUser;
+  if (!me) return { ok: false, error: "Not signed in" };
+  try {
+    const matchId = getMatchId(me.uid, otherUid);
+    await setDoc(
+      doc(db, "matches", matchId),
+      { userIds: [me.uid, otherUid].sort(), lastMessageAt: serverTimestamp() },
+      { merge: true }
+    );
+    const url = await uploadPhotoAsync(me.uid, photo.uri, `chat-${matchId}-${newPhotoId()}`);
+    await addDoc(collection(db, "matches", matchId, "messages"), {
+      senderId: me.uid,
+      text: "",
+      imageUrl: url,
+      imageW: photo.width || 3,
+      imageH: photo.height || 4,
+      createdAt: serverTimestamp(),
+      readBy: [me.uid],
+    });
+    return { ok: true };
+  } catch (e) {
+    console.log("[sendChatPhoto] error", e);
+    return { ok: false, error: e instanceof Error ? e.message : "Send failed" };
+  }
+}
+
 /** Mark a message as read by the current user. Best-effort, non-blocking. */
 export async function markMessageRead(matchId: string, messageId: string): Promise<void> {
   const me = auth.currentUser;
@@ -189,7 +225,7 @@ export function useChatThreads(): { threads: ChatThread[]; loading: boolean } {
             const row = d.data();
             const msg = rowToMessage(d.id, row, me.uid);
             if (idx === 0) {
-              lastMessage = msg.text;
+              lastMessage = msg.image ? (msg.senderId === me.uid ? "You sent a photo" : "Sent a photo") : msg.text;
               lastMessageAt = msg.createdAt;
             }
             if (!msg.read && msg.senderId !== me.uid) unread++;

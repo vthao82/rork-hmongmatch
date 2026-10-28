@@ -234,6 +234,20 @@ async function main() {
   const after = (await getDocs(collection(m.db, "matches", matchId, "messages"))).size;
   ok("liking again re-matches and clears unmatch + celebration", again && (rm.unmatchedBy || []).length === 0 && (rm.celebratedBy || []).length === 0);
   ok("old messages come back after re-match", after === before && before > 0);
+  console.log("\n[13] Photo messages");
+  const pref = ref(m.st, `users/${m.uid}/photos/chat-${matchId}-test.jpg`);
+  await uploadBytes(pref, blob, { contentType: "image/jpeg" });
+  const purl = await getDownloadURL(pref);
+  let photoOk = true;
+  try { await addDoc(collection(m.db, "matches", matchId, "messages"), { senderId: m.uid, text: "", imageUrl: purl, imageW: 64, imageH: 64, createdAt: serverTimestamp(), readBy: [m.uid] }); } catch { photoOk = false; }
+  ok("photo message can be sent", photoOk);
+  const got = (await getDocs(collection(w.db, "matches", matchId, "messages"))).docs.find((d) => d.data().imageUrl === purl);
+  ok("recipient receives photo message", !!got);
+  const fetched = await fetch(purl);
+  ok("recipient can load the photo", fetched.status === 200);
+  ok("non-storage image links are rejected", await denied(addDoc(collection(m.db, "matches", matchId, "messages"), { senderId: m.uid, text: "", imageUrl: "https://evil.example.com/x.jpg", createdAt: serverTimestamp() })));
+  ok("empty message without photo is rejected", await denied(addDoc(collection(m.db, "matches", matchId, "messages"), { senderId: m.uid, text: "", createdAt: serverTimestamp() })));
+  await adminStorage().bucket().file(`users/${m.uid}/photos/chat-${matchId}-test.jpg`).delete().catch(() => {});
   ok("cannot write someone else's active status", await denied(setDoc(doc(w.db, "users", m.uid), { lastActiveAt: serverTimestamp() }, { merge: true })));
 
   unsubInbox(); unsubM(); unsubMsgs(); unsubW2();

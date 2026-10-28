@@ -98,8 +98,10 @@ service cloud.firestore {
                       && get(/databases/$(database)/documents/matches/$(matchId)).data.get('blockedBy', []).size() == 0
                       && get(/databases/$(database)/documents/matches/$(matchId)).data.get('unmatchedBy', []).size() == 0
                       && request.resource.data.text is string
-                      && request.resource.data.text.size() > 0
                       && request.resource.data.text.size() <= 2000
+                      && (request.resource.data.text.size() > 0
+                          || (request.resource.data.imageUrl is string
+                              && request.resource.data.imageUrl.matches('https://firebasestorage[.]googleapis[.]com/.*')))
                       && request.resource.data.senderId == request.auth.uid;
 
         // Participants can update messages — used for read receipts (arrayUnion on readBy).
