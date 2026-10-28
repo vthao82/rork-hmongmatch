@@ -7,6 +7,7 @@ import InAppNotificationBanner from "@/components/InAppNotificationBanner";
 import { useChatThreads } from "@/lib/chat";
 import MatchCelebration from "@/components/MatchCelebration";
 import { usePresenceHeartbeat } from "@/lib/presence";
+import { usePushRouting } from "@/lib/notifications";
 import { useAuth } from "@/providers/AuthProvider";
 import { useOnboarding } from "@/providers/OnboardingProvider";
 
@@ -15,6 +16,7 @@ export default function HmongDateTabLayout() {
   const { user } = useAuth();
   const { data: onb } = useOnboarding();
   usePresenceHeartbeat(user?.uid, onb.showActiveStatus !== false);
+  usePushRouting();
   // Number of chats (not messages) that have unread messages
   const unread = useMemo(
     () => threads.filter((t) => (t.unreadCount ?? 0) > 0).length,

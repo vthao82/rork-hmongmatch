@@ -52,8 +52,7 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
       setUser(u);
       setLoading(false);
       // Best-effort: save the device's push token to /users/{uid} so the
-      // Cloud Function can target this device. No-op until native module is
-      // wired — see lib/notifications.ts comment.
+      // Cloud Functions can target this device (asks permission the first time).
       if (u) {
         void syncPushToken();
         void identifyRevenueCatUser(u.uid);

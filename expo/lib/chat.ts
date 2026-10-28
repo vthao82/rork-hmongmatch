@@ -8,6 +8,7 @@ import {
   onSnapshot,
   addDoc,
   setDoc,
+  deleteField,
   serverTimestamp,
   updateDoc,
   arrayUnion,
@@ -30,6 +31,7 @@ export type ChatMessage = {
   createdAt: number | null; // ms timestamp, may be null while server resolves
   read: boolean;
   image?: { url: string; width: number; height: number } | null;
+  reactions: Record<string, string>;
 };
 
 function tsToMs(t: unknown): number | null {
@@ -51,6 +53,7 @@ function rowToMessage(id: string, row: DocumentData, myUid: string): ChatMessage
     image: typeof row.imageUrl === "string"
       ? { url: row.imageUrl as string, width: Number(row.imageW) || 3, height: Number(row.imageH) || 4 }
       : null,
+    reactions: row.reactions && typeof row.reactions === "object" ? (row.reactions as Record<string, string>) : {},
   };
 }
 
@@ -154,6 +157,16 @@ export async function sendChatPhoto(
     console.log("[sendChatPhoto] error", e);
     return { ok: false, error: e instanceof Error ? e.message : "Send failed" };
   }
+}
+
+export const REACTIONS = ["❤️", "😂", "😮", "😢", "👍", "🔥"];
+
+/** Set (or clear with null) my reaction on a message. */
+export async function setMessageReaction(otherUid: string, messageId: string, emoji: string | null): Promise<void> {
+  const me = auth.currentUser;
+  if (!me) return;
+  const ref = doc(db, "matches", getMatchId(me.uid, otherUid), "messages", messageId);
+  await updateDoc(ref, { [`reactions.${me.uid}`]: emoji ?? deleteField() }).catch((e) => console.log("[reaction] error", e));
 }
 
 /** Mark a message as read by the current user. Best-effort, non-blocking. */

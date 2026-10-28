@@ -7,7 +7,7 @@ import { initializeApp } from "firebase/app";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import {
   getFirestore, doc, setDoc, getDoc, getDocs, collection, query, where, onSnapshot,
-  addDoc, updateDoc, arrayUnion, arrayRemove, serverTimestamp, orderBy, deleteDoc,
+  addDoc, updateDoc, arrayUnion, arrayRemove, serverTimestamp, orderBy, deleteDoc, deleteField,
 } from "firebase/firestore";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { readFileSync } from "node:fs";
@@ -256,6 +256,20 @@ async function main() {
   ok("cannot fake someone else's read receipt", await denied(setDoc(doc(m.db, "matches", matchId, "reads", w.uid), { at: serverTimestamp() })));
   ok("outsider cannot see read receipts", await denied(getDoc(doc(e.db, "matches", matchId, "reads", w.uid))));
   unsubR();
+  console.log("\n[16] Message reactions");
+  const msgs16 = await getDocs(collection(m.db, "matches", matchId, "messages"));
+  const target16 = msgs16.docs.find((d) => d.data().senderId === m.uid);
+  let rOk = true;
+  try { await updateDoc(doc(w.db, "matches", matchId, "messages", target16.id), { [`reactions.${w.uid}`]: "\u2764\ufe0f" }); } catch { rOk = false; }
+  ok("recipient can react to a message", rOk);
+  const r16 = (await getDoc(doc(m.db, "matches", matchId, "messages", target16.id))).data();
+  ok("sender sees the reaction", r16.reactions?.[w.uid] === "\u2764\ufe0f");
+  ok("cannot set someone else's reaction", await denied(updateDoc(doc(m.db, "matches", matchId, "messages", target16.id), { [`reactions.${w.uid}`]: "x" })));
+  ok("cannot edit message text", await denied(updateDoc(doc(w.db, "matches", matchId, "messages", target16.id), { text: "edited" })));
+  let rmOk = true;
+  try { await updateDoc(doc(w.db, "matches", matchId, "messages", target16.id), { [`reactions.${w.uid}`]: deleteField() }); } catch { rmOk = false; }
+  ok("reaction can be removed", rmOk);
+
   console.log("\n[13] Photo messages");
   const pref = ref(m.st, `users/${m.uid}/photos/chat-${matchId}-test.jpg`);
   await uploadBytes(pref, blob, { contentType: "image/jpeg" });

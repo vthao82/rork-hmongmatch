@@ -10,7 +10,9 @@ import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
 import { profiles as mockProfiles } from "@/mocks/profiles";
 import { useAllProfiles } from "@/lib/discoverProfiles";
-import { useChatMessages, sendChatMessage, sendChatPhoto, markMessageRead, formatRelative, type ChatMessage } from "@/lib/chat";
+import { useChatMessages, sendChatMessage, sendChatPhoto, markMessageRead, formatRelative, setMessageReaction, REACTIONS, type ChatMessage } from "@/lib/chat";
+import { setActiveChat } from "@/lib/notifications";
+import { Modal, Pressable } from "react-native";
 import { auth } from "@/lib/firebase";
 import { blockUser } from "@/providers/BlockProvider";
 import { useActiveLabel } from "@/lib/presence";
@@ -41,6 +43,21 @@ export default function ChatScreen() {
   const [tx, setTx] = useState<string>("");
   const [sendingPhoto, setSendingPhoto] = useState<boolean>(false);
   const [viewerUrl, setViewerUrl] = useState<string | null>(null);
+  const [reactFor, setReactFor] = useState<ChatMessage | null>(null);
+
+  // Skip push banners for this chat while it's open
+  useEffect(() => {
+    setActiveChat(id ?? null);
+    return () => setActiveChat(null);
+  }, [id]);
+
+  const react = (emoji: string) => {
+    if (!reactFor || !id) return;
+    const mineNow = reactFor.reactions[myUidRef.current] === emoji;
+    void setMessageReaction(id, reactFor.id, mineNow ? null : emoji);
+    Haptics.selectionAsync().catch(() => {});
+    setReactFor(null);
+  };
   const lr = useRef<FlatList<ChatMessage>>(null);
 
   // Mark unread incoming messages as read once we open the chat
@@ -63,6 +80,8 @@ export default function ChatScreen() {
   }, [messages.length]);
 
   const myUid = me?.uid ?? "";
+  const myUidRef = useRef<string>(myUid);
+  myUidRef.current = myUid;
   const openProfile = () => { if (id) router.push(`/user/${id}`); };
 
   const lastMine = [...messages].reverse().find((m) => m.senderId === myUid);
@@ -80,7 +99,12 @@ export default function ChatScreen() {
             <Image source={{ uri: pr.photos[0] }} style={s.ma} contentFit="cover" />
           </TouchableOpacity>
         )}
-        <View style={[s.bb, mine ? s.mb2 : s.tb, item.image && s.imgBubble]}>
+        <Pressable
+          onLongPress={() => { Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {}); setReactFor(item); }}
+          delayLongPress={300}
+          style={[s.bb, mine ? s.mb2 : s.tb, item.image && s.imgBubble]}
+          testID={`msg-bubble-${item.id}`}
+        >
           {item.image ? (
             <TouchableOpacity onPress={() => setViewerUrl(item.image!.url)} activeOpacity={0.85} testID={`msg-photo-${item.id}`}>
               <Image
@@ -94,7 +118,15 @@ export default function ChatScreen() {
             <Text style={[s.bt2, mine ? s.mbt : s.tbt]}>{item.text}</Text>
           )}
           <Text style={[s.tt, mine ? s.mtt : s.ttt]}>{formatRelative(item.createdAt)}</Text>
-        </View>
+          {Object.keys(item.reactions).length > 0 && (
+            <View style={[s.rxPill, mine ? s.rxMine : s.rxTheirs]} testID={`msg-reactions-${item.id}`}>
+              <Text style={s.rxTxt}>
+                {Array.from(new Set(Object.values(item.reactions))).join(" ")}
+                {Object.keys(item.reactions).length > 1 ? ` ${Object.keys(item.reactions).length}` : ""}
+              </Text>
+            </View>
+          )}
+        </Pressable>
         {showSeen && <Text style={s.seen} testID="msg-seen">{seenLabel}</Text>}
       </View>
     );
@@ -299,6 +331,21 @@ export default function ChatScreen() {
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+      <Modal visible={!!reactFor} transparent animationType="fade" onRequestClose={() => setReactFor(null)}>
+        <Pressable style={s.rxBackdrop} onPress={() => setReactFor(null)} testID="reaction-backdrop">
+          <View style={s.rxBar}>
+            {REACTIONS.map((e) => {
+              const picked = reactFor?.reactions[myUid] === e;
+              return (
+                <TouchableOpacity key={e} onPress={() => react(e)} style={[s.rxBtn, picked && s.rxPicked]} testID={`reaction-${REACTIONS.indexOf(e)}`}>
+                  <Text style={s.rxEmoji}>{e}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+          <Text style={s.rxHint}>Tap your reaction again to remove it</Text>
+        </Pressable>
+      </Modal>
       <PhotoViewer photos={viewerUrl ? [viewerUrl] : []} startIndex={0} visible={!!viewerUrl} onClose={() => setViewerUrl(null)} />
     </>
   );
@@ -315,7 +362,7 @@ const s = StyleSheet.create({
   htitle: { fontSize: 17, fontWeight: "700" as const, color: Colors.text },
   hsub: { fontSize: 12, color: Colors.textSecondary, marginTop: 1 },
   ml: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
-  mr: { flexDirection: "row", flexWrap: "wrap", marginBottom: 12, alignItems: "flex-end", gap: 8 },
+  mr: { flexDirection: "row", flexWrap: "wrap", marginBottom: 16, alignItems: "flex-end", gap: 8 },
   seen: { width: "100%", textAlign: "right" as const, fontSize: 11, color: Colors.textTertiary, marginTop: -4 },
   my: { justifyContent: "flex-end" },
   th: { justifyContent: "flex-start" },
@@ -324,6 +371,16 @@ const s = StyleSheet.create({
   mb2: { backgroundColor: Colors.primary, borderBottomRightRadius: 4 },
   tb: { backgroundColor: Colors.surface, borderBottomLeftRadius: 4, shadowColor: "#000", shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 1 },
   bt2: { fontSize: 15, lineHeight: 21 },
+  rxPill: { position: "absolute", bottom: -12, backgroundColor: Colors.surface, borderRadius: 999, paddingHorizontal: 6, paddingVertical: 2, borderWidth: 1, borderColor: Colors.borderLight },
+  rxMine: { left: -6 },
+  rxTheirs: { right: -6 },
+  rxTxt: { fontSize: 13, color: Colors.text },
+  rxBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.35)", alignItems: "center", justifyContent: "center" },
+  rxBar: { flexDirection: "row", backgroundColor: Colors.surface, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 6, gap: 4 },
+  rxBtn: { width: 46, height: 46, borderRadius: 23, alignItems: "center", justifyContent: "center" },
+  rxPicked: { backgroundColor: Colors.surfaceAlt },
+  rxEmoji: { fontSize: 28 },
+  rxHint: { color: "#FFF", fontSize: 12, marginTop: 10 },
   imgBubble: { paddingHorizontal: 4, paddingTop: 4, paddingBottom: 6 },
   msgImg: { width: 220, borderRadius: 14, backgroundColor: Colors.surfaceAlt },
   mbt: { color: "#FFF" },

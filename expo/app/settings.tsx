@@ -9,6 +9,7 @@ import { useTier } from "@/providers/TierProvider";
 import { useT } from "@/providers/LanguageProvider";
 import { useOnboarding } from "@/providers/OnboardingProvider";
 import { useAuth } from "@/providers/AuthProvider";
+import { loadPushPrefs, savePushPrefs, syncPushToken, DEFAULT_PUSH_PREFS, type PushPrefs } from "@/lib/notifications";
 import { deleteMyAccount } from "@/lib/deleteAccount";
 
 /** Legal pages hosted on our custom domain — update if the domain ever changes. */
@@ -180,9 +181,16 @@ export default function SettingsScreen() {
   });
   const [savedToast, setSavedToast] = useState<boolean>(false);
 
-  const [notifs, setNotifs] = useState<{ push: boolean; matches: boolean; messages: boolean; likes: boolean; promos: boolean }>({
-    push: true, matches: true, messages: true, likes: true, promos: false,
-  });
+  const [notifs, setNotifs] = useState<PushPrefs>(DEFAULT_PUSH_PREFS);
+  useEffect(() => { loadPushPrefs().then(setNotifs); }, []);
+  const changeNotif = (k: keyof PushPrefs, v: boolean) => {
+    setNotifs((p) => {
+      const next = { ...p, [k]: v };
+      void savePushPrefs(next);
+      return next;
+    });
+    if (k === "push" && v) void syncPushToken();
+  };
 
   const [picker, setPicker] = useState<PickerConfig | null>(null);
   const [locOpen, setLocOpen] = useState<boolean>(false);
@@ -401,7 +409,7 @@ export default function SettingsScreen() {
             <View key={r.k} style={s.card}>
               <View style={s.rowToggle}>
                 <Text style={s.rowLabel}>{r.label}</Text>
-                <Toggle value={(notifs as Record<string, boolean>)[r.k]} onChange={v => setNotifs(p => ({ ...p, [r.k]: v }))} />
+                <Toggle value={notifs[r.k as keyof PushPrefs]} onChange={v => changeNotif(r.k as keyof PushPrefs, v)} testID={`notif-${r.k}-toggle`} />
               </View>
             </View>
           ))}

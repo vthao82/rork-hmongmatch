@@ -120,10 +120,11 @@ service cloud.firestore {
                               && request.resource.data.imageUrl.matches('https://firebasestorage[.]googleapis[.]com/.*')))
                       && request.resource.data.senderId == request.auth.uid;
 
-        // Participants can update messages — used for read receipts (arrayUnion on readBy).
-        // We don't restrict the diff here to keep things simple; messages aren't editable
-        // from the UI anyway.
-        allow update: if isMatchParticipant(matchId);
+        // Participants may only update readBy and their own reaction (message text is never editable)
+        allow update: if isMatchParticipant(matchId)
+                      && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['readBy', 'reactions'])
+                      && request.resource.data.get('reactions', {}).diff(resource.data.get('reactions', {})).affectedKeys().hasOnly([request.auth.uid])
+                      && request.resource.data.get('readBy', []).toSet().difference(resource.data.get('readBy', []).toSet()).hasOnly([request.auth.uid]);
 
         // No deletes from clients
         allow delete: if false;

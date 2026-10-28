@@ -4,3 +4,5 @@ node_modules
 .rork
 service-account.json
 expo/scripts/service-account.json
+functions/lib
+functions/yarn-error.log
