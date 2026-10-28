@@ -111,6 +111,7 @@ export async function syncProfile(
     const existing = await getDoc(ref);
     const payload: Record<string, unknown> = {
       ...row,
+      onboardingComplete: true,
       updatedAt: serverTimestamp(),
     };
     // Never downgrade a verification saved directly by the selfie screen.

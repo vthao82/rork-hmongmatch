@@ -8,6 +8,7 @@ import Colors from "@/constants/colors";
 import { useTier } from "@/providers/TierProvider";
 import { useT } from "@/providers/LanguageProvider";
 import { useOnboarding } from "@/providers/OnboardingProvider";
+import { useAuth } from "@/providers/AuthProvider";
 import { deleteMyAccount } from "@/lib/deleteAccount";
 
 /** Legal pages hosted on our custom domain — update if the domain ever changes. */
@@ -160,7 +161,12 @@ export default function SettingsScreen() {
   const [distance, setDistance] = useState<number>(50);
   const [showFurther, setShowFurther] = useState<boolean>(true);
   const [discovery, setDiscovery] = useState<boolean>(true);
-  const { data: onb } = useOnboarding();
+  const { data: onb, reset: resetOnboarding } = useOnboarding();
+  const { signOut, user: authUser } = useAuth();
+  const logOut = async () => {
+    await signOut();
+    router.replace("/(auth)/login" as never);
+  };
   const [photoVerifiedChat, setPhotoVerifiedChat] = useState<boolean>(!!onb.photoVerified);
   // Keep local state in sync if OnboardingProvider hydrates later
   useEffect(() => { setPhotoVerifiedChat(!!onb.photoVerified); }, [onb.photoVerified]);
@@ -389,7 +395,7 @@ export default function SettingsScreen() {
           <Row label={t("reportProblem")} onPress={() => router.push("/report")} testID="report-row" />
           <TouchableOpacity style={s.row} onPress={() => Alert.alert(t("logout"), t("logoutConfirm"), [
             { text: t("cancel"), style: "cancel" },
-            { text: t("logout"), style: "destructive", onPress: () => router.replace("/(auth)/login" as never) },
+            { text: t("logout"), style: "destructive", onPress: () => { void logOut(); } },
           ])} testID="logout-row">
             <Text style={[s.rowLabel, { color: Colors.primary }]}>{t("logout")}</Text>
           </TouchableOpacity>
@@ -426,8 +432,10 @@ export default function SettingsScreen() {
                     text: "Delete forever",
                     style: "destructive",
                     onPress: async () => {
+                      const deletedUid = authUser?.uid ?? null;
                       const res = await deleteMyAccount();
                       if (res.ok) {
+                        await resetOnboarding(deletedUid);
                         Alert.alert("Account deleted", "Your account and data have been permanently removed.", [
                           { text: "OK", onPress: () => router.replace("/(auth)/login" as never) },
                         ]);
@@ -437,7 +445,7 @@ export default function SettingsScreen() {
                         Alert.alert(
                           "Please sign in again",
                           "For your security, we need you to sign in again before deleting your account. You'll be logged out now — sign back in and try again.",
-                          [{ text: "OK", onPress: () => router.replace("/(auth)/login" as never) }]
+                          [{ text: "OK", onPress: () => { void logOut(); } }]
                         );
                         return;
                       }

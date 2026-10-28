@@ -56,7 +56,7 @@ async function cleanup() {
   const db = adminDb();
   const uids = Object.values(C).map((c) => c.uid);
   for (const uid of uids) {
-    for (const sub of ["swipes", "likesReceived"]) {
+    for (const sub of ["swipes", "likesReceived", "private"]) {
       const s = await db.collection(`users/${uid}/${sub}`).get();
       for (const d of s.docs) await d.ref.delete();
     }
@@ -147,7 +147,7 @@ async function main() {
   const unsubMsgs = onSnapshot(query(collection(w.db, "matches", matchId, "messages"), orderBy("createdAt", "asc")), (s) => { wMsgs = s.docs.map((d) => ({ id: d.id, ...d.data() })); }, (err) => console.log("recipient listener error", err.code));
   await setDoc(doc(m.db, "matches", matchId), { userIds: [m.uid, w.uid].sort(), lastMessageAt: serverTimestamp() }, { merge: true });
   await addDoc(collection(m.db, "matches", matchId, "messages"), { senderId: m.uid, text: "Hi there!", createdAt: serverTimestamp(), readBy: [m.uid] });
-  await wait(2500);
+  for (let i = 0; i < 20 && !wMsgs.some((x) => x.text === "Hi there!"); i++) await wait(500);
   ok("recipient receives message live", wMsgs.some((x) => x.text === "Hi there!"));
   if (wMsgs[0]) await updateDoc(doc(w.db, "matches", matchId, "messages", wMsgs[0].id), { readBy: arrayUnion(w.uid) });
   await addDoc(collection(w.db, "matches", matchId, "messages"), { senderId: w.uid, text: "Hello back", createdAt: serverTimestamp(), readBy: [w.uid] });
@@ -169,6 +169,16 @@ async function main() {
   await recordSwipe(m, w2, false);
   const w2Inbox = await getDocs(collection(w2.db, "users", w2.uid, "likesReceived"));
   ok("passed user no longer in Likes You", !w2Inbox.docs.some((d) => d.id === m.uid));
+
+  console.log("\n[8] Unfinished sign-up draft (resume where left off)");
+  const draftRef = (c, owner) => doc(c.db, "users", owner.uid, "private", "onboarding");
+  await setDoc(draftRef(e, e), { data: { name: "Draft", resumeStep: "hometown" }, updatedAt: serverTimestamp() });
+  const back = await getDoc(draftRef(e, e));
+  ok("owner can save + read sign-up draft", back.exists() && back.data().data.resumeStep === "hometown");
+  ok("other users cannot read the draft", await denied(getDoc(draftRef(m, e))));
+  ok("other users cannot overwrite the draft", await denied(setDoc(draftRef(m, e), { data: {} })));
+  await deleteDoc(draftRef(e, e));
+  ok("owner can delete draft after finishing", !(await getDoc(draftRef(e, e))).exists());
 
   unsubInbox(); unsubM(); unsubMsgs(); unsubW2();
 }

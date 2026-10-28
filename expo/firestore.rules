@@ -44,6 +44,11 @@ service cloud.firestore {
       }
     }
 
+    // Private owner-only docs (e.g. unfinished sign-up draft)
+    match /users/{uid}/private/{docId} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
     // Inbox of likes I've received — I can read it, only the liker can write their own entry
     match /users/{uid}/likesReceived/{likerUid} {
       allow read: if request.auth != null && request.auth.uid == uid;

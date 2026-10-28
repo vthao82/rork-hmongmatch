@@ -11,6 +11,7 @@ import PillButton from "@/components/onboarding/PillButton";
 import HmongLogo from "@/components/onboarding/HmongLogo";
 import BackButton from "@/components/onboarding/BackButton";
 import { useOnboarding } from "@/providers/OnboardingProvider";
+import { ENROLLMENT_STEPS } from "@/constants/enrollment";
 import { useT } from "@/providers/LanguageProvider";
 import { useAuth } from "@/providers/AuthProvider";
 
@@ -32,7 +33,7 @@ function GoogleG() {
 }
 
 export default function LoginScreen() {
-  const { update } = useOnboarding();
+  const { update, data: onb, hydrated, completed } = useOnboarding();
   const { signInWithGoogle, signInWithEmail, signUpWithEmail, resendVerificationEmail, user, emailVerified, reloadUser, signOut } = useAuth();
   const t = useT();
   const [busy, setBusy] = useState<boolean>(false);
@@ -62,8 +63,15 @@ export default function LoginScreen() {
       if (!emailSent && user.email) setEmailSent(user.email);
       return;
     }
-    router.replace("/(auth)/terms");
-  }, [user, emailVerified, emailSent]);
+    // Wait until this user's saved profile / sign-up progress has loaded
+    if (!hydrated) return;
+    if (completed) {
+      router.replace("/discover");
+      return;
+    }
+    const step = onb.resumeStep && ENROLLMENT_STEPS.includes(onb.resumeStep) ? onb.resumeStep : "terms";
+    router.replace(`/(auth)/${step}` as never);
+  }, [user, emailVerified, emailSent, hydrated, completed, onb.resumeStep]);
 
   // While on the "Check your email" screen, poll Firebase every 3s for verification status.
   useEffect(() => {
