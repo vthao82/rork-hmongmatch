@@ -149,7 +149,6 @@ export default function UserProfileScreen() {
       <ScrollView style={s.ct} showsVerticalScrollIndicator={false}>
         <View style={s.ph}>
           <PhotoCarousel key={p.id} photos={p.photos} height={400} />
-          <View style={s.po} pointerEvents="none" />
           <View style={s.pf} pointerEvents="none">
             <View style={s.nr}>
               <Text style={s.nm}>{p.name}{p.age ? `, ${p.age}` : ""}</Text>
@@ -227,11 +226,10 @@ const s = StyleSheet.create({
   cen: { flex: 1, justifyContent: "center" as const, alignItems: "center" as const, backgroundColor: Colors.background },
   err: { fontSize: 16, color: Colors.textSecondary },
   ph: { height: 400, position: "relative" as const },
-  po: { position: "absolute" as const, bottom: 0, left: 0, right: 0, height: "40%", backgroundColor: "rgba(0,0,0,0.3)" },
   pf: { position: "absolute" as const, bottom: 20, left: 20, right: 20 },
   nr: { flexDirection: "row" as const, alignItems: "center" as const, gap: 8 },
-  nm: { fontSize: 30, fontWeight: "700" as const, color: "#FFF" },
-  cl: { fontSize: 16, fontWeight: "600" as const, color: Colors.accentLight, marginTop: 4 },
+  nm: { fontSize: 30, fontWeight: "700" as const, color: "#FFF", textShadowColor: "rgba(0,0,0,0.75)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },
+  cl: { fontSize: 16, fontWeight: "600" as const, color: Colors.accentLight, marginTop: 4, textShadowColor: "rgba(0,0,0,0.75)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },
   cn: { paddingHorizontal: 20, paddingTop: 16 },
   ab: { flexDirection: "row" as const, justifyContent: "center" as const, alignItems: "center" as const, gap: 16, marginBottom: 24 },
   pb: { width: 52, height: 52, borderRadius: 26, backgroundColor: "#FFF", justifyContent: "center" as const, alignItems: "center" as const },

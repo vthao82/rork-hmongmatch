@@ -42,12 +42,17 @@ export default function ChatScreen() {
   }, [messages.length]);
 
   const myUid = me?.uid ?? "";
+  const openProfile = () => { if (id) router.push(`/user/${id}`); };
 
   const renderMsg = ({ item }: { item: ChatMessage }) => {
     const mine = item.senderId === myUid;
     return (
       <View style={[s.mr, mine ? s.my : s.th]}>
-        {!mine && pr && <Image source={{ uri: pr.photos[0] }} style={s.ma} contentFit="cover" />}
+        {!mine && pr && (
+          <TouchableOpacity onPress={openProfile} testID={`msg-avatar-${item.id}`}>
+            <Image source={{ uri: pr.photos[0] }} style={s.ma} contentFit="cover" />
+          </TouchableOpacity>
+        )}
         <View style={[s.bb, mine ? s.mb2 : s.tb]}>
           <Text style={[s.bt2, mine ? s.mbt : s.tbt]}>{item.text}</Text>
           <Text style={[s.tt, mine ? s.mtt : s.ttt]}>{formatRelative(item.createdAt)}</Text>
@@ -132,6 +137,11 @@ export default function ChatScreen() {
     <>
       <Stack.Screen options={{
         title: pr.name,
+        headerTitle: () => (
+          <TouchableOpacity onPress={openProfile} testID="header-name">
+            <Text style={s.htitle} numberOfLines={1}>{pr.name}</Text>
+          </TouchableOpacity>
+        ),
         headerRight: () => (
           <View style={s.headerRight}>
             <TouchableOpacity onPress={onVideo} style={s.headerVideo} testID="header-video">
@@ -140,15 +150,19 @@ export default function ChatScreen() {
             <TouchableOpacity onPress={openSafetyMenu} style={s.headerVideo} testID="header-safety">
               <MoreVertical size={20} color={Colors.text} />
             </TouchableOpacity>
-            <Image source={{ uri: pr.photos[0] }} style={s.ha} contentFit="cover" />
+            <TouchableOpacity onPress={openProfile} testID="header-avatar" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Image source={{ uri: pr.photos[0] }} style={s.ha} contentFit="cover" />
+            </TouchableOpacity>
           </View>
         )
       }} />
       <KeyboardAvoidingView style={s.ct} behavior={Platform.OS === "ios" ? "padding" : "height"} keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}>
         {messages.length === 0 ? (
           <View style={s.ec}>
-            <Image source={{ uri: pr.photos[0] }} style={s.ea} contentFit="cover" />
-            <Text style={s.en}>{pr.name}</Text>
+            <TouchableOpacity onPress={openProfile} testID="empty-avatar" style={{ alignItems: "center" }}>
+              <Image source={{ uri: pr.photos[0] }} style={s.ea} contentFit="cover" />
+              <Text style={s.en}>{pr.name}</Text>
+            </TouchableOpacity>
             <Text style={s.ecl}>{pr.clan} Clan</Text>
             <Text style={s.eh}>{t("sayHello")}</Text>
           </View>
@@ -196,6 +210,7 @@ const s = StyleSheet.create({
   headerVideo: { width: 34, height: 34, borderRadius: 17, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.04)" },
   lockOverlay: { position: "absolute", bottom: 4, right: 4 },
   ha: { width: 32, height: 32, borderRadius: 16 },
+  htitle: { fontSize: 17, fontWeight: "700" as const, color: Colors.text },
   ml: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
   mr: { flexDirection: "row", marginBottom: 12, alignItems: "flex-end", gap: 8 },
   my: { justifyContent: "flex-end" },

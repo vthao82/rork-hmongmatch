@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Pressable } from "react-native";
 import { Stack, useRouter } from "expo-router";
-import { LinearGradient } from "expo-linear-gradient";
 import { PhotoCarousel } from "@/components/PhotoCarousel";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MapPin, Globe, Heart, MessageCircle, X, ChevronUp, ChevronDown } from "lucide-react-native";
@@ -110,12 +109,6 @@ export default function ProfileStackScreen() {
       <ScrollView style={s.ct} contentContainerStyle={{ paddingBottom: 80 }} showsVerticalScrollIndicator={false}>
         <View style={s.ph}>
           <PhotoCarousel key={profile.id} photos={profile.photos} height={460} counterTop={ins.top + 12} />
-          {/* Subtle bottom-only gradient so the name/clan text stays readable on bright photos */}
-          <LinearGradient
-            colors={["transparent", "rgba(0,0,0,0.55)"]}
-            style={s.po}
-            pointerEvents="none"
-          />
           <View style={[s.counterWrap, { top: ins.top + 12 }]} pointerEvents="none" testID="profile-position">
             <View style={s.counter}><Text style={s.counterTxt}>Profile {idx + 1} of {total}</Text></View>
           </View>
@@ -188,14 +181,13 @@ const s = StyleSheet.create({
   cen: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: Colors.background, padding: 20 },
   err: { fontSize: 16, color: Colors.textSecondary, textAlign: "center" as const },
   ph: { height: 460, position: "relative", backgroundColor: "#1f1419" },
-  po: { position: "absolute", bottom: 0, left: 0, right: 0, height: "40%" },
   counterWrap: { position: "absolute", left: 0, right: 0, alignItems: "center" },
   counter: { backgroundColor: "rgba(0,0,0,0.55)", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999 },
   counterTxt: { color: "#FFF", fontSize: 12, fontWeight: "700" as const },
   pf: { position: "absolute", bottom: 24, left: 20, right: 20 },
   nr: { flexDirection: "row", alignItems: "center", gap: 8 },
-  nm: { fontSize: 30, fontWeight: "800" as const, color: "#FFF" },
-  cl: { fontSize: 16, fontWeight: "600" as const, color: Colors.accentLight, marginTop: 4 },
+  nm: { fontSize: 30, fontWeight: "800" as const, color: "#FFF", textShadowColor: "rgba(0,0,0,0.75)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },
+  cl: { fontSize: 16, fontWeight: "600" as const, color: Colors.accentLight, marginTop: 4, textShadowColor: "rgba(0,0,0,0.75)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },
   closeWrap: { position: "absolute", left: 16, zIndex: 10 },
   closeBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: "rgba(0,0,0,0.55)", justifyContent: "center", alignItems: "center" },
   actions: { flexDirection: "row", alignItems: "center", justifyContent: "space-around", paddingVertical: 14, backgroundColor: Colors.surface, marginTop: -22, marginHorizontal: 16, borderRadius: 18, shadowColor: "#000", shadowOpacity: 0.1, shadowOffset: { width: 0, height: 4 }, shadowRadius: 12, elevation: 4 },

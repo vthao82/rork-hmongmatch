@@ -120,14 +120,14 @@ export default function ChatTab() {
           contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 24 }}
           renderItem={({ item }) => (
             <TouchableOpacity style={s.row} onPress={() => router.push(`/chat/${item.otherUid}`)} testID={`conv-${item.otherUid}`} activeOpacity={0.75}>
-              <View style={{ position: "relative" }}>
+              <TouchableOpacity style={{ position: "relative" }} onPress={() => router.push(`/user/${item.otherUid}`)} testID={`conv-avatar-${item.otherUid}`}>
                 {item.photo ? (
                   <Image source={{ uri: item.photo }} style={s.avatar} contentFit="cover" />
                 ) : (
                   <View style={s.avatar} />
                 )}
                 {item.isOnline && <View style={s.onlineDot} />}
-              </View>
+              </TouchableOpacity>
               <View style={{ flex: 1 }}>
                 <View style={s.rowTop}>
                   <View style={s.nameRow}>
