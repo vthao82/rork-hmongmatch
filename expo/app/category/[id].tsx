@@ -12,17 +12,11 @@ import { useTier } from "@/providers/TierProvider";
 import { useT } from "@/providers/LanguageProvider";
 import { setProfileStack } from "@/lib/profileStackStore";
 import { auth } from "@/lib/firebase";
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { spendCategoryView, useCategoryViewsLeft, CATEGORY_FREE_DAILY_CAP } from "@/lib/categoryViews";
 import { CATEGORY_GROUPS } from "@/constants/categories";
 
 const SW = Dimensions.get("window").width;
 const CW = (SW - 16 * 2 - 12) / 2;
-const CATEGORY_FREE_DAILY_CAP = 10;
-const CAP_STORAGE_KEY = "hmongdate.category.viewed.v1";
-
-function todayCentral(): string {
-  return new Intl.DateTimeFormat("en-US", { timeZone: "America/Chicago", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
-}
 
 const CATEGORY_MAP: Record<string, { match: (p: Profile) => boolean; subtitle: string }> = {
   "Foodies": { match: p => p.interests.some(i => /food|cook|pho|bbq/i.test(i)), subtitle: "People who love great food" },
@@ -106,21 +100,7 @@ export default function CategoryScreen() {
   const { data, update } = useOnboarding();
   const { byId: liveById } = useAllProfiles();
   const { isPaid } = useTier();
-  const [viewedToday, setViewedToday] = useState<number>(0);
-
-  useEffect(() => {
-    (async () => {
-      try {
-        const raw = await AsyncStorage.getItem(CAP_STORAGE_KEY);
-        if (raw) {
-          const parsed = JSON.parse(raw) as { date: string; count: number };
-          if (parsed.date === todayCentral()) setViewedToday(parsed.count);
-        }
-      } catch (_e) { /* non-fatal */ }
-    })();
-  }, []);
-
-  const remaining = isPaid ? Infinity : Math.max(0, CATEGORY_FREE_DAILY_CAP - viewedToday);
+  const remaining = useCategoryViewsLeft(isPaid);
   // Determine whether the current user belongs to this category based on
   // their stored enrollment data (clan, dialect, education, work, state,
   // religion, lookingFor, interests). This is what makes them appear in
@@ -246,17 +226,12 @@ export default function CategoryScreen() {
                 key={p.id}
                 style={[s.card, { width: CW }]}
                 activeOpacity={0.85}
-                onPress={async () => {
-                  if (!isPaid && remaining <= 0) {
+                onPress={() => {
+                  if (!spendCategoryView(p.id, isPaid)) {
                     router.push("/subscription");
                     return;
                   }
-                  if (!isPaid) {
-                    const next = viewedToday + 1;
-                    setViewedToday(next);
-                    try { await AsyncStorage.setItem(CAP_STORAGE_KEY, JSON.stringify({ date: todayCentral(), count: next })); } catch (_e) {}
-                  }
-                  setProfileStack(filtered.map((x) => x.id), i, title);
+                  setProfileStack(filtered.map((x) => x.id), i, title, "category");
                   router.push("/profile-stack");
                 }}
                 testID={`cat-profile-${p.id}`}

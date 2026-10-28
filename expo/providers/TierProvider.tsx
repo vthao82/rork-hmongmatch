@@ -286,15 +286,16 @@ export const [TierProvider, useTier] = createContextHook(() => {
     return true;
   }, [usage, persistUsage]);
 
-  const consumeRewind = useCallback((): boolean => {
+  /** `silent` skips the Discover limit pop-ups (caller shows its own message). */
+  const consumeRewind = useCallback((silent?: boolean): boolean => {
     if (!isPaid && usage.rewinds >= FREE_LIMITS.rewinds) {
-      setShowLimitModal(true);
+      if (!silent) setShowLimitModal(true);
       return false;
     }
     const next: Usage = { ...usage, rewinds: usage.rewinds + 1 };
     setUsage(next);
     persistUsage(next);
-    checkAndPrompt(next);
+    if (!silent) checkAndPrompt(next);
     return true;
   }, [isPaid, usage, persistUsage, checkAndPrompt]);
 

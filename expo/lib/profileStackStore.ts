@@ -15,13 +15,15 @@ type Stack = {
   startIndex: number;
   /** Optional title for the screen ("Likes You" / "Top Picks" / "Christian"). */
   title?: string;
+  /** "category" = opened from the Interests tab (free members spend daily views). */
+  source?: "category";
 };
 
 let current: Stack | null = null;
 const listeners = new Set<(s: Stack | null) => void>();
 
-export function setProfileStack(ids: string[], startIndex: number = 0, title?: string): void {
-  current = { ids, startIndex, title };
+export function setProfileStack(ids: string[], startIndex: number = 0, title?: string, source?: "category"): void {
+  current = { ids, startIndex, title, source };
   listeners.forEach((fn) => fn(current));
 }
 

@@ -12,6 +12,7 @@ import { useAllProfiles, useMyMatches, recordSwipe } from "@/lib/discoverProfile
 import { profiles as mockProfiles, type Profile } from "@/mocks/profiles";
 import { useTier } from "@/providers/TierProvider";
 import { useLikes } from "@/providers/LikesProvider";
+import { spendCategoryView, useCategoryViewsLeft } from "@/lib/categoryViews";
 
 /**
  * Swipeable profile viewer route. Drives the "tap a card → swipe up to next
@@ -25,7 +26,8 @@ export default function ProfileStackScreen() {
   const ins = useSafeAreaInsets();
   const stack = useProfileStack();
   const { byId } = useAllProfiles();
-  const { isPaid } = useTier();
+  const { isPaid, consumeRewind, remaining } = useTier();
+  const viewsLeft = useCategoryViewsLeft(isPaid);
   const { consume: addLike } = useLikes();
   const { matchIds } = useMyMatches();
   const [idx, setIdx] = useState<number>(stack?.startIndex ?? 0);
@@ -51,13 +53,29 @@ export default function ProfileStackScreen() {
   }
 
   const total = stack.ids.length;
+  const fromInterests = stack.source === "category";
+  const upsell = (title: string, body: string) =>
+    Alert.alert(title, body, [
+      { text: "Maybe later", style: "cancel" },
+      { text: "Upgrade", onPress: () => router.push("/subscription") },
+    ]);
   const next = () => {
     if (idx >= total - 1) return;
+    // Interests: each new profile uses a free daily view (ones already seen today are free)
+    if (fromInterests && !spendCategoryView(stack.ids[idx + 1], isPaid)) {
+      upsell("Out of free views", "You've used today's free Interests views. Upgrade to Unlimited to keep browsing, or come back tomorrow.");
+      return;
+    }
     Haptics.selectionAsync().catch(() => {});
     setIdx((i) => Math.min(total - 1, i + 1));
   };
   const prev = () => {
     if (idx <= 0) return;
+    // Interests: going back uses a rewind (shared with Discover)
+    if (fromInterests && !consumeRewind(true)) {
+      upsell("Out of rewinds", "You've used today's free rewinds. Upgrade to Unlimited for unlimited rewinds.");
+      return;
+    }
     Haptics.selectionAsync().catch(() => {});
     setIdx((i) => Math.max(0, i - 1));
   };
@@ -162,7 +180,11 @@ export default function ProfileStackScreen() {
         </TouchableOpacity>
       </View>
       <View style={{ position: "absolute", bottom: ins.bottom + 6, alignSelf: "center" }}>
-        <Text style={s.hint}>Use Prev / Next to browse more profiles</Text>
+        <Text style={s.hint} testID="stack-hint">
+          {fromInterests && !isPaid
+            ? `${viewsLeft} free views · ${remaining.rewinds} rewinds left today`
+            : "Use Prev / Next to browse more profiles"}
+        </Text>
       </View>
     </>
   );
