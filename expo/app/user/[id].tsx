@@ -1,7 +1,7 @@
 import React from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from "react-native";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
-import { Image } from "expo-image";
+import { PhotoCarousel } from "@/components/PhotoCarousel";
 import { MapPin, Globe, Heart, MessageCircle, X, MoreVertical } from "lucide-react-native";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import * as Haptics from "expo-haptics";
@@ -148,9 +148,9 @@ export default function UserProfileScreen() {
       />
       <ScrollView style={s.ct} showsVerticalScrollIndicator={false}>
         <View style={s.ph}>
-          <Image source={{ uri: p.photos[0] }} style={s.pi} contentFit="cover" transition={300} />
-          <View style={s.po} />
-          <View style={s.pf}>
+          <PhotoCarousel key={p.id} photos={p.photos} height={400} />
+          <View style={s.po} pointerEvents="none" />
+          <View style={s.pf} pointerEvents="none">
             <View style={s.nr}>
               <Text style={s.nm}>{p.name}{p.age ? `, ${p.age}` : ""}</Text>
               <VerifiedBadge verified={!!p.verified} size={22} />
@@ -201,14 +201,6 @@ export default function UserProfileScreen() {
               <View style={s.ir}>{p.interests.map(i => <View key={i} style={s.ic}><Text style={s.it}>{i}</Text></View>)}</View>
             </View>
           ) : null}
-          {p.photos.length > 1 ? (
-            <View style={s.se}>
-              <Text style={s.st}>More Photos</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.pr}>
-                {p.photos.slice(1).map((ph, i) => <Image key={i} source={{ uri: ph }} style={s.ep} contentFit="cover" transition={200} />)}
-              </ScrollView>
-            </View>
-          ) : null}
           <View style={{ height: 40 }} />
         </View>
       </ScrollView>
@@ -235,7 +227,6 @@ const s = StyleSheet.create({
   cen: { flex: 1, justifyContent: "center" as const, alignItems: "center" as const, backgroundColor: Colors.background },
   err: { fontSize: 16, color: Colors.textSecondary },
   ph: { height: 400, position: "relative" as const },
-  pi: { width: "100%", height: "100%" },
   po: { position: "absolute" as const, bottom: 0, left: 0, right: 0, height: "40%", backgroundColor: "rgba(0,0,0,0.3)" },
   pf: { position: "absolute" as const, bottom: 20, left: 20, right: 20 },
   nr: { flexDirection: "row" as const, alignItems: "center" as const, gap: 8 },
@@ -256,6 +247,4 @@ const s = StyleSheet.create({
   ir: { flexDirection: "row" as const, flexWrap: "wrap" as const, gap: 8 },
   ic: { backgroundColor: Colors.surfaceAlt, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20 },
   it: { fontSize: 14, fontWeight: "500" as const, color: Colors.text },
-  pr: { gap: 10 },
-  ep: { width: 200, height: 260, borderRadius: 16 },
 });

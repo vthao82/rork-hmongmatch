@@ -164,8 +164,8 @@ export default function ProfileScreen() {
           <View style={s.compareHeader}>
             <Text style={s.compareTitle}>{t("whatsIncluded")}</Text>
             <View style={s.compareCols}>
-              <Text style={s.compareColText}>{t("free")}</Text>
-              <Text style={s.compareColText}>Unlimited</Text>
+              <Text style={s.compareColText} numberOfLines={1} testID="compare-col-free">{t("free")}</Text>
+              <Text style={s.compareColText} numberOfLines={1} testID="compare-col-unlimited">Unlimited</Text>
             </View>
           </View>
           {[
@@ -236,10 +236,10 @@ const s = StyleSheet.create({
   upgradeBtn: { backgroundColor: Colors.accent, paddingHorizontal: 18, paddingVertical: 10, borderRadius: 999 },
   upgradeText: { color: "#1a1404", fontWeight: "800" as const, fontSize: 13 },
   compareHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingBottom: 8, borderBottomWidth: 1, borderBottomColor: "rgba(212,168,67,0.15)" },
-  compareTitle: { color: "#FFF", fontSize: 14, fontWeight: "700" as const },
-  compareCols: { flexDirection: "row", gap: 20 },
-  compareColText: { color: "rgba(255,255,255,0.75)", fontSize: 13, fontWeight: "700" as const, width: 36, textAlign: "center" },
+  compareTitle: { color: "#FFF", fontSize: 14, fontWeight: "700" as const, flex: 1, paddingRight: 8 },
+  compareCols: { flexDirection: "row", gap: 8 },
+  compareColText: { color: "rgba(255,255,255,0.75)", fontSize: 13, fontWeight: "700" as const, width: 72, textAlign: "center" },
   compareRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 10 },
-  compareRowText: { color: "#FFF", fontSize: 14 },
-  colIcon: { width: 36, alignItems: "center" },
+  compareRowText: { color: "#FFF", fontSize: 14, flex: 1, paddingRight: 8 },
+  colIcon: { width: 72, alignItems: "center" },
 });

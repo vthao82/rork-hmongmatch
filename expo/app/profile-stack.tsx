@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Pressable } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
-import { Image } from "expo-image";
+import { PhotoCarousel } from "@/components/PhotoCarousel";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { MapPin, Globe, Heart, MessageCircle, X, ChevronUp, ChevronDown } from "lucide-react-native";
 import * as Haptics from "expo-haptics";
@@ -109,17 +109,17 @@ export default function ProfileStackScreen() {
       <Stack.Screen options={{ title: stack.title ?? profile.name }} />
       <ScrollView style={s.ct} contentContainerStyle={{ paddingBottom: 80 }} showsVerticalScrollIndicator={false}>
         <View style={s.ph}>
-          <Image source={{ uri: profile.photos[0] }} style={s.pi} contentFit="cover" transition={250} />
+          <PhotoCarousel key={profile.id} photos={profile.photos} height={460} counterTop={ins.top + 12} />
           {/* Subtle bottom-only gradient so the name/clan text stays readable on bright photos */}
           <LinearGradient
             colors={["transparent", "rgba(0,0,0,0.55)"]}
             style={s.po}
             pointerEvents="none"
           />
-          <View style={s.counter}>
-            <Text style={s.counterTxt}>{idx + 1} / {total}</Text>
+          <View style={[s.counterWrap, { top: ins.top + 12 }]} pointerEvents="none" testID="profile-position">
+            <View style={s.counter}><Text style={s.counterTxt}>Profile {idx + 1} of {total}</Text></View>
           </View>
-          <View style={s.pf}>
+          <View style={s.pf} pointerEvents="none">
             <View style={s.nr}>
               <Text style={s.nm}>{profile.name}, {profile.age}</Text>
               <VerifiedBadge verified={!!profile.verified} size={22} />
@@ -168,14 +168,6 @@ export default function ProfileStackScreen() {
               </View>
             </View>
           ) : null}
-          {profile.photos.length > 1 ? (
-            <View style={s.se}>
-              <Text style={s.st}>More Photos</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.pr}>
-                {profile.photos.slice(1).map((p, i) => <Image key={i} source={{ uri: p }} style={s.ep} contentFit="cover" transition={180} />)}
-              </ScrollView>
-            </View>
-          ) : null}
         </View>
       </ScrollView>
 
@@ -196,9 +188,9 @@ const s = StyleSheet.create({
   cen: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: Colors.background, padding: 20 },
   err: { fontSize: 16, color: Colors.textSecondary, textAlign: "center" as const },
   ph: { height: 460, position: "relative", backgroundColor: "#1f1419" },
-  pi: { width: "100%", height: "100%", backgroundColor: "#2a1a20" },
   po: { position: "absolute", bottom: 0, left: 0, right: 0, height: "40%" },
-  counter: { position: "absolute", top: 60, right: 16, backgroundColor: "rgba(0,0,0,0.55)", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999 },
+  counterWrap: { position: "absolute", left: 0, right: 0, alignItems: "center" },
+  counter: { backgroundColor: "rgba(0,0,0,0.55)", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999 },
   counterTxt: { color: "#FFF", fontSize: 12, fontWeight: "700" as const },
   pf: { position: "absolute", bottom: 24, left: 20, right: 20 },
   nr: { flexDirection: "row", alignItems: "center", gap: 8 },
@@ -222,7 +214,5 @@ const s = StyleSheet.create({
   ir: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
   ic: { backgroundColor: Colors.surfaceAlt, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 18 },
   it: { fontSize: 13, fontWeight: "500" as const, color: Colors.text },
-  pr: { gap: 10 },
-  ep: { width: 200, height: 260, borderRadius: 16 },
   hint: { color: "rgba(255,255,255,0.6)", fontSize: 11, backgroundColor: "rgba(0,0,0,0.4)", paddingHorizontal: 12, paddingVertical: 5, borderRadius: 999 },
 });

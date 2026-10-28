@@ -8,10 +8,9 @@ import { useChatThreads } from "@/lib/chat";
 
 export default function HmongDateTabLayout() {
   const { threads } = useChatThreads();
-  // Total unread messages across every active thread — surfaces on the Chat
-  // tab icon so the user knows someone is waiting on them.
+  // Number of chats (not messages) that have unread messages
   const unread = useMemo(
-    () => threads.reduce((sum, t) => sum + (t.unreadCount ?? 0), 0),
+    () => threads.filter((t) => (t.unreadCount ?? 0) > 0).length,
     [threads]
   );
   const chatBadge: string | number | undefined =
