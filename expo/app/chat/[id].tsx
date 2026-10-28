@@ -14,7 +14,8 @@ import { useChatMessages, sendChatMessage, sendChatPhoto, markMessageRead, forma
 import { auth } from "@/lib/firebase";
 import { blockUser } from "@/providers/BlockProvider";
 import { useActiveLabel } from "@/lib/presence";
-import { useTypingPinger, useOtherTyping } from "@/lib/typing";
+import { useTypingPinger, useOtherTyping, markChatSeen, useOtherSeenAt } from "@/lib/typing";
+import { useOnboarding } from "@/providers/OnboardingProvider";
 import { unmatchUser, useMyMatches } from "@/lib/discoverProfiles";
 import { useTier } from "@/providers/TierProvider";
 import { useT } from "@/providers/LanguageProvider";
@@ -34,6 +35,9 @@ export default function ChatScreen() {
   const otherTyping = useOtherTyping(matchId, id);
   const pingTyping = useTypingPinger(matchId, me?.uid);
   const { matchIds } = useMyMatches();
+  const { data: onb } = useOnboarding();
+  const receiptsOn = onb.showReadReceipts !== false;
+  const otherSeenAt = useOtherSeenAt(matchId, id, receiptsOn);
   const [tx, setTx] = useState<string>("");
   const [sendingPhoto, setSendingPhoto] = useState<boolean>(false);
   const [viewerUrl, setViewerUrl] = useState<string | null>(null);
@@ -49,6 +53,11 @@ export default function ChatScreen() {
     });
   }, [messages, matchId, me?.uid]);
 
+  // Share "Seen" with the sender whenever new messages arrive while the chat is open
+  useEffect(() => {
+    if (receiptsOn && messages.length > 0) markChatSeen(matchId, me?.uid);
+  }, [messages.length, matchId, me?.uid, receiptsOn]);
+
   useEffect(() => {
     if (messages.length > 0) setTimeout(() => lr.current?.scrollToEnd({ animated: true }), 100);
   }, [messages.length]);
@@ -56,8 +65,14 @@ export default function ChatScreen() {
   const myUid = me?.uid ?? "";
   const openProfile = () => { if (id) router.push(`/user/${id}`); };
 
+  const lastMine = [...messages].reverse().find((m) => m.senderId === myUid);
+  const seenLast = !!lastMine && !!otherSeenAt && !!lastMine.createdAt && otherSeenAt >= lastMine.createdAt;
+  const seenAgo = otherSeenAt ? Date.now() - otherSeenAt : 0;
+  const seenLabel = seenAgo < 60_000 ? "Seen just now" : seenAgo < 24 * 3600_000 ? `Seen ${formatRelative(otherSeenAt)} ago` : "Seen";
+
   const renderMsg = ({ item }: { item: ChatMessage }) => {
     const mine = item.senderId === myUid;
+    const showSeen = mine && seenLast && item.id === lastMine?.id;
     return (
       <View style={[s.mr, mine ? s.my : s.th]}>
         {!mine && pr && (
@@ -80,6 +95,7 @@ export default function ChatScreen() {
           )}
           <Text style={[s.tt, mine ? s.mtt : s.ttt]}>{formatRelative(item.createdAt)}</Text>
         </View>
+        {showSeen && <Text style={s.seen} testID="msg-seen">{seenLabel}</Text>}
       </View>
     );
   };
@@ -299,7 +315,8 @@ const s = StyleSheet.create({
   htitle: { fontSize: 17, fontWeight: "700" as const, color: Colors.text },
   hsub: { fontSize: 12, color: Colors.textSecondary, marginTop: 1 },
   ml: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8 },
-  mr: { flexDirection: "row", marginBottom: 12, alignItems: "flex-end", gap: 8 },
+  mr: { flexDirection: "row", flexWrap: "wrap", marginBottom: 12, alignItems: "flex-end", gap: 8 },
+  seen: { width: "100%", textAlign: "right" as const, fontSize: 11, color: Colors.textTertiary, marginTop: -4 },
   my: { justifyContent: "flex-end" },
   th: { justifyContent: "flex-start" },
   ma: { width: 28, height: 28, borderRadius: 14 },

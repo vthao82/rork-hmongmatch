@@ -12,6 +12,7 @@ import {
   deleteDoc,
   updateDoc,
   arrayUnion,
+  arrayRemove,
   serverTimestamp,
   type DocumentData,
 } from "firebase/firestore";
@@ -255,7 +256,7 @@ export function useAllProfiles() {
  * Hook: subscribe to matches involving the current user.
  * Each match doc lives at /matches/{sortedUid1_sortedUid2} with userIds: string[].
  */
-export type MatchInfo = { matchId: string; otherId: string; createdAt: number | null; celebratedBy: string[]; unmatched: boolean };
+export type MatchInfo = { matchId: string; otherId: string; createdAt: number | null; celebratedBy: string[]; unmatchedBy: string[] };
 
 export function useMyMatches() {
   const { hidden } = useBlocks();
@@ -283,7 +284,7 @@ export function useMyMatches() {
               otherId,
               createdAt: tsToMillis(r.createdAt),
               celebratedBy: Array.isArray(r.celebratedBy) ? (r.celebratedBy as string[]) : [],
-              unmatched: Array.isArray(r.unmatchedBy) && r.unmatchedBy.length > 0,
+              unmatchedBy: Array.isArray(r.unmatchedBy) ? (r.unmatchedBy as string[]) : [],
             });
           }
         });
@@ -298,9 +299,11 @@ export function useMyMatches() {
     return () => unsub();
   }, [uid]);
 
-  const matches = useMemo(() => all.filter((m) => !hidden.has(m.otherId) && !m.unmatched), [all, hidden]);
+  const matches = useMemo(() => all.filter((m) => !hidden.has(m.otherId) && m.unmatchedBy.length === 0), [all, hidden]);
+  // People I unmatched (Settings → Unmatched people lets me undo)
+  const unmatchedByMe = useMemo(() => all.filter((m) => !!uid && m.unmatchedBy.includes(uid) && !hidden.has(m.otherId)), [all, hidden, uid]);
   const matchIds = useMemo(() => matches.map((m) => m.otherId), [matches]);
-  return { matchIds, matches, loading };
+  return { matchIds, matches, unmatchedByMe, loading };
 }
 
 /** Hook: live list of user ids who liked the current user and haven't been swiped on yet. */
@@ -369,12 +372,15 @@ export async function recordSwipe(
       const matchRef = doc(db, "matches", matchId);
       const existing = await getDoc(matchRef);
       const ex = existing.exists() ? existing.data() : null;
-      const live = ex && ex.createdAt && !(Array.isArray(ex.unmatchedBy) && ex.unmatchedBy.length > 0);
-      if (!live) {
-        // New match, or matching again after an unmatch: old messages come back, celebration shows again
+      const unmatchedBy: string[] = Array.isArray(ex?.unmatchedBy) ? ex!.unmatchedBy : [];
+      if (!ex || !ex.createdAt) {
         await setDoc(matchRef, { userIds: ids, createdAt: serverTimestamp(), unmatchedBy: [], celebratedBy: [] }, { merge: true });
+        return { ok: true, isMatch: true, matchId };
       }
-      return { ok: true, isMatch: true, matchId };
+      // Liking again only undoes MY unmatch; if they unmatched me it stays hidden
+      if (unmatchedBy.includes(me.uid)) await updateDoc(matchRef, { unmatchedBy: arrayRemove(me.uid) });
+      const stillUnmatched = unmatchedBy.some((u) => u !== me.uid);
+      return { ok: true, isMatch: !stillUnmatched, matchId };
     }
 
     return { ok: true, isMatch: false };
@@ -394,6 +400,19 @@ export async function unmatchUser(otherUid: string): Promise<boolean> {
     return true;
   } catch (e) {
     console.log("[unmatch] error", e);
+    return false;
+  }
+}
+
+/** Undo my unmatch — the chat returns unless the other person also unmatched. */
+export async function rematchUser(otherUid: string): Promise<boolean> {
+  const me = auth.currentUser;
+  if (!me || !otherUid) return false;
+  try {
+    await updateDoc(doc(db, "matches", [me.uid, otherUid].sort().join("_")), { unmatchedBy: arrayRemove(me.uid) });
+    return true;
+  } catch (e) {
+    console.log("[rematch] error", e);
     return false;
   }
 }

@@ -26,6 +26,13 @@ service cloud.firestore {
               .data.userIds.hasAny([request.auth.uid]);
     }
 
+    // A match-list field may only change by adding/removing the caller's own uid
+    function onlyOwnChange(field) {
+      let before = resource.data.get(field, []).toSet();
+      let after = request.resource.data.get(field, []).toSet();
+      return after.difference(before).union(before.difference(after)).hasOnly([request.auth.uid]);
+    }
+
     // -------- Users (profiles) --------
     match /users/{uid} {
       // Any signed-in user can read profiles (Discover feed, chat avatars, etc.)
@@ -80,7 +87,16 @@ service cloud.firestore {
       // Update: participant, and the participant list can't change
       allow update: if request.auth != null
                     && resource.data.userIds.hasAny([request.auth.uid])
-                    && request.resource.data.userIds == resource.data.userIds;
+                    && request.resource.data.userIds == resource.data.userIds
+                    && onlyOwnChange('unmatchedBy')
+                    && onlyOwnChange('blockedBy')
+                    && onlyOwnChange('celebratedBy');
+
+      // Read receipts: participants read; each writes only their own "seen" time
+      match /reads/{readerUid} {
+        allow read: if isMatchParticipant(matchId);
+        allow write: if isMatchParticipant(matchId) && request.auth.uid == readerUid;
+      }
 
       // Typing indicator: participants read; each writes only their own doc
       match /typing/{typerUid} {

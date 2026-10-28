@@ -18,6 +18,26 @@ export function useTypingPinger(matchId: string | null, myUid: string | null | u
   };
 }
 
+/** Record that I've seen this chat up to now (only when I share read receipts). */
+export function markChatSeen(matchId: string | null, myUid: string | null | undefined) {
+  if (!matchId || !myUid) return;
+  setDoc(doc(db, "matches", matchId, "reads", myUid), { at: serverTimestamp() }).catch(() => {});
+}
+
+/** When the other person last opened this chat (ms), or null. */
+export function useOtherSeenAt(matchId: string | null, otherUid: string | null | undefined, enabled: boolean): number | null {
+  const [at, setAt] = useState<number | null>(null);
+  useEffect(() => {
+    if (!matchId || !otherUid || !enabled) { setAt(null); return; }
+    return onSnapshot(
+      doc(db, "matches", matchId, "reads", otherUid),
+      (s) => setAt(tsToMillis(s.data()?.at)),
+      () => setAt(null)
+    );
+  }, [matchId, otherUid, enabled]);
+  return at;
+}
+
 /** True while the other person is typing in this chat. */
 export function useOtherTyping(matchId: string | null, otherUid: string | null | undefined): boolean {
   const [state, setState] = useState<{ typing: boolean; at: number | null }>({ typing: false, at: null });

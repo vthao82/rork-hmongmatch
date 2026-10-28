@@ -87,8 +87,10 @@ async function recordSwipe(me, target, liked) {
     const ref_ = doc(me.db, "matches", ids.join("_"));
     const ex = await getDoc(ref_);
     const d = ex.exists() ? ex.data() : null;
-    const live = d && d.createdAt && !((d.unmatchedBy || []).length > 0);
-    if (!live) await setDoc(ref_, { userIds: ids, createdAt: serverTimestamp(), unmatchedBy: [], celebratedBy: [] }, { merge: true });
+    if (!d || !d.createdAt) { await setDoc(ref_, { userIds: ids, createdAt: serverTimestamp(), unmatchedBy: [], celebratedBy: [] }, { merge: true }); return true; }
+    const ub = d.unmatchedBy || [];
+    if (ub.includes(me.uid)) await updateDoc(ref_, { unmatchedBy: arrayRemove(me.uid) });
+    return !ub.some((u) => u !== me.uid);
     return true;
   }
   return false;
@@ -232,8 +234,28 @@ async function main() {
   const again = await recordSwipe(w, m, true);
   const rm = (await getDoc(doc(m.db, "matches", matchId))).data();
   const after = (await getDocs(collection(m.db, "matches", matchId, "messages"))).size;
-  ok("liking again re-matches and clears unmatch + celebration", again && (rm.unmatchedBy || []).length === 0 && (rm.celebratedBy || []).length === 0);
+  ok("liking again undoes my unmatch and re-matches", again && (rm.unmatchedBy || []).length === 0);
   ok("old messages come back after re-match", after === before && before > 0);
+
+  console.log("\n[14] Undo unmatch from Settings + no tampering");
+  await updateDoc(doc(w.db, "matches", matchId), { unmatchedBy: arrayUnion(w.uid) });
+  ok("other person cannot undo my unmatch", await denied(updateDoc(doc(m.db, "matches", matchId), { unmatchedBy: arrayRemove(w.uid) })));
+  await updateDoc(doc(w.db, "matches", matchId), { blockedBy: arrayUnion(w.uid) });
+  ok("other person cannot remove my block", await denied(updateDoc(doc(m.db, "matches", matchId), { blockedBy: [] })));
+  await updateDoc(doc(w.db, "matches", matchId), { blockedBy: arrayRemove(w.uid) });
+  await updateDoc(doc(w.db, "matches", matchId), { unmatchedBy: arrayRemove(w.uid) });
+  const undone = (await getDoc(doc(m.db, "matches", matchId))).data();
+  ok("undo unmatch from Settings brings chat back", (undone.unmatchedBy || []).length === 0);
+
+  console.log("\n[15] Read receipts");
+  let seenAt = null;
+  const unsubR = onSnapshot(doc(m.db, "matches", matchId, "reads", w.uid), (sn) => { seenAt = sn.data()?.at?.toMillis?.() ?? null; }, () => {});
+  await setDoc(doc(w.db, "matches", matchId, "reads", w.uid), { at: serverTimestamp() });
+  for (let i = 0; i < 20 && !seenAt; i++) await wait(300);
+  ok("sender sees when the other person read the chat", !!seenAt);
+  ok("cannot fake someone else's read receipt", await denied(setDoc(doc(m.db, "matches", matchId, "reads", w.uid), { at: serverTimestamp() })));
+  ok("outsider cannot see read receipts", await denied(getDoc(doc(e.db, "matches", matchId, "reads", w.uid))));
+  unsubR();
   console.log("\n[13] Photo messages");
   const pref = ref(m.st, `users/${m.uid}/photos/chat-${matchId}-test.jpg`);
   await uploadBytes(pref, blob, { contentType: "image/jpeg" });

@@ -365,6 +365,15 @@ export default function SettingsScreen() {
               <Toggle value={onb.showActiveStatus !== false} onChange={(v) => updateOnb({ showActiveStatus: v })} testID="active-status-toggle" />
             </View>
           </View>
+          <View style={s.card}>
+            <View style={s.rowToggle}>
+              <View style={{ flex: 1, paddingRight: 8 }}>
+                <Text style={s.rowLabel}>Read receipts</Text>
+                <Text style={s.rowSub}>Let people see when you've read their messages. If off, you won't see theirs either.</Text>
+              </View>
+              <Toggle value={onb.showReadReceipts !== false} onChange={(v) => updateOnb({ showReadReceipts: v })} testID="read-receipts-toggle" />
+            </View>
+          </View>
         </Section>
 
         <Section title="Photo Verification">
@@ -402,6 +411,7 @@ export default function SettingsScreen() {
           <Row label={t("editProfile")} onPress={() => router.push("/edit-profile")} testID="edit-profile-row" />
           <Row label={t("manageSubscription")} onPress={() => router.push("/subscription")} testID="manage-sub-row" />
           <Row label={t("reportProblem")} onPress={() => router.push("/report")} testID="report-row" />
+          <Row label="Unmatched people" onPress={() => router.push("/unmatched" as never)} testID="unmatched-row" />
           <Row label="Blocked users" onPress={() => router.push("/blocked" as never)} testID="blocked-users-row" />
           <TouchableOpacity style={s.row} onPress={() => Alert.alert(t("logout"), t("logoutConfirm"), [
             { text: t("cancel"), style: "cancel" },

@@ -31,6 +31,7 @@ function RootLayoutNav() {
       <Stack.Screen name="report" options={{ headerShown: false, presentation: "modal" }} />
       <Stack.Screen name="photo-verify" options={{ headerShown: false, presentation: "modal" }} />
       <Stack.Screen name="blocked" options={{ title: "Blocked users" }} />
+      <Stack.Screen name="unmatched" options={{ title: "Unmatched people" }} />
       <Stack.Screen name="+not-found" />
     </Stack>
   );

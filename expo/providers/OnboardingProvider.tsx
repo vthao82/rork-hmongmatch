@@ -69,6 +69,8 @@ export type OnboardingData = {
   resumeStep?: string;
   /** Show "Active now" / "Active 2h ago" to others (default on). */
   showActiveStatus?: boolean;
+  /** Send and see "Seen" read receipts in chat (default on). */
+  showReadReceipts?: boolean;
 };
 
 const LEGACY_KEY = "hmongmatch.onboarding.v1";
