@@ -84,7 +84,11 @@ async function recordSwipe(me, target, liked) {
   const theirs = await getDoc(doc(me.db, "users", target.uid, "swipes", me.uid));
   if (theirs.exists() && theirs.data().liked === true) {
     const ids = [me.uid, target.uid].sort();
-    await setDoc(doc(me.db, "matches", ids.join("_")), { userIds: ids, createdAt: serverTimestamp() }, { merge: true });
+    const ref_ = doc(me.db, "matches", ids.join("_"));
+    const ex = await getDoc(ref_);
+    const d = ex.exists() ? ex.data() : null;
+    const live = d && d.createdAt && !((d.unmatchedBy || []).length > 0);
+    if (!live) await setDoc(ref_, { userIds: ids, createdAt: serverTimestamp(), unmatchedBy: [], celebratedBy: [] }, { merge: true });
     return true;
   }
   return false;
@@ -208,6 +212,28 @@ async function main() {
   await setDoc(doc(m.db, "users", m.uid), { lastActiveAt: serverTimestamp() }, { merge: true });
   const pres = (await getDoc(doc(w.db, "users", m.uid))).data();
   ok("active status saved and visible to others", !!pres.lastActiveAt && Date.now() - pres.lastActiveAt.toMillis() < 60000);
+  console.log("\n[11] Typing indicator");
+  let typingSeen = false;
+  const unsubT = onSnapshot(doc(w.db, "matches", matchId, "typing", m.uid), (sn) => { typingSeen = sn.data()?.typing === true; }, () => {});
+  await setDoc(doc(m.db, "matches", matchId, "typing", m.uid), { typing: true, at: serverTimestamp() });
+  for (let i = 0; i < 20 && !typingSeen; i++) await wait(300);
+  ok("other person sees typing live", typingSeen);
+  ok("cannot fake someone else's typing", await denied(setDoc(doc(w.db, "matches", matchId, "typing", m.uid), { typing: true })));
+  ok("outsider cannot see typing", await denied(getDoc(doc(e.db, "matches", matchId, "typing", m.uid))));
+  unsubT();
+
+  console.log("\n[12] Unmatch hides chat, keeps messages, re-match restores");
+  const before = (await getDocs(collection(m.db, "matches", matchId, "messages"))).size;
+  await updateDoc(doc(w.db, "matches", matchId), { unmatchedBy: arrayUnion(w.uid) });
+  const um = (await getDoc(doc(m.db, "matches", matchId))).data();
+  ok("match flagged as unmatched for both", (um.unmatchedBy || []).includes(w.uid));
+  ok("no new messages after unmatch", await denied(addDoc(collection(m.db, "matches", matchId, "messages"), { senderId: m.uid, text: "hi?", createdAt: serverTimestamp() })));
+  ok("can check a not-yet-existing match (needed for matching)", !(await getDoc(doc(e.db, "matches", [e.uid, "zzzz-nobody"].sort().join("_")))).exists());
+  const again = await recordSwipe(w, m, true);
+  const rm = (await getDoc(doc(m.db, "matches", matchId))).data();
+  const after = (await getDocs(collection(m.db, "matches", matchId, "messages"))).size;
+  ok("liking again re-matches and clears unmatch + celebration", again && (rm.unmatchedBy || []).length === 0 && (rm.celebratedBy || []).length === 0);
+  ok("old messages come back after re-match", after === before && before > 0);
   ok("cannot write someone else's active status", await denied(setDoc(doc(w.db, "users", m.uid), { lastActiveAt: serverTimestamp() }, { merge: true })));
 
   unsubInbox(); unsubM(); unsubMsgs(); unsubW2();

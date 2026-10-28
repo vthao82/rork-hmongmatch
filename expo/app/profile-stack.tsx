@@ -12,7 +12,8 @@ import { useAllProfiles, useMyMatches, recordSwipe } from "@/lib/discoverProfile
 import { profiles as mockProfiles, type Profile } from "@/mocks/profiles";
 import { useTier } from "@/providers/TierProvider";
 import { useLikes } from "@/providers/LikesProvider";
-import { spendCategoryView, useCategoryViewsLeft } from "@/lib/categoryViews";
+import { spendCategoryView, useCategoryViewsLeft, resetsInLabel } from "@/lib/categoryViews";
+import { NewBadge } from "@/components/NewBadge";
 
 /**
  * Swipeable profile viewer route. Drives the "tap a card → swipe up to next
@@ -63,7 +64,7 @@ export default function ProfileStackScreen() {
     if (idx >= total - 1) return;
     // Interests: each new profile uses a free daily view (ones already seen today are free)
     if (fromInterests && !spendCategoryView(stack.ids[idx + 1], isPaid)) {
-      upsell("Out of free views", "You've used today's free Interests views. Upgrade to Unlimited to keep browsing, or come back tomorrow.");
+      upsell("Out of free views", `You've used today's free Interests views. They reset in ${resetsInLabel()}, or upgrade to Unlimited to keep browsing.`);
       return;
     }
     Haptics.selectionAsync().catch(() => {});
@@ -73,7 +74,7 @@ export default function ProfileStackScreen() {
     if (idx <= 0) return;
     // Interests: going back uses a rewind (shared with Discover)
     if (fromInterests && !consumeRewind(true)) {
-      upsell("Out of rewinds", "You've used today's free rewinds. Upgrade to Unlimited for unlimited rewinds.");
+      upsell("Out of rewinds", `You've used today's free rewinds. Upgrade to Unlimited for unlimited rewinds.`);
       return;
     }
     Haptics.selectionAsync().catch(() => {});
@@ -126,6 +127,7 @@ export default function ProfileStackScreen() {
             <View style={s.nr}>
               <Text style={s.nm}>{profile.name}, {profile.age}</Text>
               <VerifiedBadge verified={!!profile.verified} size={22} />
+              <NewBadge createdAtMs={profile.createdAtMs} inline />
             </View>
             <Text style={s.cl}>{profile.clan} Clan</Text>
           </View>

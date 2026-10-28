@@ -19,6 +19,7 @@ export interface Profile {
   seeking?: string[];
   lastActiveAt?: number | null;
   showActiveStatus?: boolean;
+  createdAtMs?: number | null;
 }
 
 export interface Match {

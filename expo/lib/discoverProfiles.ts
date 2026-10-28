@@ -10,6 +10,8 @@ import {
   getDoc,
   setDoc,
   deleteDoc,
+  updateDoc,
+  arrayUnion,
   serverTimestamp,
   type DocumentData,
 } from "firebase/firestore";
@@ -73,6 +75,7 @@ function rowToProfile(id: string, row: DocumentData): Profile {
     lastActive: activeLabel(lastActiveAt, showActiveStatus),
     lastActiveAt,
     showActiveStatus,
+    createdAtMs: tsToMillis(row.createdAt),
     verified: !!row.photoVerified,
     hometownCity: (row.hometownCity as string) ?? null,
     hometownState: (row.hometownState as string) ?? null,
@@ -252,7 +255,7 @@ export function useAllProfiles() {
  * Hook: subscribe to matches involving the current user.
  * Each match doc lives at /matches/{sortedUid1_sortedUid2} with userIds: string[].
  */
-export type MatchInfo = { matchId: string; otherId: string; createdAt: number | null; celebratedBy: string[] };
+export type MatchInfo = { matchId: string; otherId: string; createdAt: number | null; celebratedBy: string[]; unmatched: boolean };
 
 export function useMyMatches() {
   const { hidden } = useBlocks();
@@ -280,6 +283,7 @@ export function useMyMatches() {
               otherId,
               createdAt: tsToMillis(r.createdAt),
               celebratedBy: Array.isArray(r.celebratedBy) ? (r.celebratedBy as string[]) : [],
+              unmatched: Array.isArray(r.unmatchedBy) && r.unmatchedBy.length > 0,
             });
           }
         });
@@ -294,7 +298,7 @@ export function useMyMatches() {
     return () => unsub();
   }, [uid]);
 
-  const matches = useMemo(() => all.filter((m) => !hidden.has(m.otherId)), [all, hidden]);
+  const matches = useMemo(() => all.filter((m) => !hidden.has(m.otherId) && !m.unmatched), [all, hidden]);
   const matchIds = useMemo(() => matches.map((m) => m.otherId), [matches]);
   return { matchIds, matches, loading };
 }
@@ -363,14 +367,13 @@ export async function recordSwipe(
       const ids = [me.uid, targetUserId].sort();
       const matchId = `${ids[0]}_${ids[1]}`;
       const matchRef = doc(db, "matches", matchId);
-      await setDoc(
-        matchRef,
-        {
-          userIds: ids,
-          createdAt: serverTimestamp(),
-        },
-        { merge: true }
-      );
+      const existing = await getDoc(matchRef);
+      const ex = existing.exists() ? existing.data() : null;
+      const live = ex && ex.createdAt && !(Array.isArray(ex.unmatchedBy) && ex.unmatchedBy.length > 0);
+      if (!live) {
+        // New match, or matching again after an unmatch: old messages come back, celebration shows again
+        await setDoc(matchRef, { userIds: ids, createdAt: serverTimestamp(), unmatchedBy: [], celebratedBy: [] }, { merge: true });
+      }
       return { ok: true, isMatch: true, matchId };
     }
 
@@ -378,6 +381,20 @@ export async function recordSwipe(
   } catch (e: any) {
     console.log("[discover] recordSwipe error", e);
     return { ok: false, error: e?.message ?? "Swipe failed" };
+  }
+}
+
+/** Unmatch: hides the chat for both people (messages are kept and return if they match again). */
+export async function unmatchUser(otherUid: string): Promise<boolean> {
+  const me = auth.currentUser;
+  if (!me || !otherUid) return false;
+  try {
+    const ids = [me.uid, otherUid].sort();
+    await updateDoc(doc(db, "matches", ids.join("_")), { unmatchedBy: arrayUnion(me.uid) });
+    return true;
+  } catch (e) {
+    console.log("[unmatch] error", e);
+    return false;
   }
 }
 

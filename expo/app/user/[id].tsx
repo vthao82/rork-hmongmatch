@@ -14,6 +14,8 @@ import { useLikes } from "@/providers/LikesProvider";
 import { auth } from "@/lib/firebase";
 import { blockUser } from "@/providers/BlockProvider";
 import { useActiveLabel } from "@/lib/presence";
+import { NewBadge } from "@/components/NewBadge";
+import { unmatchUser } from "@/lib/discoverProfiles";
 
 export default function UserProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -101,6 +103,24 @@ export default function UserProfileScreen() {
               params: { userId: p.id, userName: p.name },
             }),
         },
+        ...(matchIds.includes(p.id)
+          ? [{
+              text: "Unmatch",
+              style: "destructive" as const,
+              onPress: () =>
+                Alert.alert(`Unmatch ${p.name}?`, "Your chat will disappear for both of you. If you match again later, your messages come back.", [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Unmatch",
+                    style: "destructive",
+                    onPress: async () => {
+                      if (!(await unmatchUser(p.id))) { Alert.alert("Couldn't unmatch", "Please try again."); return; }
+                      router.back();
+                    },
+                  },
+                ]),
+            }]
+          : []),
         {
           text: "Block this user",
           style: "destructive",
@@ -154,6 +174,7 @@ export default function UserProfileScreen() {
             <View style={s.nr}>
               <Text style={s.nm}>{p.name}{p.age ? `, ${p.age}` : ""}</Text>
               <VerifiedBadge verified={!!p.verified} size={22} />
+              <NewBadge createdAtMs={p.createdAtMs} inline />
             </View>
             {p.clan ? <Text style={s.cl}>{p.clan} Clan</Text> : null}
             {!isMe && activeText ? (

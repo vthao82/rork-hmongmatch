@@ -12,6 +12,8 @@ import { useChatMessages, sendChatMessage, markMessageRead, formatRelative, type
 import { auth } from "@/lib/firebase";
 import { blockUser } from "@/providers/BlockProvider";
 import { useActiveLabel } from "@/lib/presence";
+import { useTypingPinger, useOtherTyping } from "@/lib/typing";
+import { unmatchUser, useMyMatches } from "@/lib/discoverProfiles";
 import { useTier } from "@/providers/TierProvider";
 import { useT } from "@/providers/LanguageProvider";
 
@@ -27,6 +29,9 @@ export default function ChatScreen() {
   const pr = (id ? liveById[id] : null) ?? mockProfiles.find(x => x.id === id);
   const { messages, matchId } = useChatMessages(id);
   const activeText = useActiveLabel(id);
+  const otherTyping = useOtherTyping(matchId, id);
+  const pingTyping = useTypingPinger(matchId, me?.uid);
+  const { matchIds } = useMyMatches();
   const [tx, setTx] = useState<string>("");
   const lr = useRef<FlatList<ChatMessage>>(null);
 
@@ -81,6 +86,7 @@ export default function ChatScreen() {
     if (!ok) return;
     if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     setTx("");
+    pingTyping(true);
     const res = await sendChatMessage(id, trimmed);
     if (!res.ok) {
       Alert.alert("Couldn't send", res.error ?? "Please try again.");
@@ -111,6 +117,24 @@ export default function ChatScreen() {
               params: { userId: pr.id, userName: pr.name },
             }),
         },
+        ...(id && matchIds.includes(id)
+          ? [{
+              text: "Unmatch",
+              style: "destructive" as const,
+              onPress: () =>
+                Alert.alert(`Unmatch ${pr.name}?`, "Your chat will disappear for both of you. If you match again later, your messages come back.", [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Unmatch",
+                    style: "destructive",
+                    onPress: async () => {
+                      if (!(await unmatchUser(pr.id))) { Alert.alert("Couldn't unmatch", "Please try again."); return; }
+                      router.back();
+                    },
+                  },
+                ]),
+            }]
+          : []),
         {
           text: "Block this user",
           style: "destructive",
@@ -146,7 +170,11 @@ export default function ChatScreen() {
         headerTitle: () => (
           <TouchableOpacity onPress={openProfile} testID="header-name">
             <Text style={s.htitle} numberOfLines={1}>{pr.name}</Text>
-            {activeText ? <Text style={[s.hsub, activeText === "Active now" && { color: Colors.online }]} testID="chat-active-status">{activeText}</Text> : null}
+            {otherTyping ? (
+              <Text style={[s.hsub, { color: Colors.primary }]} testID="chat-typing-status">typing…</Text>
+            ) : activeText ? (
+              <Text style={[s.hsub, activeText === "Active now" && { color: Colors.online }]} testID="chat-active-status">{activeText}</Text>
+            ) : null}
           </TouchableOpacity>
         ),
         headerRight: () => (
@@ -195,7 +223,8 @@ export default function ChatScreen() {
             placeholder={t("typeMessage")}
             placeholderTextColor={Colors.textTertiary}
             value={tx}
-            onChangeText={setTx}
+            onChangeText={(v) => { setTx(v); pingTyping(v.length === 0); }}
+            onBlur={() => pingTyping(true)}
             multiline
             maxLength={500}
             testID="chat-input"

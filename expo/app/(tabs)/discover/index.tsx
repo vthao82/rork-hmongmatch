@@ -12,6 +12,7 @@ import { useDiscoverProfiles, recordSwipe, deleteSwipe } from "@/lib/discoverPro
 import HmongMatchHeader from "@/components/HmongMatchHeader";
 import RedBackground from "@/components/RedBackground";
 import { useTier } from "@/providers/TierProvider";
+import { NewBadge } from "@/components/NewBadge";
 import { useLikes } from "@/providers/LikesProvider";
 import { useT } from "@/providers/LanguageProvider";
 
@@ -47,6 +48,7 @@ function ProfileCard({ profile, height }: { profile: Profile; height: number }) 
   return (
     <View style={[st.card, { height }]} pointerEvents="box-none">
       <PhotoCarousel photos={profile.photos} />
+      <NewBadge createdAtMs={profile.createdAtMs} style={{ top: 16, left: 16 }} />
       <LinearGradient colors={["transparent", "rgba(0,0,0,0.9)"]} locations={[0.35, 1]} style={st.shade} pointerEvents="none" />
       <View style={st.info} pointerEvents="none">
         <View style={st.nameRow}>

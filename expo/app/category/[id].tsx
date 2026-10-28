@@ -12,7 +12,8 @@ import { useTier } from "@/providers/TierProvider";
 import { useT } from "@/providers/LanguageProvider";
 import { setProfileStack } from "@/lib/profileStackStore";
 import { auth } from "@/lib/firebase";
-import { spendCategoryView, useCategoryViewsLeft, CATEGORY_FREE_DAILY_CAP } from "@/lib/categoryViews";
+import { spendCategoryView, useCategoryViewsLeft, useResetsIn, CATEGORY_FREE_DAILY_CAP } from "@/lib/categoryViews";
+import { NewBadge } from "@/components/NewBadge";
 import { CATEGORY_GROUPS } from "@/constants/categories";
 
 const SW = Dimensions.get("window").width;
@@ -101,6 +102,7 @@ export default function CategoryScreen() {
   const { byId: liveById } = useAllProfiles();
   const { isPaid } = useTier();
   const remaining = useCategoryViewsLeft(isPaid);
+  const resetsIn = useResetsIn();
   // Determine whether the current user belongs to this category based on
   // their stored enrollment data (clan, dialect, education, work, state,
   // religion, lookingFor, interests). This is what makes them appear in
@@ -191,7 +193,7 @@ export default function CategoryScreen() {
       {!isPaid && (
         <View style={s.capBar}>
           <Lock size={11} color={Colors.accent} />
-          <Text style={s.capTxt}>{remaining} of {CATEGORY_FREE_DAILY_CAP} free views today</Text>
+          <Text style={s.capTxt} testID="views-cap-text">{remaining} of {CATEGORY_FREE_DAILY_CAP} free views today · resets in {resetsIn}</Text>
         </View>
       )}
       <TouchableOpacity
@@ -237,6 +239,7 @@ export default function CategoryScreen() {
                 testID={`cat-profile-${p.id}`}
               >
                 <Image source={{ uri: p.photos[0] }} style={s.img} contentFit="cover" />
+                <NewBadge createdAtMs={p.createdAtMs} />
                 {p.isOnline && <View style={s.onlineDot} />}
                 <View style={s.info}>
                   <View style={s.nameRow}>

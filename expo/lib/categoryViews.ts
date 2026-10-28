@@ -9,6 +9,26 @@ function todayCentral(): string {
   return new Intl.DateTimeFormat("en-US", { timeZone: "America/Chicago", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
 }
 
+/** Time until free views reset (midnight US Central), e.g. "5h 12m". */
+export function resetsInLabel(): string {
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone: "America/Chicago", hour: "numeric", minute: "numeric", second: "numeric", hourCycle: "h23" }).formatToParts(new Date());
+  const get = (t: string) => Number(parts.find((p) => p.type === t)?.value ?? 0);
+  const left = 24 * 3600 - (get("hour") * 3600 + get("minute") * 60 + get("second"));
+  const h = Math.floor(left / 3600);
+  const m = Math.max(1, Math.ceil((left % 3600) / 60));
+  return h > 0 ? `${h}h ${m === 60 ? 59 : m}m` : `${m}m`;
+}
+
+/** Re-renders every 30s so countdowns stay current. */
+export function useResetsIn(): string {
+  const [label, setLabel] = useState<string>(resetsInLabel());
+  useEffect(() => {
+    const t = setInterval(() => setLabel(resetsInLabel()), 30000);
+    return () => clearInterval(t);
+  }, []);
+  return label;
+}
+
 type State = { date: string; ids: string[] };
 let state: State = { date: todayCentral(), ids: [] };
 let loaded = false;

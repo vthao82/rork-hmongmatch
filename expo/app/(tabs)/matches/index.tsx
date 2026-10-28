@@ -10,6 +10,7 @@ import RedBackground from "@/components/RedBackground";
 import { profiles as mockProfiles } from "@/mocks/profiles";
 import { useAllProfiles, useLikedMe, fitsSeeking } from "@/lib/discoverProfiles";
 import { auth } from "@/lib/firebase";
+import { NewBadge } from "@/components/NewBadge";
 import { useLikes, DAILY_LIMIT } from "@/providers/LikesProvider";
 import { useTier } from "@/providers/TierProvider";
 import { useT } from "@/providers/LanguageProvider";
@@ -96,6 +97,7 @@ export default function LikesScreen() {
               {myLiked.map(p => (
                 <TouchableOpacity key={p.id} style={[s.pick, { width: CW }]} onPress={() => { setProfileStack(myLiked.map(x => x.id), myLiked.findIndex(x => x.id === p.id), t("youLiked")); router.push("/profile-stack"); }} testID={`liked-${p.id}`}>
                   <Image source={{ uri: p.photos[0] }} style={s.pickImg} contentFit="cover" />
+                  <NewBadge createdAtMs={p.createdAtMs} />
                   <View style={s.pickOverlay} />
                   <View style={s.pickInfo}>
                     <View style={s.pickNameRow}>
@@ -142,6 +144,7 @@ export default function LikesScreen() {
               return (
               <TouchableOpacity key={p.id} style={[s.pick, { width: CW }]} activeOpacity={0.85} onPress={() => { if (!unlocked) { setUpgradeOpen(true); return; } setProfileStack(likedMe.map(x => x.id), likedMe.findIndex(x => x.id === p.id), t("likesYou")); router.push("/profile-stack"); }} testID={`liked-by-${p.id}`}>
                 <Image source={{ uri: p.photos[0] }} style={s.pickImg} contentFit="cover" blurRadius={unlocked ? 0 : 14} />
+                <NewBadge createdAtMs={p.createdAtMs} />
                 <View style={s.pickOverlay} />
                 <View style={s.pickInfo}>
                   <Text style={s.pickName}>{unlocked ? `${p.name}, ${p.age}` : "?, ?"}</Text>
@@ -169,6 +172,7 @@ export default function LikesScreen() {
             {topPicks.slice(0, 4).map(p => (
               <TouchableOpacity key={p.id} style={[s.pick, { width: CW }]} activeOpacity={0.85} onPress={() => { if (!isPaid) { setUpgradeOpen(true); return; } setProfileStack(topPicks.slice(0, 4).map(x => x.id), topPicks.slice(0, 4).findIndex(x => x.id === p.id), t("topPicks")); router.push("/profile-stack"); }} testID={`top-${p.id}`}>
                 <Image source={{ uri: p.photos[0] }} style={s.pickImg} contentFit="cover" blurRadius={isPaid ? 0 : 8} />
+                <NewBadge createdAtMs={p.createdAtMs} />
                 <View style={s.pickOverlay} />
                 <View style={s.pickInfo}>
                   <Text style={s.pickName}>{isPaid ? `${p.name}, ${p.age}` : "???"}</Text>

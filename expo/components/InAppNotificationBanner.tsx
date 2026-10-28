@@ -2,9 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Animated, Platform } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter, usePathname } from "expo-router";
-import { MessageCircle, Sparkles, X } from "lucide-react-native";
+import { MessageCircle, X } from "lucide-react-native";
 import Colors from "@/constants/colors";
-import { useMyMatches } from "@/lib/discoverProfiles";
 import { useChatThreads } from "@/lib/chat";
 
 const DISMISSED_KEY = "hmongdate.inapp.banner.dismissed.v1";
@@ -19,7 +18,6 @@ export default function InAppNotificationBanner() {
   const router = useRouter();
   const pathname = usePathname();
   const ins = useSafeAreaInsets();
-  const { matchIds } = useMyMatches();
   const { threads } = useChatThreads();
   const [dismissed, setDismissed] = useState<boolean>(false);
   const [lastShown, setLastShown] = useState<number>(0);
@@ -40,15 +38,9 @@ export default function InAppNotificationBanner() {
         onTap: () => router.push("/(tabs)/messages" as never),
       };
     }
-    if (matchIds.length > 0) {
-      return {
-        icon: <Sparkles size={18} color="#FFF" />,
-        text: matchIds.length === 1 ? "You have a new match" : `You have ${matchIds.length} matches`,
-        onTap: () => router.push("/(tabs)/matches" as never),
-      };
-    }
+    // New matches are announced once by MatchCelebration, not here
     return null;
-  }, [totalUnread, matchIds.length, router]);
+  }, [totalUnread, router]);
 
   // Show banner once per app-foreground burst, only on top-level tabs
   const onTab = pathname?.startsWith("/(tabs)") || pathname === "/" || (pathname?.split("/").filter(Boolean).length ?? 0) <= 1;

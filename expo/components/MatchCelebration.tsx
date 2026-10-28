@@ -9,6 +9,7 @@ import { db } from "@/lib/firebase";
 import { useMyMatches, type MatchInfo } from "@/lib/discoverProfiles";
 import { useOnboarding } from "@/providers/OnboardingProvider";
 import { useAuth } from "@/providers/AuthProvider";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 type Shown = { match: MatchInfo; name: string; photo: string | null };
 
@@ -29,8 +30,14 @@ export default function MatchCelebration() {
     if (!pending) return;
     busy.current = true;
     (async () => {
+      const key = `hmongdate.celebrated.v1:${uid}`;
+      const seen: string[] = JSON.parse((await AsyncStorage.getItem(key).catch(() => null)) ?? "[]");
+      const stamp = `${pending.matchId}@${pending.createdAt}`;
+      const already = seen.includes(stamp);
+      if (!already) await AsyncStorage.setItem(key, JSON.stringify([...seen, stamp].slice(-200))).catch(() => {});
       // Mark first so it never shows twice, even if the app closes mid-animation
       await updateDoc(doc(db, "matches", pending.matchId), { celebratedBy: arrayUnion(uid) }).catch((e) => console.log("[celebrate] mark error", e));
+      if (already) { busy.current = false; return; }
       const snap = await getDoc(doc(db, "users", pending.otherId)).catch(() => null);
       const r = snap?.data();
       if (r) setShown({ match: pending, name: (r.name as string) ?? "Someone", photo: (r.photos as string[] | undefined)?.[0] ?? null });
