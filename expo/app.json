@@ -11,7 +11,7 @@
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#5C091D"
+      "backgroundColor": "#320411"
     },
     "ios": {
       "supportsTablet": false,
@@ -35,7 +35,7 @@
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#5C091D"
+        "backgroundColor": "#320411"
       },
       "package": "com.hmongdate.app",
       "intentFilters": [

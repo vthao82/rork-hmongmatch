@@ -37,8 +37,12 @@ service cloud.firestore {
     match /users/{uid} {
       // Any signed-in user can read profiles (Discover feed, chat avatars, etc.)
       allow read: if request.auth != null;
-      // Only the owner can create / update / delete their own profile
-      allow create, update, delete: if request.auth != null && request.auth.uid == uid;
+      // Only the owner can create / update / delete their own profile (never the admin-only comp flag)
+      allow create: if request.auth != null && request.auth.uid == uid
+                    && !('complimentaryUnlimited' in request.resource.data);
+      allow update: if request.auth != null && request.auth.uid == uid
+                    && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['complimentaryUnlimited']);
+      allow delete: if request.auth != null && request.auth.uid == uid;
 
       // Swipes subcollection — owner-only
       // Note: when checking for a mutual like, the OTHER user's swipe is read via

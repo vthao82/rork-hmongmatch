@@ -11,7 +11,7 @@ export const CATEGORY_GROUPS: CategoryGroup[] = [
     title: "Relationship Goals",
     freeAccess: true,
     cards: [
-      { id: "long", label: "Long-term partner", members: "1.2K", image: "https://images.unsplash.com/photo-1519741497674-611481863552?w=600" },
+      { id: "long", label: "Long-term partner", members: "1.2K", image: "https://static.prod-images.emergentagent.com/jobs/dac90db4-482a-4458-9b08-d5188ee46b56/images/beb94d5f5bca7224157074880c0f407bbe04029c4dcec595a0a1f66483c30851.jpeg" },
       { id: "long-open", label: "Long-term, open to short", members: "812", image: "https://images.unsplash.com/photo-1529626455594-4ff0802cfb7e?w=600" },
       { id: "short-open", label: "Short-term, open to long", members: "654", image: "https://images.unsplash.com/photo-1516589178581-6cd7833ae3b2?w=600" },
       { id: "short", label: "Short-term fun", members: "421", image: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=600" },
@@ -24,7 +24,7 @@ export const CATEGORY_GROUPS: CategoryGroup[] = [
     cards: [
       { id: "wants-kids", label: "Wants Kids", members: "612", image: "https://images.unsplash.com/photo-1543269865-cbf427effbad?w=600" },
       { id: "child-free", label: "Child-Free", members: "240", image: "https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=600" },
-      { id: "family", label: "Family First", members: "510", image: "https://images.unsplash.com/photo-1511895426328-dc8714191300?w=600" },
+      { id: "family", label: "Family First", members: "510", image: "https://static.prod-images.emergentagent.com/jobs/dac90db4-482a-4458-9b08-d5188ee46b56/images/7116c10880122a3630df3a7d27230434dd1a26383919abbcef98345679eda40c.jpeg" },
     ],
   },
   {
@@ -34,7 +34,7 @@ export const CATEGORY_GROUPS: CategoryGroup[] = [
     cards: [
       { id: "christian", label: "Christian", members: "780", image: "https://images.unsplash.com/photo-1438232992991-995b7058bbb3?w=600" },
       { id: "catholic", label: "Catholic", members: "412", image: "https://images.unsplash.com/photo-1473177104440-ffee2f376098?w=600" },
-      { id: "traditional", label: "Hmong Tradition", members: "660", image: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=600" },
+      { id: "traditional", label: "Hmong Tradition", members: "660", image: "https://static.prod-images.emergentagent.com/jobs/dac90db4-482a-4458-9b08-d5188ee46b56/images/d80cccd8ed9b426a80e244dfae5399c30f19bf6bc80817973b9d67e5a40bd48c.jpeg" },
       { id: "none", label: "No Religion", members: "215", image: "https://images.unsplash.com/photo-1499209974431-9dddcece7f88?w=600" },
     ],
   },
@@ -43,8 +43,8 @@ export const CATEGORY_GROUPS: CategoryGroup[] = [
     title: "Dialect",
     freeAccess: false,
     cards: [
-      { id: "green", label: "Green Hmong", members: "920", image: "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=600" },
-      { id: "white", label: "White Hmong", members: "1.1K", image: "https://images.unsplash.com/photo-1500382017468-9049fed747ef?w=600" },
+      { id: "green", label: "Green Hmong", members: "920", image: "https://static.prod-images.emergentagent.com/jobs/dac90db4-482a-4458-9b08-d5188ee46b56/images/0ac256ca6befc952f0be94b9c3385c1066542316536a828a21862d3a885880e4.jpeg" },
+      { id: "white", label: "White Hmong", members: "1.1K", image: "https://static.prod-images.emergentagent.com/jobs/dac90db4-482a-4458-9b08-d5188ee46b56/images/c1756e62783f67f00d31b454d45be345a7ba7a0c61aae9ed360d3920379c16c9.jpeg" },
     ],
   },
   {
@@ -116,9 +116,9 @@ export const CATEGORY_GROUPS: CategoryGroup[] = [
     title: "Hmong Culture",
     freeAccess: false,
     cards: [
-      { id: "clan-trad", label: "Clan Traditions", members: "1.3K", image: "https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=600" },
-      { id: "hmong-food", label: "Hmong Food", members: "1.7K", image: "https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=600" },
-      { id: "outdoor-mkt", label: "Outdoor Markets", members: "510", image: "https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=600" },
+      { id: "clan-trad", label: "Clan Traditions", members: "1.3K", image: "https://static.prod-images.emergentagent.com/jobs/dac90db4-482a-4458-9b08-d5188ee46b56/images/5a165ec3c36986b015723390c98599853d8069e9c2d1da70e8312a23a6952d1a.jpeg" },
+      { id: "hmong-food", label: "Hmong Food", members: "1.7K", image: "https://static.prod-images.emergentagent.com/jobs/dac90db4-482a-4458-9b08-d5188ee46b56/images/61a67e53b402fd4a571ff1246cde6b428ba08f5908d8a7340e3114072c990814.jpeg" },
+      { id: "outdoor-mkt", label: "Outdoor Markets", members: "510", image: "https://static.prod-images.emergentagent.com/jobs/dac90db4-482a-4458-9b08-d5188ee46b56/images/97b8dad980d194dcaaa952bacddc1fbed074013ec8bf38c485362dbb848f022f.jpeg" },
     ],
   },
   {
@@ -140,7 +140,7 @@ export const CATEGORY_GROUPS: CategoryGroup[] = [
       { id: "country", label: "Country", members: "320", image: "https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=600" },
       { id: "gospel", label: "Gospel", members: "210", image: "https://images.unsplash.com/photo-1519682337058-a94d519337bc?w=600" },
       { id: "rock", label: "Rock", members: "450", image: "https://images.unsplash.com/photo-1498038432885-c6f3f1b912ee?w=600" },
-      { id: "hmong", label: "Hmong", members: "910", image: "https://images.unsplash.com/photo-1533174072545-7a4b6ad7a6c3?w=600" },
+      { id: "hmong", label: "Hmong", members: "910", image: "https://static.prod-images.emergentagent.com/jobs/dac90db4-482a-4458-9b08-d5188ee46b56/images/255003250a0a4ca16cde735d2a7f33fec3ecdd0f172c79df6f97dcdd7e3c6ff2.jpeg" },
       { id: "kpop", label: "K-Pop", members: "780", image: "https://images.unsplash.com/photo-1501612780327-45045538702b?w=600" },
       { id: "hiphop", label: "Hip Hop and R&B", members: "640", image: "https://images.unsplash.com/photo-1571974599782-87624638275e?w=600" },
     ],
@@ -154,7 +154,7 @@ export const CATEGORY_GROUPS: CategoryGroup[] = [
       { id: "basketball", label: "Basketball", members: "840", image: "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=600" },
       { id: "baseball", label: "Baseball", members: "320", image: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?w=600" },
       { id: "running", label: "Running", members: "510", image: "https://images.unsplash.com/photo-1517649763962-0c623066013b?w=600" },
-      { id: "hmong-sports", label: "Hmong Sports", members: "440", image: "https://images.unsplash.com/photo-1551884170-09fb70a3a2ed?w=600" },
+      { id: "hmong-sports", label: "Hmong Sports", members: "440", image: "https://static.prod-images.emergentagent.com/jobs/dac90db4-482a-4458-9b08-d5188ee46b56/images/6264232ce9623ddaebc5215516fc9f5e73df08aeaa6db2900556c7f6177d37e7.jpeg" },
     ],
   },
   {

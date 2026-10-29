@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Modal } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
-import { User, Lock, Crown, Plus, ChevronRight } from "lucide-react-native";
+import { Lock, Crown, Plus, ChevronRight } from "lucide-react-native";
 import { useRouter } from "expo-router";
 import Colors from "@/constants/colors";
 import HmongMatchHeader from "@/components/HmongMatchHeader";
@@ -116,7 +116,7 @@ export default function InterestsTab() {
                     >
                       <Image source={{ uri: card.image }} style={s.cardImg} contentFit="cover" />
                       <View style={s.cardTint} />
-                      <View style={s.badge}><User size={11} color="#FFF" /><Text style={s.badgeTxt}>{card.members}</Text></View>
+                      
                       {locked && (
                         <View style={s.lockBadge}><Lock size={11} color="#FFF" /></View>
                       )}

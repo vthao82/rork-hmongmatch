@@ -9,6 +9,9 @@ import {
   purchasePackage as rcPurchasePackage,
   restorePurchases as rcRestorePurchases,
 } from "@/lib/revenuecat";
+import { doc, onSnapshot } from "firebase/firestore";
+import { db } from "@/lib/firebase";
+import { useAuth } from "@/providers/AuthProvider";
 
 /**
  * Two-tier subscription model:
@@ -226,7 +229,15 @@ export const [TierProvider, useTier] = createContextHook(() => {
     await setTierAndPersist("unlimited");
   }, [setTierAndPersist]);
 
-  const isPaid = tier === "unlimited";
+  // Complimentary Unlimited (e.g. Google Play reviewer) — set only by an admin, rules block self-grant
+  const { user } = useAuth();
+  const [complimentary, setComplimentary] = useState<boolean>(false);
+  useEffect(() => {
+    if (!user?.uid) { setComplimentary(false); return; }
+    return onSnapshot(doc(db, "users", user.uid), (s) => setComplimentary(s.data()?.complimentaryUnlimited === true), () => {});
+  }, [user?.uid]);
+
+  const isPaid = tier === "unlimited" || complimentary;
 
   const checkAndPrompt = useCallback((next: Usage) => {
     if (isPaid) return;
