@@ -2,7 +2,7 @@
   "expo": {
     "name": "Hmong Date",
     "slug": "8g9q9xcaqktiqbyw1ssbb",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "rork-app",
@@ -70,7 +70,8 @@
           "icon": "./assets/images/notification-icon.png",
           "color": "#C0152F"
         }
-      ]
+      ],
+      "@react-native-google-signin/google-signin"
     ],
     "experiments": {},
     "extra": {

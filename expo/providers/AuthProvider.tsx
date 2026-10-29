@@ -10,6 +10,7 @@ import {
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import { syncPushToken } from "@/lib/notifications";
+import { googleSignIn, googleSignOut } from "@/lib/googleSignIn";
 import {
   initRevenueCat,
   identifyRevenueCatUser,
@@ -68,12 +69,7 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
   const emailVerified =
     !!user?.emailVerified || (!!providerId && providerId !== "password");
 
-  const signInWithGoogle = useCallback(async (): Promise<{ ok: boolean; error?: string }> => {
-    return {
-      ok: false,
-      error: "Google Sign-In is coming soon. Please use email and password for now.",
-    };
-  }, []);
+  const signInWithGoogle = useCallback(() => googleSignIn(), []);
 
   const signInWithApple = useCallback(async (): Promise<{ ok: boolean; error?: string }> => {
     return {
@@ -152,6 +148,7 @@ export const [AuthProvider, useAuth] = createContextHook<AuthState>(() => {
 
   const signOut = useCallback(async () => {
     try {
+      await googleSignOut();
       await firebaseSignOut(auth);
     } catch (e) {
       console.log("[auth] signOut error", e);
