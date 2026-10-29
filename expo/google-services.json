@@ -49,6 +49,35 @@
           ]
         }
       }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1004199539174:android:ff947769f61ea9486de627",
+        "android_client_info": {
+          "package_name": "com.hmongdate.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1004199539174-a947opurbaftcplnl7igaof0hu76h7il.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBQqlH0RZbce5tBTNenN7PA4u3uEwfBaVQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1004199539174-a947opurbaftcplnl7igaof0hu76h7il.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
     }
   ],
   "configuration_version": "1"

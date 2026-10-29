@@ -10,7 +10,7 @@ import { useTier, UNLIMITED_PRICE, UNLIMITED_PRICE_LABEL } from "@/providers/Tie
 
 /** Play Store product ID — must match the SKU created in Google Play Console. */
 const PRODUCT_ID = "unlimited_monthly";
-const PACKAGE_NAME = "app.rork.hmongmatch";
+const PACKAGE_NAME = "com.hmongdate.app";
 
 /** Deep-link URLs for managing the subscription in the platform store. */
 const MANAGE_URL_IOS = "itms-apps://apps.apple.com/account/subscriptions";
