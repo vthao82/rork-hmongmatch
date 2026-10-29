@@ -170,7 +170,7 @@ export default function ProfileScreen() {
               <Text style={s.compareColText} numberOfLines={1} testID="compare-col-unlimited">Unlimited</Text>
             </View>
           </View>
-          {UNLIMITED_FEATURES.map(label => ({ label, free: false })).map(r => (
+          {UNLIMITED_FEATURES.map(f => f.replace(/^Unlimited /, "")).map(f => ({ label: f.charAt(0).toUpperCase() + f.slice(1), free: false })).map(r => (
             <View key={r.label} style={s.compareRow}>
               <Text style={s.compareRowText}>{r.label}</Text>
               <View style={s.compareCols}>
