@@ -14,6 +14,7 @@ import { useTier } from "@/providers/TierProvider";
 import { useT } from "@/providers/LanguageProvider";
 import { auth } from "@/lib/firebase";
 import InviteCard from "@/components/InviteCard";
+import { UNLIMITED_FEATURES } from "@/constants/plan";
 
 function TaskCard({ icon, title, sub, pct, onPress, done, testID }: { icon: React.ReactNode; title: string; sub: string; pct: string; onPress: () => void; done?: boolean; testID?: string }) {
   return (
@@ -169,12 +170,7 @@ export default function ProfileScreen() {
               <Text style={s.compareColText} numberOfLines={1} testID="compare-col-unlimited">Unlimited</Text>
             </View>
           </View>
-          {[
-            { label: t("seeWhoLikesYouFeat"), free: false },
-            { label: t("topPicksFeat"), free: false },
-            { label: t("unlimitedLikesFeat"), free: false },
-            { label: t("profileBoosts"), free: false },
-          ].map(r => (
+          {UNLIMITED_FEATURES.map(label => ({ label, free: false })).map(r => (
             <View key={r.label} style={s.compareRow}>
               <Text style={s.compareRowText}>{r.label}</Text>
               <View style={s.compareCols}>

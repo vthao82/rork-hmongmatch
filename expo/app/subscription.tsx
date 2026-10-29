@@ -4,6 +4,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { X, Check, Flame, Crown, Sparkles } from "lucide-react-native";
 import { LinearGradient } from "expo-linear-gradient";
+import { UNLIMITED_FEATURES } from "@/constants/plan";
 import Colors from "@/constants/colors";
 import { useT } from "@/providers/LanguageProvider";
 import { useTier, UNLIMITED_PRICE, UNLIMITED_PRICE_LABEL } from "@/providers/TierProvider";
@@ -25,13 +26,7 @@ export default function SubscriptionScreen() {
   const { isPaid, purchaseUnlimited, restorePurchases } = useTier();
   const [busy, setBusy] = useState<"buy" | "restore" | null>(null);
 
-  const PERKS: Perk[] = [
-    { label: t("unlimitedLikes") },
-    { label: t("unlimitedRewinds") },
-    { label: t("seeWhoLikesYouRow") },
-    { label: "2 free boosts per month", desc: "Be one of the top profiles for 60 minutes" },
-    { label: "Video messages", desc: "Coming soon — record and send video to your matches" },
-  ];
+  const PERKS: Perk[] = UNLIMITED_FEATURES.map((label) => ({ label }));
 
   const buy = async () => {
     if (busy) return;
