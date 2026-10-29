@@ -59,6 +59,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "1004199539174-6qa396vduj4ciq22h7os017ndo1tb85k.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.hmongdate.app",
+            "certificate_hash": "89b3f0c78990afa692de7e4e651d3e8d3e0a51dc"
+          }
+        },
+        {
           "client_id": "1004199539174-a947opurbaftcplnl7igaof0hu76h7il.apps.googleusercontent.com",
           "client_type": 3
         }
