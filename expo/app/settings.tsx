@@ -11,6 +11,7 @@ import { useOnboarding } from "@/providers/OnboardingProvider";
 import { useAuth } from "@/providers/AuthProvider";
 import { loadPushPrefs, savePushPrefs, syncPushToken, DEFAULT_PUSH_PREFS, type PushPrefs } from "@/lib/notifications";
 import { deleteMyAccount } from "@/lib/deleteAccount";
+import { shareInvite } from "@/lib/invite";
 
 /** Legal pages hosted on our custom domain — update if the domain ever changes. */
 const LEGAL_URL = "https://hmongdate.com";
@@ -419,6 +420,8 @@ export default function SettingsScreen() {
           <Row label={t("editProfile")} onPress={() => router.push("/edit-profile")} testID="edit-profile-row" />
           <Row label={t("manageSubscription")} onPress={() => router.push("/subscription")} testID="manage-sub-row" />
           <Row label={t("reportProblem")} onPress={() => router.push("/report")} testID="report-row" />
+          <Row label="Send feedback" onPress={() => router.push("/feedback" as never)} testID="feedback-row" />
+          <Row label="Invite friends" onPress={shareInvite} testID="invite-row" />
           <Row label="Unmatched people" onPress={() => router.push("/unmatched" as never)} testID="unmatched-row" />
           <Row label="Blocked users" onPress={() => router.push("/blocked" as never)} testID="blocked-users-row" />
           <TouchableOpacity style={s.row} onPress={() => Alert.alert(t("logout"), t("logoutConfirm"), [

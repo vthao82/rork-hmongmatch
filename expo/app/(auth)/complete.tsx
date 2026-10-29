@@ -13,9 +13,9 @@ import { useOnboarding } from "@/providers/OnboardingProvider";
 import { useT } from "@/providers/LanguageProvider";
 
 const CARDS = [
-  { uri: "https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=600", name: "Mai" },
-  { uri: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=600", name: "Pa" },
-  { uri: "https://images.unsplash.com/photo-1502767089025-6572583495f4?w=600", name: "Kou" },
+  { uri: "https://static.prod-images.emergentagent.com/jobs/dac90db4-482a-4458-9b08-d5188ee46b56/images/0ab09e580e1807c1817519c56034b0736b59a51330faceabe8be985260f2b671.jpeg", name: "Mai" },
+  { uri: "https://static.prod-images.emergentagent.com/jobs/dac90db4-482a-4458-9b08-d5188ee46b56/images/2fa839e5dd07a91049022cac8f1c831f058233c0fd72f66b8292ade787853141.jpeg", name: "Pa" },
+  { uri: "https://static.prod-images.emergentagent.com/jobs/dac90db4-482a-4458-9b08-d5188ee46b56/images/0baf6a9c2f16c1d8a0b3ad713626d41e1458f2323ed1f9159d63183d02f0c2d6.jpeg", name: "Kou" },
 ];
 
 export default function CompleteScreen() {

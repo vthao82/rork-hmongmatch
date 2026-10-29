@@ -13,6 +13,7 @@ import { useOnboarding } from "@/providers/OnboardingProvider";
 import { useTier } from "@/providers/TierProvider";
 import { useT } from "@/providers/LanguageProvider";
 import { auth } from "@/lib/firebase";
+import InviteCard from "@/components/InviteCard";
 
 function TaskCard({ icon, title, sub, pct, onPress, done, testID }: { icon: React.ReactNode; title: string; sub: string; pct: string; onPress: () => void; done?: boolean; testID?: string }) {
   return (
@@ -183,6 +184,8 @@ export default function ProfileScreen() {
             </View>
           ))}
         </TouchableOpacity>
+
+        <InviteCard />
 
         <TouchableOpacity style={s.reportRow} onPress={() => router.push("/report")} testID="report-row">
           <AlertTriangle size={18} color={Colors.crimsonLight} />
