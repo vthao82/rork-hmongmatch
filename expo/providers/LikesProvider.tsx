@@ -1,6 +1,7 @@
 import createContextHook from "@nkzw/create-context-hook";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useCallback, useEffect, useState } from "react";
+import { useAuth } from "@/providers/AuthProvider";
 
 const KEY = "hmongmatch.likes.v1";
 const PREM = "hmongmatch.premium.v1";
@@ -22,16 +23,23 @@ export const [LikesProvider, useLikes] = createContextHook(() => {
   const [hydrated, setHydrated] = useState<boolean>(false);
   const [likedIds, setLikedIds] = useState<string[]>([]);
   const [rewindUsed, setRewindUsed] = useState<number>(0);
+  // Per-account storage so counts and liked lists never carry over between accounts on one phone
+  const { user } = useAuth();
+  const sfx = user?.uid ? `:${user.uid}` : ":signed-out";
 
   useEffect(() => {
+    let cancelled = false;
+    setHydrated(false);
+    setUsed(0); setPremium(false); setLikedIds([]); setRewindUsed(0);
     (async () => {
       try {
         const [s, p, l, r] = await Promise.all([
-          AsyncStorage.getItem(KEY),
-          AsyncStorage.getItem(PREM),
-          AsyncStorage.getItem(LIKED),
-          AsyncStorage.getItem(REWIND),
+          AsyncStorage.getItem(KEY + sfx),
+          AsyncStorage.getItem(PREM + sfx),
+          AsyncStorage.getItem(LIKED + sfx),
+          AsyncStorage.getItem(REWIND + sfx),
         ]);
+        if (cancelled) return;
         if (s && s !== "null") {
           try { const parsed = JSON.parse(s) as Stored; if (parsed?.date === today()) setUsed(parsed.used); else setUsed(0); } catch (_e) { setUsed(0); }
         }
@@ -45,24 +53,25 @@ export const [LikesProvider, useLikes] = createContextHook(() => {
       } catch (e) {
         console.log("likes hydrate error", e);
       } finally {
-        setHydrated(true);
+        if (!cancelled) setHydrated(true);
       }
     })();
-  }, []);
+    return () => { cancelled = true; };
+  }, [sfx]);
 
   const persist = useCallback(async (next: number) => {
     const v: Stored = { date: today(), used: next };
-    await AsyncStorage.setItem(KEY, JSON.stringify(v)).catch(() => {});
-  }, []);
+    await AsyncStorage.setItem(KEY + sfx, JSON.stringify(v)).catch(() => {});
+  }, [sfx]);
 
   const persistRewind = useCallback(async (next: number) => {
     const v: Stored = { date: today(), used: next };
-    await AsyncStorage.setItem(REWIND, JSON.stringify(v)).catch(() => {});
-  }, []);
+    await AsyncStorage.setItem(REWIND + sfx, JSON.stringify(v)).catch(() => {});
+  }, [sfx]);
 
   const persistLiked = useCallback(async (ids: string[]) => {
-    await AsyncStorage.setItem(LIKED, JSON.stringify(ids)).catch(() => {});
-  }, []);
+    await AsyncStorage.setItem(LIKED + sfx, JSON.stringify(ids)).catch(() => {});
+  }, [sfx]);
 
   const canLike = premium || used < DAILY_LIMIT;
   const remaining = premium ? Infinity : Math.max(0, DAILY_LIMIT - used);
@@ -106,8 +115,8 @@ export const [LikesProvider, useLikes] = createContextHook(() => {
 
   const setPremiumOn = useCallback(async () => {
     setPremium(true);
-    await AsyncStorage.setItem(PREM, "1").catch(() => {});
-  }, []);
+    await AsyncStorage.setItem(PREM + sfx, "1").catch(() => {});
+  }, [sfx]);
 
   const resetDaily = useCallback(async () => {
     setUsed(0);

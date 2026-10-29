@@ -5,6 +5,7 @@ import {
   fetchCurrentOffering,
   fetchCustomerInfo,
   hasUnlimitedEntitlement,
+  identifyRevenueCatUser,
   onCustomerInfoUpdate,
   purchasePackage as rcPurchasePackage,
   restorePurchases as rcRestorePurchases,
@@ -96,19 +97,27 @@ export const [TierProvider, useTier] = createContextHook(() => {
   const [hydrated, setHydrated] = useState<boolean>(false);
   const [showLimitModal, setShowLimitModal] = useState<boolean>(false);
   const [show75Modal, setShow75Modal] = useState<boolean>(false);
+  // Per-account storage so plan status and daily counts never carry over between accounts on one phone
+  const { user } = useAuth();
+  const uid = user?.uid ?? null;
+  const sfx = uid ? `:${uid}` : ":signed-out";
 
   useEffect(() => {
+    let cancelled = false;
+    setHydrated(false);
+    setTier("free"); setSubEndsAt(null); setUsage(emptyUsage());
     (async () => {
       try {
         const [t, u, e] = await Promise.all([
-          AsyncStorage.getItem(KEY),
-          AsyncStorage.getItem(USAGE_KEY),
-          AsyncStorage.getItem(SUB_END_KEY),
+          AsyncStorage.getItem(KEY + sfx),
+          AsyncStorage.getItem(USAGE_KEY + sfx),
+          AsyncStorage.getItem(SUB_END_KEY + sfx),
         ]);
+        if (cancelled) return;
         const normalized = normalizeTier(t);
         setTier(normalized);
         if (t && t !== normalized) {
-          try { await AsyncStorage.setItem(KEY, normalized); } catch (_e) {}
+          try { await AsyncStorage.setItem(KEY + sfx, normalized); } catch (_e) {}
         }
         if (e) {
           const parsed = parseInt(e, 10);
@@ -118,18 +127,19 @@ export const [TierProvider, useTier] = createContextHook(() => {
           try { const parsed = JSON.parse(u) as Usage; if (parsed?.date === today()) setUsage({ ...emptyUsage(), ...parsed }); else setUsage(emptyUsage()); } catch (_e) { setUsage(emptyUsage()); }
         }
       } catch (e) { console.log("tier hydrate", e); }
-      finally { setHydrated(true); }
+      finally { if (!cancelled) setHydrated(true); }
     })();
-  }, []);
+    return () => { cancelled = true; };
+  }, [sfx]);
 
   const persistUsage = useCallback(async (u: Usage) => {
-    try { await AsyncStorage.setItem(USAGE_KEY, JSON.stringify(u)); } catch (e) { console.log("usage persist", e); }
-  }, []);
+    try { await AsyncStorage.setItem(USAGE_KEY + sfx, JSON.stringify(u)); } catch (e) { console.log("usage persist", e); }
+  }, [sfx]);
 
   const setTierAndPersist = useCallback(async (t: Tier) => {
     setTier(t);
-    try { await AsyncStorage.setItem(KEY, t); } catch (e) { console.log("tier save", e); }
-  }, []);
+    try { await AsyncStorage.setItem(KEY + sfx, t); } catch (e) { console.log("tier save", e); }
+  }, [sfx]);
 
   // ---- RevenueCat sync ----
   // Once the AsyncStorage cache has hydrated, ask RevenueCat for the source of
@@ -140,24 +150,28 @@ export const [TierProvider, useTier] = createContextHook(() => {
     if (!hydrated) return;
     let disposed = false;
     (async () => {
+      if (!uid) return;
+      // Make sure RevenueCat is on this account before reading its entitlement
+      await identifyRevenueCatUser(uid);
       const info = await fetchCustomerInfo();
       if (disposed) return;
       if (info) {
         const entitled = hasUnlimitedEntitlement(info);
         setTier(entitled ? "unlimited" : "free");
-        try { await AsyncStorage.setItem(KEY, entitled ? "unlimited" : "free"); } catch (_e) {}
+        try { await AsyncStorage.setItem(KEY + sfx, entitled ? "unlimited" : "free"); } catch (_e) {}
       }
     })();
     const unsub = onCustomerInfoUpdate((info) => {
+      if (disposed || !uid) return;
       const entitled = hasUnlimitedEntitlement(info);
       setTier(entitled ? "unlimited" : "free");
-      AsyncStorage.setItem(KEY, entitled ? "unlimited" : "free").catch(() => {});
+      AsyncStorage.setItem(KEY + sfx, entitled ? "unlimited" : "free").catch(() => {});
     });
     return () => {
       disposed = true;
       unsub();
     };
-  }, [hydrated]);
+  }, [hydrated, uid, sfx]);
 
   const purchaseUnlimited = useCallback(async (): Promise<{ ok: boolean; error?: string; cancelled?: boolean }> => {
     // 1. Grab the current offering from RevenueCat
@@ -183,7 +197,7 @@ export const [TierProvider, useTier] = createContextHook(() => {
     // 4. Success — flip tier and clear any pending cancellation
     await setTierAndPersist("unlimited");
     setSubEndsAt(null);
-    try { await AsyncStorage.removeItem(SUB_END_KEY); } catch (_e) {}
+    try { await AsyncStorage.removeItem(SUB_END_KEY + sfx); } catch (_e) {}
     return { ok: true };
   }, [setTierAndPersist]);
 
@@ -196,9 +210,9 @@ export const [TierProvider, useTier] = createContextHook(() => {
     // real `expirationDate` from the customer info.
     const endsAt = Date.now() + 30 * 24 * 60 * 60 * 1000;
     setSubEndsAt(endsAt);
-    try { await AsyncStorage.setItem(SUB_END_KEY, String(endsAt)); } catch (_e) {}
+    try { await AsyncStorage.setItem(SUB_END_KEY + sfx, String(endsAt)); } catch (_e) {}
     return { ok: true, endsAt };
-  }, []);
+  }, [sfx]);
 
   // Effective paid state — flips to free automatically once the subscription
   // grace period expires (checked once on hydration; UI re-renders normally).
@@ -207,10 +221,10 @@ export const [TierProvider, useTier] = createContextHook(() => {
       // Past the end date — downgrade silently
       setTier("free");
       setSubEndsAt(null);
-      AsyncStorage.setItem(KEY, "free").catch(() => {});
-      AsyncStorage.removeItem(SUB_END_KEY).catch(() => {});
+      AsyncStorage.setItem(KEY + sfx, "free").catch(() => {});
+      AsyncStorage.removeItem(SUB_END_KEY + sfx).catch(() => {});
     }
-  }, [tier, subEndsAt]);
+  }, [tier, subEndsAt, sfx]);
 
   const restorePurchases = useCallback(async (): Promise<{ ok: boolean; entitled: boolean; error?: string }> => {
     const res = await rcRestorePurchases();
@@ -218,7 +232,7 @@ export const [TierProvider, useTier] = createContextHook(() => {
     if (res.entitled) {
       await setTierAndPersist("unlimited");
       setSubEndsAt(null);
-      try { await AsyncStorage.removeItem(SUB_END_KEY); } catch (_e) {}
+      try { await AsyncStorage.removeItem(SUB_END_KEY + sfx); } catch (_e) {}
     }
     return { ok: true, entitled: res.entitled };
   }, [setTierAndPersist]);
@@ -230,7 +244,6 @@ export const [TierProvider, useTier] = createContextHook(() => {
   }, [setTierAndPersist]);
 
   // Complimentary Unlimited (e.g. Google Play reviewer) — set only by an admin, rules block self-grant
-  const { user } = useAuth();
   const [complimentary, setComplimentary] = useState<boolean>(false);
   useEffect(() => {
     if (!user?.uid) { setComplimentary(false); return; }

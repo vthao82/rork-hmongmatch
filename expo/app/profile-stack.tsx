@@ -14,6 +14,7 @@ import { useTier } from "@/providers/TierProvider";
 import { useLikes } from "@/providers/LikesProvider";
 import { spendCategoryView, useCategoryViewsLeft, resetsInLabel } from "@/lib/categoryViews";
 import { NewBadge } from "@/components/NewBadge";
+import { dialectText, lookingForText } from "@/lib/profileLabels";
 
 /**
  * Swipeable profile viewer route. Drives the "tap a card → swipe up to next
@@ -161,8 +162,8 @@ export default function ProfileStackScreen() {
             <Text style={s.st}>Details</Text>
             <View style={s.dc}>
               <View style={s.di}><MapPin size={16} color={Colors.primary} /><Text style={s.dt}>{profile.location}{profile.distance ? ` · ${profile.distance}` : ""}</Text></View>
-              {profile.languages?.length ? <View style={s.di}><Globe size={16} color={Colors.primary} /><Text style={s.dt}>{profile.languages.join(", ")}</Text></View> : null}
-              {profile.lookingFor ? <View style={s.di}><Heart size={16} color={Colors.primary} /><Text style={s.dt}>{profile.lookingFor}</Text></View> : null}
+              {dialectText(profile.languages) ? <View style={s.di}><Globe size={16} color={Colors.primary} /><Text style={s.dt}>{dialectText(profile.languages)}</Text></View> : null}
+              {profile.lookingFor ? <View style={s.di}><Heart size={16} color={Colors.primary} /><Text style={s.dt}>{lookingForText(profile.lookingFor)}</Text></View> : null}
             </View>
           </View>
           {profile.interests?.length ? (

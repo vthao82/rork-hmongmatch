@@ -70,7 +70,7 @@ function rowToProfile(id: string, row: DocumentData): Profile {
     bio: (row.bio as string) ?? "",
     photos: Array.isArray(row.photos) ? (row.photos as string[]) : [],
     interests: Array.isArray(row.interests) ? (row.interests as string[]) : [],
-    languages: row.dialect ? [row.dialect as string] : [],
+    languages: row.dialect === "other" ? (row.dialectOther ? [row.dialectOther as string] : []) : row.dialect ? [row.dialect as string] : [],
     lookingFor: (row.lookingFor as string) ?? "",
     isOnline: isActiveNow(lastActiveAt, showActiveStatus),
     lastActive: activeLabel(lastActiveAt, showActiveStatus),

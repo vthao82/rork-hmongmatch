@@ -16,6 +16,7 @@ import { blockUser } from "@/providers/BlockProvider";
 import { useActiveLabel } from "@/lib/presence";
 import { NewBadge } from "@/components/NewBadge";
 import { unmatchUser } from "@/lib/discoverProfiles";
+import { dialectText, lookingForText } from "@/lib/profileLabels";
 
 export default function UserProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -44,7 +45,7 @@ export default function UserProfileScreen() {
       bio: data.bio || currentUser.bio,
       photos: (data.photos && data.photos.length > 0) ? data.photos : currentUser.photos,
       interests: data.interests || currentUser.interests,
-      languages: data.dialect ? [data.dialect] : currentUser.languages,
+      languages: data.dialect === "other" ? (data.dialectOther ? [data.dialectOther] : []) : data.dialect ? [data.dialect] : currentUser.languages,
       lookingFor: data.lookingFor || currentUser.lookingFor,
       location: [data.hometownCity, data.hometownState].filter(Boolean).join(", ") || currentUser.location,
       verified: !!data.photoVerified,
@@ -218,8 +219,8 @@ export default function UserProfileScreen() {
             <Text style={s.st}>Details</Text>
             <View style={s.dc}>
               <View style={s.di}><MapPin size={16} color={Colors.primary} /><Text style={s.dt}>{p.location}{p.distance ? ` · ${p.distance}` : ""}</Text></View>
-              {p.languages?.length ? <View style={s.di}><Globe size={16} color={Colors.primary} /><Text style={s.dt}>{p.languages.join(", ")}</Text></View> : null}
-              {p.lookingFor ? <View style={s.di}><Heart size={16} color={Colors.primary} /><Text style={s.dt}>{p.lookingFor}</Text></View> : null}
+              {dialectText(p.languages) ? <View style={s.di}><Globe size={16} color={Colors.primary} /><Text style={s.dt} testID="profile-dialect">{dialectText(p.languages)}</Text></View> : null}
+              {p.lookingFor ? <View style={s.di}><Heart size={16} color={Colors.primary} /><Text style={s.dt} testID="profile-looking-for">{lookingForText(p.lookingFor)}</Text></View> : null}
             </View>
           </View>
           {p.interests?.length ? (
