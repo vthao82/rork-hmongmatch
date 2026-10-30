@@ -111,7 +111,7 @@ export default function ProfileStackScreen() {
     addLike(profile.id);
     void recordSwipe(profile.id, true);
     // Move to next on like so they can keep going through the list
-    if (idx < total - 1) setIdx((i) => i + 1);
+    if (idx < total - 1) next();
     else router.back();
   };
 

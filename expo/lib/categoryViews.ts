@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import { auth } from "@/lib/firebase";
+import { useAuth } from "@/providers/AuthProvider";
 
 /** Free members can open this many different profiles per day from the Interests tab. */
 export const CATEGORY_FREE_DAILY_CAP = 10;
-const KEY = "hmongdate.category.viewed.v2";
+const KEY = "hmongdate.category.views.v3";
 
 function todayCentral(): string {
   return new Intl.DateTimeFormat("en-US", { timeZone: "America/Chicago", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
@@ -29,55 +31,57 @@ export function useResetsIn(): string {
   return label;
 }
 
-type State = { date: string; ids: string[] };
-let state: State = { date: todayCentral(), ids: [] };
-let loaded = false;
+type State = { uid: string; date: string; count: number };
+const who = () => auth.currentUser?.uid ?? "signed-out";
+let state: State = { uid: who(), date: todayCentral(), count: 0 };
+let loadedFor = "";
 const listeners = new Set<(s: State) => void>();
 
 function current(): State {
-  if (state.date !== todayCentral()) state = { date: todayCentral(), ids: [] };
+  const uid = who();
+  if (state.uid !== uid || state.date !== todayCentral()) state = { uid, date: todayCentral(), count: 0 };
+  if (loadedFor !== uid) void load(uid);
   return state;
 }
 
 function save(next: State) {
   state = next;
-  AsyncStorage.setItem(KEY, JSON.stringify(next)).catch(() => {});
+  AsyncStorage.setItem(`${KEY}:${next.uid}`, JSON.stringify({ date: next.date, count: next.count })).catch(() => {});
   listeners.forEach((fn) => fn(next));
 }
 
-async function load() {
-  if (loaded) return;
-  loaded = true;
+async function load(uid: string) {
+  loadedFor = uid;
   try {
-    const raw = await AsyncStorage.getItem(KEY);
-    const parsed = raw ? (JSON.parse(raw) as State) : null;
-    if (parsed && parsed.date === todayCentral() && Array.isArray(parsed.ids)) save(parsed);
+    const raw = await AsyncStorage.getItem(`${KEY}:${uid}`);
+    const parsed = raw ? (JSON.parse(raw) as { date?: string; count?: number }) : null;
+    const s = current();
+    // Never lose views spent while storage was still loading
+    if (parsed && s.uid === uid && parsed.date === s.date && typeof parsed.count === "number" && parsed.count > s.count) {
+      save({ ...s, count: parsed.count });
+    }
   } catch (_e) { /* non-fatal */ }
 }
 
-/**
- * Use one free Interests view for `profileId`. Profiles already opened today are free.
- * Returns false (and uses nothing) when the free member is out of views.
- */
-export function spendCategoryView(profileId: string, isPaid: boolean): boolean {
+/** Use one free Interests view (every profile opened counts). Returns false when the free member is out of views. */
+export function spendCategoryView(_profileId: string, isPaid: boolean): boolean {
   if (isPaid) return true;
   const s = current();
-  if (s.ids.includes(profileId)) return true;
-  if (s.ids.length >= CATEGORY_FREE_DAILY_CAP) return false;
-  save({ date: s.date, ids: [...s.ids, profileId] });
+  if (s.count >= CATEGORY_FREE_DAILY_CAP) return false;
+  save({ ...s, count: s.count + 1 });
   return true;
 }
 
 /** Live count of free Interests views left today. */
 export function useCategoryViewsLeft(isPaid: boolean): number {
+  const { user } = useAuth();
   const [s, setS] = useState<State>(current());
   useEffect(() => {
-    load();
     listeners.add(setS);
     setS(current());
     return () => { listeners.delete(setS); };
-  }, []);
+  }, [user?.uid]);
   if (isPaid) return Infinity;
-  const ids = s.date === todayCentral() ? s.ids : [];
-  return Math.max(0, CATEGORY_FREE_DAILY_CAP - ids.length);
+  const live = s.uid === who() && s.date === todayCentral() ? s.count : 0;
+  return Math.max(0, CATEGORY_FREE_DAILY_CAP - live);
 }

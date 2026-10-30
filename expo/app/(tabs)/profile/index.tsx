@@ -169,12 +169,22 @@ export default function ProfileScreen() {
               <Text style={s.compareColText} numberOfLines={1} testID="compare-col-unlimited">Unlimited</Text>
             </View>
           </View>
-          {["See who likes you", "Top picks", "Likes", "Dislikes", "Rewinds", "Chat", "All Interest Access", "Profile Boost", "New Features Access"].map(label => ({ label, free: false })).map(r => (
-            <View key={r.label} style={s.compareRow}>
+          {[
+            { label: "See who likes you", free: null },
+            { label: "Top picks", free: null },
+            { label: "New Features Access", free: null },
+            { label: "Likes", free: "10/day" },
+            { label: "Dislikes", free: "10/day" },
+            { label: "Rewinds", free: "10/day" },
+            { label: "Chat", free: "Match only" },
+            { label: "Interest Access", free: "Relationship Goals 10/day" },
+            { label: "Profile Boost", free: "1/month", paid: "2/month" },
+          ].map(r => (
+            <View key={r.label} style={s.compareRow} testID={`compare-row-${r.label.toLowerCase().replace(/\s+/g, "-")}`}>
               <Text style={s.compareRowText}>{r.label}</Text>
               <View style={s.compareCols}>
-                <View style={s.colIcon}>{r.free ? <Check size={16} color={Colors.accent} /> : <Lock size={14} color="rgba(255,255,255,0.5)" />}</View>
-                <View style={s.colIcon}><Check size={16} color={Colors.accent} /></View>
+                <View style={s.colIcon}>{r.free ? <Text style={s.colVal}>{r.free}</Text> : <Lock size={14} color="rgba(255,255,255,0.5)" />}</View>
+                <View style={s.colIcon}>{r.paid ? <Text style={[s.colVal, s.colValPaid]}>{r.paid}</Text> : <Check size={16} color={Colors.accent} />}</View>
               </View>
             </View>
           ))}
@@ -239,5 +249,7 @@ const s = StyleSheet.create({
   compareColText: { color: "rgba(255,255,255,0.75)", fontSize: 13, fontWeight: "700" as const, width: 72, textAlign: "center" },
   compareRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", paddingVertical: 10 },
   compareRowText: { color: "#FFF", fontSize: 14, flex: 1, paddingRight: 8 },
-  colIcon: { width: 72, alignItems: "center" },
+  colIcon: { width: 72, alignItems: "center", justifyContent: "center" },
+  colVal: { color: "rgba(255,255,255,0.8)", fontSize: 11, fontWeight: "600" as const, textAlign: "center" },
+  colValPaid: { color: Colors.accent, fontWeight: "800" as const },
 });
