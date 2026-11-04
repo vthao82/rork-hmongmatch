@@ -2,6 +2,7 @@ import createContextHook from "@nkzw/create-context-hook";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useCallback, useEffect, useState } from "react";
 import { useAuth } from "@/providers/AuthProvider";
+import { useTier } from "@/providers/TierProvider";
 
 const KEY = "hmongmatch.likes.v1";
 const PREM = "hmongmatch.premium.v1";
@@ -19,7 +20,10 @@ function today(): string {
 
 export const [LikesProvider, useLikes] = createContextHook(() => {
   const [used, setUsed] = useState<number>(0);
-  const [premium, setPremium] = useState<boolean>(false);
+  const [premiumFlag, setPremium] = useState<boolean>(false);
+  // Paid, complimentary (e.g. reviewer) and legacy-unlocked accounts are all unlimited
+  const { isPaid } = useTier();
+  const premium = premiumFlag || isPaid;
   const [hydrated, setHydrated] = useState<boolean>(false);
   const [likedIds, setLikedIds] = useState<string[]>([]);
   const [rewindUsed, setRewindUsed] = useState<number>(0);
