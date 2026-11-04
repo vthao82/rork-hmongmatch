@@ -158,15 +158,20 @@ export const [OnboardingProvider, useOnboarding] = createContextHook(() => {
 
       let profile: Record<string, unknown> | undefined;
       let draft: Partial<OnboardingData> | undefined;
-      try {
-        const [p, d] = await Promise.all([
-          getDoc(doc(db, "users", uid)),
-          getDoc(doc(db, "users", uid, "private", "onboarding")),
-        ]);
-        profile = p.exists() ? p.data() : undefined;
-        draft = d.exists() ? (d.data().data as Partial<OnboardingData>) : undefined;
-      } catch (e) {
-        console.log("[onboarding] remote hydrate error (using local)", e);
+      // Retry: right after sign-in the first read can fail before auth is fully attached
+      for (let attempt = 0; attempt < 5 && !cancelled; attempt++) {
+        try {
+          const [p, d] = await Promise.all([
+            getDoc(doc(db, "users", uid)),
+            getDoc(doc(db, "users", uid, "private", "onboarding")),
+          ]);
+          profile = p.exists() ? p.data() : undefined;
+          draft = d.exists() ? (d.data().data as Partial<OnboardingData>) : undefined;
+          break;
+        } catch (e) {
+          console.log(`[onboarding] remote hydrate error (attempt ${attempt + 1})`, e);
+          await new Promise((r) => setTimeout(r, 600 * (attempt + 1)));
+        }
       }
       if (cancelled) return;
 
