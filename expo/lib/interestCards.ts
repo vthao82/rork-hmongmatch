@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { collection, query, where, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
+import { httpsCallable } from "firebase/functions";
+import { auth, db, functions } from "@/lib/firebase";
 import { useAuth } from "@/providers/AuthProvider";
 import { CATEGORY_GROUPS } from "@/constants/categories";
 
-export type SuggestedCard = { id: string; groupId: string; label: string; status: "pending" | "approved" | "rejected"; createdBy: string };
+export type SuggestedCard = { id: string; groupId: string; label: string; status: "pending" | "approved" | "rejected"; createdBy: string; image?: string };
 
 function useCardQuery(field: "status" | "createdBy", value: string | null) {
   const { user } = useAuth();
@@ -31,7 +32,7 @@ export function useCategoryGroups() {
       CATEGORY_GROUPS.map((g) => {
         const extra = approved
           .filter((c) => c.groupId === g.id && !g.cards.some((x) => x.label.toLowerCase() === c.label.toLowerCase()))
-          .map((c) => ({ id: `custom-${c.id}`, label: c.label, members: "New", image: g.cards[0]?.image ?? "" }));
+          .map((c) => ({ id: `custom-${c.id}`, label: c.label, members: "New", image: c.image || g.cards[0]?.image || "" }));
         return extra.length ? { ...g, cards: [...g.cards, ...extra] } : g;
       }),
     [approved]
@@ -46,3 +47,9 @@ export async function suggestCard(groupId: string, label: string): Promise<void>
 
 export const reviewCard = (id: string, status: "approved" | "rejected") => updateDoc(doc(db, "interestCards", id), { status, reviewedAt: serverTimestamp() });
 export const removeCard = (id: string) => deleteDoc(doc(db, "interestCards", id));
+
+/** Admin-only: AI-made photo for an approved card (Cloud Function, Gemini). */
+export async function generateCardPhoto(cardId: string): Promise<string> {
+  const res = await httpsCallable<{ cardId: string }, { image: string }>(functions, "generateCardPhoto", { timeout: 130000 })({ cardId });
+  return res.data.image;
+}

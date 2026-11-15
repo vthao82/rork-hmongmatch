@@ -170,14 +170,35 @@ service cloud.firestore {
                     && request.resource.data.createdBy == request.auth.uid
                     && request.resource.data.status == 'pending'
                     && request.resource.data.going == []
+                    && request.resource.data.get('notGoing', []) == []
+                    && request.resource.data.get('goingHidden', []) == []
                     && request.resource.data.title is string && request.resource.data.title.size() > 0 && request.resource.data.title.size() <= 80
                     && request.resource.data.startsAt is number;
       allow update: if isAdmin()
                     || (request.auth != null
                         && resource.data.status == 'approved'
-                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['going'])
-                        && onlyOwnChange('going'));
+                        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['going', 'notGoing', 'goingHidden'])
+                        && onlyOwnChange('going')
+                        && onlyOwnChange('notGoing')
+                        && onlyOwnChange('goingHidden'));
       allow delete: if request.auth != null && (resource.data.createdBy == request.auth.uid || isAdmin());
+
+      // Comments + replies on approved events
+      match /comments/{commentId} {
+        allow read: if request.auth != null
+                    && get(/databases/$(database)/documents/events/$(eventId)).data.status == 'approved';
+        allow create: if request.auth != null
+                      && get(/databases/$(database)/documents/events/$(eventId)).data.status == 'approved'
+                      && request.resource.data.keys().hasOnly(['uid', 'text', 'parentId', 'replyTo', 'createdAt'])
+                      && request.resource.data.uid == request.auth.uid
+                      && request.resource.data.text is string
+                      && request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 500
+                      && (request.resource.data.parentId == null || request.resource.data.parentId is string)
+                      && (request.resource.data.get('replyTo', null) == null || request.resource.data.replyTo is string)
+                      && request.resource.data.createdAt == request.time;
+        allow update: if false;
+        allow delete: if request.auth != null && (resource.data.uid == request.auth.uid || isAdmin());
+      }
     }
 
     // -------- Suggested Interest cards (members suggest, admins approve) --------

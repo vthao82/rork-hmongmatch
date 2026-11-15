@@ -1,5 +1,9 @@
 import { onDocumentCreated, onDocumentWritten } from "firebase-functions/v2/firestore";
 import { setGlobalOptions, logger } from "firebase-functions/v2";
+import { onSchedule } from "firebase-functions/v2/scheduler";
+import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { defineSecret } from "firebase-functions/params";
+import { getStorage, getDownloadURL } from "firebase-admin/storage";
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 import { Expo, ExpoPushMessage } from "expo-server-sdk";
@@ -177,4 +181,93 @@ export const onEventSuggested = onDocumentCreated("events/{eventId}", async (eve
     body: `${e.title ?? "An event"} — ${[e.city, e.state].filter(Boolean).join(", ")}`,
     data: { type: "event", eventId: event.params.eventId },
   })));
+});
+
+const centralDay = (ms: number) => new Intl.DateTimeFormat("en-US", { timeZone: "America/Chicago", month: "long", day: "numeric" }).format(new Date(ms));
+
+/** Reply on an event comment → push to the person who wrote the comment being replied to. */
+export const onEventComment = onDocumentCreated("events/{eventId}/comments/{commentId}", async (event) => {
+  const c = event.data?.data();
+  const target = typeof c?.replyTo === "string" ? c.replyTo : c?.parentId;
+  if (!c || typeof target !== "string") return;
+  const { eventId } = event.params;
+  const parent = await db.doc(`events/${eventId}/comments/${target}`).get();
+  const parentUid = parent.get("uid") as string | undefined;
+  if (!parentUid || parentUid === c.uid) return;
+  if ((await db.doc(`users/${parentUid}/blocked/${c.uid}`).get()).exists) return;
+  const title = ((await db.doc(`events/${eventId}`).get()).get("title") as string) || "an event";
+  const text = String(c.text ?? "").trim();
+  await sendTo(parentUid, "events", {
+    title: `${await nameOf(c.uid)} replied to you`,
+    body: `On ${title}: ${text.length > 120 ? `${text.slice(0, 117)}...` : text}`,
+    data: { type: "event", eventId },
+  });
+});
+
+/** 6 PM US Central: remind everyone going to an event that starts tomorrow. */
+export const eventReminders = onSchedule({ schedule: "0 18 * * *", timeZone: "America/Chicago" }, async () => {
+  const now = Date.now();
+  const snap = await db.collection("events").where("status", "==", "approved").get();
+  const due = snap.docs.filter((d) => {
+    const at = d.get("startsAt") as number;
+    return typeof at === "number" && at > now && at <= now + 24 * 3600 * 1000 && d.get("reminderSent") !== true;
+  });
+  for (const d of due) {
+    const e = d.data();
+    const place = [e.venue, e.city].filter(Boolean).join(", ");
+    await Promise.all(listOf(e.going).map((uid) => sendTo(uid, "events", {
+      title: `Tomorrow: ${e.title ?? "your event"}`,
+      body: `${centralDay(e.startsAt)}${e.timeText ? ` · ${e.timeText}` : ""}${place ? ` · ${place}` : ""}. See you there!`,
+      data: { type: "event", eventId: d.id },
+    })));
+    await d.ref.update({ reminderSent: true });
+    logger.info("event reminder sent", { eventId: d.id, people: listOf(e.going).length });
+  }
+});
+
+const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
+const IMAGE_MODELS = ["gemini-3.1-flash-image", "gemini-3.1-flash-image-preview"];
+
+async function geminiImage(prompt: string, key: string): Promise<{ data: string; mime: string }> {
+  let lastErr = "";
+  for (const model of IMAGE_MODELS) {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-goog-api-key": key },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: { responseModalities: ["TEXT", "IMAGE"], imageConfig: { aspectRatio: "3:4" } },
+      }),
+    });
+    if (r.status === 404) { lastErr = `${model} not found`; continue; }
+    const j = (await r.json()) as any;
+    if (!r.ok) throw new HttpsError("internal", j?.error?.message ?? `Gemini error ${r.status}`);
+    const part = (j?.candidates?.[0]?.content?.parts ?? []).find((p: any) => p?.inlineData?.data);
+    if (!part) throw new HttpsError("internal", "No image came back. Try again.");
+    return { data: part.inlineData.data, mime: part.inlineData.mimeType ?? "image/png" };
+  }
+  throw new HttpsError("internal", lastErr);
+}
+
+/** Admin-only: AI photo for an approved suggested Interest card → Storage → card.image. */
+export const generateCardPhoto = onCall({ secrets: [GEMINI_API_KEY], timeoutSeconds: 120, memory: "512MiB" }, async (req) => {
+  const uid = req.auth?.uid;
+  if (!uid) throw new HttpsError("unauthenticated", "Sign in first.");
+  if ((await db.doc(`users/${uid}`).get()).get("isAdmin") !== true) throw new HttpsError("permission-denied", "Admins only.");
+  const cardId = String(req.data?.cardId ?? "");
+  const ref = db.doc(`interestCards/${cardId}`);
+  const card = await ref.get();
+  if (!cardId || !card.exists) throw new HttpsError("not-found", "Card not found.");
+  const label = String(card.get("label") ?? "");
+  const hint = String(req.data?.hint ?? "").trim().slice(0, 200);
+  const prompt = `Warm, realistic lifestyle photo for a Hmong dating app interest card called "${label}". `
+    + `Show Hmong-American young adults enjoying ${label}${hint ? ` (${hint})` : ""}. `
+    + "Natural light, vibrant but tasteful colors, portrait orientation, subject centered with space at the bottom for a caption. No text, no words, no logos, no watermarks.";
+  const img = await geminiImage(prompt, GEMINI_API_KEY.value());
+  const ext = img.mime.includes("jpeg") ? "jpg" : "png";
+  const file = getStorage().bucket().file(`interestCards/${cardId}-${Date.now()}.${ext}`);
+  await file.save(Buffer.from(img.data, "base64"), { contentType: img.mime, resumable: false });
+  const url = await getDownloadURL(file);
+  await ref.update({ image: url, imageUpdatedAt: FieldValue.serverTimestamp() });
+  return { image: url };
 });

@@ -76,11 +76,24 @@ function ProfileCard({ profile, height }: { profile: Profile; height: number }) 
   );
 }
 
+/** "45m left" for a running boost, refreshed every 15s. */
+function useBoostLeft(until: number | undefined): string {
+  const [now, setNow] = useState<number>(Date.now());
+  useEffect(() => {
+    if (!until) return;
+    setNow(Date.now());
+    const t = setInterval(() => setNow(Date.now()), 15000);
+    return () => clearInterval(t);
+  }, [until]);
+  const mins = Math.ceil(Math.max(0, (until ?? 0) - now) / 60000);
+  return mins <= 1 ? "<1m left" : `${mins}m left`;
+}
+
 export default function BrowseScreen() {
   const ins = useSafeAreaInsets();
   const router = useRouter();
   const t = useT();
-  const { isPaid, remaining, consumeLike, consumeDislike, consumeRewind, startBoost, stopBoost, boostActive, showLimitModal, setShowLimitModal, show75Modal, setShow75Modal } = useTier();
+  const { isPaid, usage, remaining, consumeLike, consumeDislike, consumeRewind, startBoost, stopBoost, boostActive, showLimitModal, setShowLimitModal, show75Modal, setShow75Modal } = useTier();
   const { consume: addLike } = useLikes();
   const { profiles: liveProfiles, loading: loadingProfiles, error: profilesError, reload: reloadProfiles } = useDiscoverProfiles();
   // Local session-only dismissed set. The Firestore swipes doc is the
@@ -159,6 +172,8 @@ export default function BrowseScreen() {
     setHistory(h => h.slice(0, -1));
   }, [history, consumeRewind, isPaid]);
 
+  const boostLeft = useBoostLeft(boostActive ? usage.boostActiveUntil : undefined);
+
   const toggleBoost = useCallback(() => {
     if (boostActive) {
       Alert.alert("Turn off boost?", "Your boost for this hour will end now and still counts toward this month.", [
@@ -182,7 +197,7 @@ export default function BrowseScreen() {
       <HmongMatchHeader right={
         <TouchableOpacity onPress={toggleBoost} style={[st.boost, boostActive && st.boostActive]} testID="boost-toggle">
           <Zap size={14} color={boostActive ? "#1a1404" : Colors.accent} fill={boostActive ? "#1a1404" : "transparent"} />
-          <Text style={[st.boostTxt, boostActive && { color: "#1a1404" }]}>{boostActive ? t("boostOn") : t("boost")}</Text>
+          <Text style={[st.boostTxt, boostActive && { color: "#1a1404" }]}>{boostActive ? `${t("boost")} · ${boostLeft}` : t("boost")}</Text>
         </TouchableOpacity>
       } />
 

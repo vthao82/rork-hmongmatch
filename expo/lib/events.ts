@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { collection, query, where, onSnapshot, addDoc, updateDoc, deleteDoc, doc, arrayUnion, arrayRemove, serverTimestamp } from "firebase/firestore";
+import { collection, query, where, onSnapshot, addDoc, updateDoc, deleteDoc, doc, arrayUnion, arrayRemove, serverTimestamp, orderBy } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { useAuth } from "@/providers/AuthProvider";
 
@@ -17,7 +17,11 @@ export type HmongEvent = {
   status: EventStatus;
   createdBy: string;
   going: string[];
+  notGoing: string[];
+  goingHidden: string[];
 };
+
+export type EventComment = { id: string; uid: string; text: string; parentId: string | null; replyTo: string | null; createdAt: number };
 
 function toEvent(id: string, d: Record<string, any>): HmongEvent {
   return {
@@ -33,6 +37,8 @@ function toEvent(id: string, d: Record<string, any>): HmongEvent {
     status: d.status ?? "pending",
     createdBy: d.createdBy ?? "",
     going: Array.isArray(d.going) ? d.going : [],
+    notGoing: Array.isArray(d.notGoing) ? d.notGoing : [],
+    goingHidden: Array.isArray(d.goingHidden) ? d.goingHidden : [],
   };
 }
 
@@ -72,17 +78,50 @@ export function useIsAdmin(): boolean {
   return admin;
 }
 
-export async function suggestEvent(e: Omit<HmongEvent, "id" | "status" | "createdBy" | "going">): Promise<void> {
+export async function suggestEvent(e: Omit<HmongEvent, "id" | "status" | "createdBy" | "going" | "notGoing" | "goingHidden">): Promise<void> {
   const uid = auth.currentUser?.uid;
   if (!uid) throw new Error("Not signed in");
   await addDoc(collection(db, "events"), { ...e, status: "pending", createdBy: uid, going: [], createdAt: serverTimestamp() });
 }
 
-export async function setGoing(eventId: string, going: boolean): Promise<void> {
+export type Rsvp = "going" | "notGoing" | null;
+
+/** Going / not going (or clear); showProfile decides if I appear in "Who's going". */
+export async function setRsvp(eventId: string, rsvp: Rsvp, showProfile = true): Promise<void> {
   const uid = auth.currentUser?.uid;
   if (!uid) return;
-  await updateDoc(doc(db, "events", eventId), { going: going ? arrayUnion(uid) : arrayRemove(uid) });
+  await updateDoc(doc(db, "events", eventId), {
+    going: rsvp === "going" ? arrayUnion(uid) : arrayRemove(uid),
+    notGoing: rsvp === "notGoing" ? arrayUnion(uid) : arrayRemove(uid),
+    goingHidden: rsvp === "going" && !showProfile ? arrayUnion(uid) : arrayRemove(uid),
+  });
 }
+
+export function useEventComments(eventId: string | undefined, enabled: boolean) {
+  const [comments, setComments] = useState<EventComment[]>([]);
+  const { user } = useAuth();
+  useEffect(() => {
+    if (!user || !eventId || !enabled) { setComments([]); return; }
+    return onSnapshot(
+      query(collection(db, "events", eventId, "comments"), orderBy("createdAt", "asc")),
+      (snap) => setComments(snap.docs.map((d) => {
+        const x = d.data();
+        return { id: d.id, uid: x.uid ?? "", text: x.text ?? "", parentId: typeof x.parentId === "string" ? x.parentId : null, replyTo: typeof x.replyTo === "string" ? x.replyTo : null, createdAt: x.createdAt?.toMillis?.() ?? Date.now() };
+      })),
+      (e) => console.log("[events] comments error", e)
+    );
+  }, [user?.uid, eventId, enabled]);
+  return comments;
+}
+
+/** parentId = top-level thread; replyTo = the exact comment answered (its author gets the push). */
+export async function addEventComment(eventId: string, text: string, parentId: string | null, replyTo: string | null): Promise<void> {
+  const uid = auth.currentUser?.uid;
+  if (!uid) throw new Error("Not signed in");
+  await addDoc(collection(db, "events", eventId, "comments"), { uid, text: text.trim(), parentId, replyTo, createdAt: serverTimestamp() });
+}
+
+export const deleteEventComment = (eventId: string, commentId: string) => deleteDoc(doc(db, "events", eventId, "comments", commentId));
 
 export const reviewEvent = (eventId: string, status: "approved" | "rejected") => updateDoc(doc(db, "events", eventId), { status, reviewedAt: serverTimestamp() });
 export const removeEvent = (eventId: string) => deleteDoc(doc(db, "events", eventId));

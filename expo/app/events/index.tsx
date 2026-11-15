@@ -7,6 +7,7 @@ import { useApprovedEvents, usePendingEvents, useMyEvents, useIsAdmin, type Hmon
 import { useOnboarding } from "@/providers/OnboardingProvider";
 import { usePendingCards, reviewCard } from "@/lib/interestCards";
 import { CATEGORY_GROUPS } from "@/constants/categories";
+import { ApprovedCardsAdmin } from "@/components/ApprovedCardsAdmin";
 
 export function EventRow({ e, onPress, badge }: { e: HmongEvent; onPress: () => void; badge?: string }) {
   return (
@@ -48,7 +49,7 @@ export default function EventsScreen() {
       <Stack.Screen options={{ title: "Hmong Events" }} />
       <ScrollView style={s.ct} contentContainerStyle={s.scroll} testID="events-screen">
         <Text style={s.h1}>Community events</Text>
-        <Text style={s.sub}>Hmong New Year celebrations, festivals and meetups. Tap "I'm going" to see who else will be there.</Text>
+        <Text style={s.sub}>Hmong New Year celebrations, festivals and meetups. Tap "I'm going" to see who else will be there and join the conversation.</Text>
 
         <View style={s.actions}>
           <TouchableOpacity style={s.suggest} onPress={() => router.push("/events/new")} testID="events-suggest">
@@ -77,6 +78,8 @@ export default function EventsScreen() {
             ))}
           </View>
         )}
+
+        {isAdmin && <ApprovedCardsAdmin />}
 
         {isAdmin && pending.length > 0 && (
           <View style={s.section}>

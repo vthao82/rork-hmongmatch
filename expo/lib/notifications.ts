@@ -93,11 +93,12 @@ export function usePushRouting() {
   const router = useRouter();
   useEffect(() => {
     if (!N) return;
-    const go = (data: { type?: string; otherUid?: string } | undefined) => {
+    const go = (data: { type?: string; otherUid?: string; eventId?: string } | undefined) => {
       if (!data?.type) return;
       if (data.type === "message" && data.otherUid) router.push(`/chat/${data.otherUid}`);
       else if (data.type === "match" && data.otherUid) router.push(`/chat/${data.otherUid}`);
       else if (data.type === "like") router.push("/(tabs)/matches" as never);
+      else if (data.type === "event" && data.eventId) router.push(`/events/${data.eventId}`);
     };
     N.getLastNotificationResponseAsync().then((r) => go(r?.notification.request.content.data as never)).catch(() => {});
     const sub = N.addNotificationResponseReceivedListener((r) => go(r.notification.request.content.data as never));
