@@ -2,5 +2,5 @@
 export const ENROLLMENT_STEPS = [
   "terms", "rules", "name", "birthday", "gender", "clan", "dialect", "hometown", "orientation",
   "religion", "seeking", "looking-for", "distance", "work", "education", "interests", "lifestyle",
-  "extras", "photos", "photo-verify", "bio", "location", "complete",
+  "extras", "photos", "photo-verify", "bio", "prompts", "invite-code", "location", "complete",
 ];

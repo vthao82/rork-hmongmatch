@@ -2,7 +2,8 @@ import React, { useMemo, useState } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Modal } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
-import { Lock, Crown, Plus, ChevronRight } from "lucide-react-native";
+import { Lock, Crown, Plus, ChevronRight, CalendarDays } from "lucide-react-native";
+import MostCompatibleCard from "@/components/MostCompatibleCard";
 import { useRouter } from "expo-router";
 import Colors from "@/constants/colors";
 import HmongMatchHeader from "@/components/HmongMatchHeader";
@@ -78,6 +79,16 @@ export default function InterestsTab() {
       <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
         <Text style={s.heroTitle}>{t("exploreTitle")}</Text>
         <Text style={s.heroSub}>{t("exploreSub")}</Text>
+
+        <MostCompatibleCard />
+        <TouchableOpacity style={s.eventsBanner} onPress={() => router.push("/events")} testID="events-banner">
+          <View style={s.eventsIcon}><CalendarDays size={22} color={Colors.indigo} /></View>
+          <View style={{ flex: 1 }}>
+            <Text style={s.eventsTitle}>Hmong Events</Text>
+            <Text style={s.eventsSub}>New Year celebrations & meetups — see who's going</Text>
+          </View>
+          <ChevronRight size={20} color="rgba(255,255,255,0.7)" />
+        </TouchableOpacity>
 
         {sortedGroups.map(group => {
           const visibleCards = seeAll === group.id ? group.cards : group.cards.slice(0, 4);
@@ -181,4 +192,8 @@ const s = StyleSheet.create({
   cta: { backgroundColor: Colors.accent, paddingHorizontal: 32, paddingVertical: 14, borderRadius: 999, marginTop: 18 },
   ctaTxt: { color: "#1a1404", fontSize: 14, fontWeight: "700" as const },
   later: { color: "rgba(255,255,255,0.5)", marginTop: 14, fontSize: 13 },
+  eventsBanner: { flexDirection: "row", alignItems: "center", gap: 12, marginTop: 12, marginBottom: 8, padding: 14, borderRadius: 20, backgroundColor: "rgba(15,6,31,0.55)", borderWidth: 1, borderColor: "rgba(255,255,255,0.15)" },
+  eventsIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: Colors.gold, alignItems: "center", justifyContent: "center" },
+  eventsTitle: { color: "#FFF", fontSize: 16, fontWeight: "800" as const },
+  eventsSub: { color: "rgba(255,255,255,0.7)", fontSize: 12, marginTop: 2 },
 });

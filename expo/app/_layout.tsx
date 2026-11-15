@@ -30,6 +30,10 @@ function RootLayoutNav() {
       <Stack.Screen name="category/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="report" options={{ headerShown: false, presentation: "modal" }} />
       <Stack.Screen name="feedback" options={{ headerShown: false, presentation: "modal" }} />
+      <Stack.Screen name="date-safety" options={{ title: "Date safety" }} />
+      <Stack.Screen name="events/index" options={{ title: "Hmong Events" }} />
+      <Stack.Screen name="events/new" options={{ title: "Suggest an event" }} />
+      <Stack.Screen name="events/[id]" options={{ title: "Event" }} />
       <Stack.Screen name="photo-verify" options={{ headerShown: false, presentation: "modal" }} />
       <Stack.Screen name="blocked" options={{ title: "Blocked users" }} />
       <Stack.Screen name="unmatched" options={{ title: "Unmatched people" }} />

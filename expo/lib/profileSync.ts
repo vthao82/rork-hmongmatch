@@ -49,6 +49,9 @@ export type ProfileRow = {
   lifestyle: Record<string, unknown>;
   extras: Record<string, unknown>;
   prompt: { q: string; a: string } | null;
+  prompts: { q: string; a: string }[];
+  hideSameClan: boolean;
+  verifiedOnly: boolean;
   updatedAt?: Timestamp;
   createdAt?: Timestamp;
 };
@@ -95,6 +98,9 @@ function toProfileRow(userId: string, d: OnboardingData): Omit<ProfileRow, "upda
     lifestyle: (d.lifestyle ?? {}) as Record<string, unknown>,
     extras: (d.extras ?? {}) as Record<string, unknown>,
     prompt: d.prompt ?? null,
+    prompts: (d.prompts ?? []).filter((p) => p.q && p.a?.trim()).slice(0, 3),
+    hideSameClan: d.hideSameClan ?? false,
+    verifiedOnly: d.verifiedOnly ?? false,
   };
 }
 
@@ -120,6 +126,8 @@ export async function syncProfile(
     };
     // Never downgrade a verification saved directly by the selfie screen.
     if (!row.photoVerified) delete payload.photoVerified;
+    // Invite code is write-once; the server credits the inviter
+    if (data.referredByCode && !existing.data()?.referredByCode) payload.referredByCode = data.referredByCode.trim().toUpperCase();
     if (!existing.exists() || !existing.data()?.createdAt) {
       payload.createdAt = serverTimestamp();
     }

@@ -46,6 +46,8 @@ export default function AuthLayout() {
       <Stack.Screen name="extras" />
       <Stack.Screen name="photos" />
       <Stack.Screen name="bio" />
+      <Stack.Screen name="prompts" />
+      <Stack.Screen name="invite-code" />
       <Stack.Screen name="location" />
       <Stack.Screen name="complete" />
       <Stack.Screen name="auth-callback" />

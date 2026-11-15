@@ -8,7 +8,8 @@ import Colors from "@/constants/colors";
 import HmongMatchHeader from "@/components/HmongMatchHeader";
 import RedBackground from "@/components/RedBackground";
 import { profiles as mockProfiles } from "@/mocks/profiles";
-import { useAllProfiles, useLikedMe, fitsSeeking } from "@/lib/discoverProfiles";
+import { useAllProfiles, useLikedMe, fitsSeeking, passesPrefs } from "@/lib/discoverProfiles";
+import { useOnboarding } from "@/providers/OnboardingProvider";
 import { auth } from "@/lib/firebase";
 import { NewBadge } from "@/components/NewBadge";
 import { useLikes, DAILY_LIMIT } from "@/providers/LikesProvider";
@@ -27,7 +28,9 @@ export default function LikesScreen() {
   const { used, premium, likedIds } = useLikes();
   const { isPaid } = useTier();
   const { byId: liveById } = useAllProfiles();
-  const { likerIds } = useLikedMe();
+  const { likerIds, comments } = useLikedMe();
+  const { data: onb } = useOnboarding();
+  const prefs = { myClan: onb.clan, hideSameClan: onb.hideSameClan, verifiedOnly: onb.verifiedOnly };
   const myUid = auth.currentUser?.uid ?? "";
   const mySeeking = liveById[myUid]?.seeking;
   const [tab, setTab] = useState<"likes" | "liked" | "top">("liked");
@@ -42,6 +45,7 @@ export default function LikesScreen() {
   const topPicks = Object.values(liveById)
     .filter((p) => p.id !== myUid && !p.id.startsWith("seed-") && p.photos.length > 0)
     .filter((p) => fitsSeeking(mySeeking, p.genders))
+    .filter((p) => passesPrefs(p, prefs))
     .filter((p) => !likedIds.includes(p.id) && !blocked.includes(p.id))
     .slice(0, 12);
   // "Likes You" — real people whose swipe on me is a like and I haven't answered yet
@@ -148,6 +152,7 @@ export default function LikesScreen() {
                 <View style={s.pickOverlay} />
                 <View style={s.pickInfo}>
                   <Text style={s.pickName}>{unlocked ? `${p.name}, ${p.age}` : "?, ?"}</Text>
+                  {unlocked && comments[p.id] ? <Text style={s.pickComment} numberOfLines={2} testID={`liked-by-comment-${p.id}`}>“{comments[p.id]}”</Text> : null}
                 </View>
                 {!unlocked && (
                   <View style={s.lockCenter}>
@@ -238,6 +243,7 @@ const s = StyleSheet.create({
   pickInfo: { position: "absolute", left: 10, bottom: 10, right: 10 },
   pickNameRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   pickName: { color: "#FFF", fontSize: 15, fontWeight: "700" as const },
+  pickComment: { color: "#FFF", fontSize: 12, marginTop: 3, fontStyle: "italic" as const },
   pickTime: { color: Colors.accent, fontSize: 12, fontWeight: "600" as const, marginTop: 2 },
   pickStar: { position: "absolute", bottom: 10, right: 10, width: 26, height: 26, borderRadius: 13, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "center", alignItems: "center" },
   lockCenter: { position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "center", alignItems: "center" },

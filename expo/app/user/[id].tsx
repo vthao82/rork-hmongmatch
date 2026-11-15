@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from "react-native";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { PhotoCarousel } from "@/components/PhotoCarousel";
@@ -17,6 +17,9 @@ import { useActiveLabel } from "@/lib/presence";
 import { NewBadge } from "@/components/NewBadge";
 import { unmatchUser } from "@/lib/discoverProfiles";
 import { dialectText, lookingForText } from "@/lib/profileLabels";
+import PromptCards from "@/components/PromptCards";
+import LikeCommentModal from "@/components/LikeCommentModal";
+import { shareWithFamily } from "@/lib/shareProfile";
 
 export default function UserProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -28,6 +31,7 @@ export default function UserProfileScreen() {
   const { consume: addLike } = useLikes();
   const { matchIds } = useMyMatches();
   const activeText = useActiveLabel(id);
+  const [commentOpen, setCommentOpen] = useState<boolean>(false);
 
   // 1) Live Firestore lookup
   // 2) Mock fallback (during loading or for legacy mocked IDs)
@@ -49,6 +53,7 @@ export default function UserProfileScreen() {
       lookingFor: data.lookingFor || currentUser.lookingFor,
       location: [data.hometownCity, data.hometownState].filter(Boolean).join(", ") || currentUser.location,
       verified: !!data.photoVerified,
+      prompts: data.prompts ?? [],
     };
   }
 
@@ -79,10 +84,10 @@ export default function UserProfileScreen() {
     router.push(`/chat/${profile.id}`);
   };
 
-  const onLike = () => {
+  const onLike = (comment?: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     addLike(profile.id);
-    recordSwipe(profile.id, true).then((res) => {
+    recordSwipe(profile.id, true, comment).then((res) => {
       if (res.ok && !res.isMatch) {
         Alert.alert("Liked", `We'll let you know if ${profile.name} likes you back.`);
       }
@@ -95,6 +100,7 @@ export default function UserProfileScreen() {
       p.name,
       "What would you like to do?",
       [
+        { text: "Share with family", onPress: () => void shareWithFamily(p) },
         {
           text: "Report this user",
           style: "destructive",
@@ -202,7 +208,7 @@ export default function UserProfileScreen() {
               </TouchableOpacity>
             )}
             {!isMe && (
-              <TouchableOpacity style={s.lb} onPress={onLike} testID="profile-like-btn">
+              <TouchableOpacity style={s.lb} onPress={() => onLike()} testID="profile-like-btn">
                 <Heart size={24} color={Colors.like} />
               </TouchableOpacity>
             )}
@@ -212,9 +218,15 @@ export default function UserProfileScreen() {
               </TouchableOpacity>
             )}
           </View>
+          {!isMe && (
+            <TouchableOpacity onPress={() => setCommentOpen(true)} style={s.commentLink} testID="profile-like-comment">
+              <Text style={s.commentLinkText}>Add a comment with your like</Text>
+            </TouchableOpacity>
+          )}
           {p.bio ? (
             <View style={s.se}><Text style={s.st}>About</Text><Text style={s.bt}>{p.bio}</Text></View>
           ) : null}
+          <PromptCards prompts={p.prompts} name={p.name} onLike={isMe ? undefined : (c) => onLike(c)} />
           <View style={s.se}>
             <Text style={s.st}>Details</Text>
             <View style={s.dc}>
@@ -232,6 +244,7 @@ export default function UserProfileScreen() {
           <View style={{ height: 40 }} />
         </View>
       </ScrollView>
+      <LikeCommentModal visible={commentOpen} name={p.name} onClose={() => setCommentOpen(false)} onSend={(c) => { setCommentOpen(false); onLike(c); }} />
     </>
   );
 }
@@ -269,6 +282,8 @@ const s = StyleSheet.create({
   mt: { color: "#FFF", fontSize: 16, fontWeight: "600" as const },
   lb: { width: 52, height: 52, borderRadius: 26, backgroundColor: "#FFF", justifyContent: "center" as const, alignItems: "center" as const },
   se: { marginBottom: 24 },
+  commentLink: { alignSelf: "center", marginTop: -8, marginBottom: 20, paddingVertical: 6 },
+  commentLinkText: { color: Colors.primary, fontWeight: "700" as const, fontSize: 14 },
   st: { fontSize: 18, fontWeight: "700" as const, color: Colors.text, marginBottom: 10 },
   bt: { fontSize: 15, color: Colors.textSecondary, lineHeight: 24 },
   dc: { backgroundColor: Colors.surface, borderRadius: 16, padding: 16, gap: 14 },

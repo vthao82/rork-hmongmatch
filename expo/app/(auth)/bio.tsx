@@ -15,7 +15,7 @@ export default function BioScreen() {
 
   const onNext = () => {
     update({ bio });
-    router.push("/(auth)/location");
+    router.push("/(auth)/prompts");
   };
 
   return (

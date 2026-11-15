@@ -10,6 +10,8 @@ import { useOnboarding } from "@/providers/OnboardingProvider";
 import { currentUser } from "@/mocks/profiles";
 import { INTEREST_GROUPS } from "@/constants/interests";
 import { useT } from "@/providers/LanguageProvider";
+import PromptsEditor from "@/components/PromptsEditor";
+import type { PromptAnswer } from "@/constants/prompts";
 
 const SW = Dimensions.get("window").width;
 const GAP = 10;
@@ -28,6 +30,7 @@ export default function EditProfileScreen() {
   const [photos, setPhotos] = useState<string[]>(data.photos && data.photos.length > 0 ? data.photos : currentUser.photos);
   const [interests, setInterests] = useState<string[]>(data.interests && data.interests.length > 0 ? data.interests : currentUser.interests);
   const [editingInterests, setEditingInterests] = useState<boolean>(false);
+  const [prompts, setPrompts] = useState<PromptAnswer[]>(data.prompts ?? []);
 
   const { focus } = useLocalSearchParams<{ focus?: string }>();
   const scrollRef = useRef<ScrollView>(null);
@@ -83,10 +86,10 @@ export default function EditProfileScreen() {
   }, []);
 
   const save = useCallback(() => {
-    update({ name: name.trim(), bio, photos, interests, mainPhotoIndex });
+    update({ name: name.trim(), bio, photos, interests, mainPhotoIndex, prompts: prompts.filter((p) => p.a.trim()) });
     console.log("profile saved", { name, bio, photoCount: photos.length, interestCount: interests.length });
     router.back();
-  }, [name, bio, photos, interests, router, update, mainPhotoIndex]);
+  }, [name, bio, photos, interests, router, update, mainPhotoIndex, prompts]);
 
   const slots = Array.from({ length: 6 }, (_, i) => photos[i] ?? null);
 
@@ -164,6 +167,11 @@ export default function EditProfileScreen() {
             testID="edit-bio"
           />
           <Text style={s.count}>{bio.length}/300</Text>
+        </View>
+
+        <Text style={s.sectionLabel}>Prompts</Text>
+        <View style={{ marginBottom: 18 }} testID="edit-prompts">
+          <PromptsEditor value={prompts} onChange={setPrompts} />
         </View>
 
         <View style={s.sectionRow}>

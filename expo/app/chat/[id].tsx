@@ -21,6 +21,7 @@ import { useOnboarding } from "@/providers/OnboardingProvider";
 import { unmatchUser, useMyMatches } from "@/lib/discoverProfiles";
 import { useTier } from "@/providers/TierProvider";
 import { useT } from "@/providers/LanguageProvider";
+import { CONVO_STARTERS } from "@/constants/prompts";
 
 export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -205,6 +206,7 @@ export default function ChatScreen() {
       pr.name,
       "What would you like to do?",
       [
+        { text: "Date safety & share plans", onPress: () => router.push({ pathname: "/date-safety", params: { name: pr.name } }) },
         {
           text: "Report this user",
           style: "destructive",
@@ -297,6 +299,16 @@ export default function ChatScreen() {
             </TouchableOpacity>
             <Text style={s.ecl}>{pr.clan} Clan</Text>
             <Text style={s.eh}>{t("sayHello")}</Text>
+            <View style={s.starters} testID="convo-starters">
+              {[
+                ...(pr.prompts?.[0] ? [`I loved your answer to “${pr.prompts[0].q}” — tell me more!`] : []),
+                ...CONVO_STARTERS,
+              ].slice(0, 4).map((line, i) => (
+                <TouchableOpacity key={line} style={s.starter} onPress={() => setTx(line)} testID={`convo-starter-${i}`}>
+                  <Text style={s.starterText}>{line}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
         ) : (
           <FlatList
@@ -393,6 +405,9 @@ const s = StyleSheet.create({
   en: { fontSize: 20, fontWeight: "700" as const, color: Colors.text },
   ecl: { fontSize: 14, fontWeight: "600" as const, color: Colors.accent },
   eh: { fontSize: 14, color: Colors.textSecondary, marginTop: 8, textAlign: "center" },
+  starters: { marginTop: 18, gap: 8, alignSelf: "stretch" },
+  starter: { borderWidth: 1, borderColor: Colors.border, borderRadius: 16, paddingVertical: 10, paddingHorizontal: 14, backgroundColor: Colors.surfaceAlt },
+  starterText: { color: Colors.text, fontSize: 14 },
   ir: { flexDirection: "row", alignItems: "flex-end", paddingHorizontal: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: Colors.borderLight, backgroundColor: "#FFF", gap: 8 },
   videoBtn: { width: 40, height: 40, borderRadius: 20, justifyContent: "center", alignItems: "center", backgroundColor: Colors.background },
   ip: { flex: 1, backgroundColor: Colors.background, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, fontSize: 15, maxHeight: 100, color: Colors.text },

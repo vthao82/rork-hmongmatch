@@ -9,7 +9,7 @@ setGlobalOptions({ region: "us-central1", maxInstances: 10 });
 const db = getFirestore();
 const expo = new Expo();
 
-type Kind = "messages" | "matches" | "likes";
+type Kind = "messages" | "matches" | "likes" | "events";
 
 async function nameOf(uid: string): Promise<string> {
   const s = await db.doc(`users/${uid}`).get();
@@ -80,9 +80,101 @@ export const onLike = onDocumentCreated("users/{uid}/likesReceived/{likerId}", a
   if (mine.get("liked") === true) return;
   const blocked = await db.doc(`users/${uid}/blocked/${likerId}`).get();
   if (blocked.exists) return;
+  const comment = (event.data?.get("comment") as string | undefined)?.trim();
   await sendTo(uid, "likes", {
     title: "Someone likes you",
-    body: "Open Hmong Date to see who liked you.",
+    body: comment ? "Someone liked you and left a comment. Open Hmong Date to see it." : "Open Hmong Date to see who liked you.",
     data: { type: "like" },
   });
+});
+
+const FRIENDS_PER_REWARD = 3;
+const REWARD_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** Unique, readable invite code like VANG4821. */
+async function createInviteCode(uid: string, clan: unknown): Promise<string> {
+  const prefix = (typeof clan === "string" ? clan : "").toUpperCase().replace(/[^A-Z]/g, "").slice(0, 4) || "HMNG";
+  for (let i = 0; i < 20; i++) {
+    const code = `${prefix}${Math.floor(1000 + Math.random() * 9000)}`;
+    const ref = db.doc(`invites/${code}`);
+    const ok = await db.runTransaction(async (tx) => {
+      if ((await tx.get(ref)).exists) return false;
+      tx.set(ref, { uid, createdAt: FieldValue.serverTimestamp() });
+      return true;
+    });
+    if (ok) return code;
+  }
+  throw new Error("Could not create a unique invite code");
+}
+
+/**
+ * Users: give every member an invite code, and credit the inviter exactly once when a
+ * referred friend finishes sign-up. Every 3 friends = 7 more days of free Unlimited.
+ */
+export const onUserWrite = onDocumentWritten("users/{uid}", async (event) => {
+  const uid = event.params.uid;
+  const after = event.data?.after.data();
+  if (!after) return;
+  const userRef = db.doc(`users/${uid}`);
+
+  if (!after.inviteCode) {
+    try {
+      await userRef.update({ inviteCode: await createInviteCode(uid, after.clan) });
+    } catch (e) {
+      logger.error("invite code failed", { uid, e });
+    }
+  }
+
+  const code = typeof after.referredByCode === "string" ? after.referredByCode.trim().toUpperCase() : "";
+  if (!code || after.onboardingComplete !== true || after.referralCredited) return;
+
+  await db.runTransaction(async (tx) => {
+    const me = await tx.get(userRef);
+    if (me.get("referralCredited")) return;
+    const invite = await tx.get(db.doc(`invites/${code}`));
+    const inviterUid = invite.get("uid") as string | undefined;
+    if (!inviterUid || inviterUid === uid) {
+      tx.update(userRef, { referralCredited: "invalid" });
+      return;
+    }
+    const inviterRef = db.doc(`users/${inviterUid}`);
+    const inviter = await tx.get(inviterRef);
+    if (!inviter.exists) {
+      tx.update(userRef, { referralCredited: "invalid" });
+      return;
+    }
+    const count = ((inviter.get("referralCount") as number) ?? 0) + 1;
+    const update: Record<string, unknown> = { referralCount: count };
+    if (count % FRIENDS_PER_REWARD === 0) {
+      const current = (inviter.get("referralUnlimitedUntil") as Timestamp | undefined)?.toMillis() ?? 0;
+      update.referralUnlimitedUntil = Timestamp.fromMillis(Math.max(current, Date.now()) + REWARD_MS);
+    }
+    tx.update(inviterRef, update);
+    tx.set(db.doc(`users/${inviterUid}/referrals/${uid}`), { name: after.name ?? null, code, createdAt: FieldValue.serverTimestamp() });
+    tx.update(userRef, { referralCredited: true, referredBy: inviterUid });
+  });
+
+  const credited = (await userRef.get()).get("referredBy") as string | undefined;
+  if (credited) {
+    const inv = await db.doc(`users/${credited}`).get();
+    const count = (inv.get("referralCount") as number) ?? 0;
+    const earned = count % FRIENDS_PER_REWARD === 0;
+    await sendTo(credited, "matches", {
+      title: earned ? "You earned a free week of Unlimited!" : "A friend joined Hmong Date",
+      body: earned ? `${count} friends joined with your code. Enjoy Unlimited for 7 days.` : `${count % FRIENDS_PER_REWARD} of ${FRIENDS_PER_REWARD} friends joined with your code.`,
+      data: { type: "referral" },
+    });
+  }
+});
+
+/** New event suggestion → alert every admin so it can be reviewed. */
+export const onEventSuggested = onDocumentCreated("events/{eventId}", async (event) => {
+  const e = event.data?.data();
+  if (!e || e.status !== "pending") return;
+  const admins = await db.collection("users").where("isAdmin", "==", true).get();
+  await Promise.all(admins.docs.map((a) => sendTo(a.id, "events", {
+    title: "New event to review",
+    body: `${e.title ?? "An event"} — ${[e.city, e.state].filter(Boolean).join(", ")}`,
+    data: { type: "event", eventId: event.params.eventId },
+  })));
 });

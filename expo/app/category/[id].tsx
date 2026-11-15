@@ -6,7 +6,7 @@ import { Image } from "expo-image";
 import { ArrowLeft, BadgeCheck, MapPin, Users, Plus, Check, Lock } from "lucide-react-native";
 import Colors from "@/constants/colors";
 import { profiles as mockProfiles, currentUser, Profile } from "@/mocks/profiles";
-import { useAllProfiles } from "@/lib/discoverProfiles";
+import { useAllProfiles, passesPrefs } from "@/lib/discoverProfiles";
 import { useOnboarding } from "@/providers/OnboardingProvider";
 import { useTier } from "@/providers/TierProvider";
 import { useT } from "@/providers/LanguageProvider";
@@ -152,7 +152,8 @@ export default function CategoryScreen() {
     // Exclude current user from the base list (we'll add them at the top if they match)
     const myUid = auth.currentUser?.uid;
     const baseFull = myUid ? all.filter((p) => p.id !== myUid) : all;
-    const base = entry ? baseFull.filter(entry.match) : baseFull;
+    const prefs = { myClan: data.clan, hideSameClan: data.hideSameClan, verifiedOnly: data.verifiedOnly };
+    const base = (entry ? baseFull.filter(entry.match) : baseFull).filter((p) => passesPrefs(p, prefs));
     const sub = entry?.subtitle ?? t("peopleInterested");
     if (inCategory) {
       const meLive = myUid ? liveById[myUid] : null;

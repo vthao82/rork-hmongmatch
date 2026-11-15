@@ -11,7 +11,7 @@ import { useOnboarding } from "@/providers/OnboardingProvider";
 import { useAuth } from "@/providers/AuthProvider";
 import { loadPushPrefs, savePushPrefs, syncPushToken, DEFAULT_PUSH_PREFS, type PushPrefs } from "@/lib/notifications";
 import { deleteMyAccount } from "@/lib/deleteAccount";
-import { shareInvite } from "@/lib/invite";
+import { shareInvite, useMyReferral } from "@/lib/invite";
 
 /** Legal pages hosted on our custom domain — update if the domain ever changes. */
 const LEGAL_URL = "https://hmongdate.com";
@@ -155,6 +155,7 @@ function PickerModal({ visible, config, selected, onClose, onSave, t }: { visibl
 export default function SettingsScreen() {
   const ins = useSafeAreaInsets();
   const router = useRouter();
+  const referral = useMyReferral();
   const { isPaid, subEndsAt, cancelSubscription } = useTier();
   const t = useT();
 
@@ -385,6 +386,27 @@ export default function SettingsScreen() {
           </View>
         </Section>
 
+        <Section title="Who I see">
+          <View style={s.card}>
+            <View style={s.rowToggle}>
+              <View style={{ flex: 1, paddingRight: 8 }}>
+                <Text style={s.rowLabel}>Verified profiles only</Text>
+                <Text style={s.rowSub}>Only show people with the blue photo-verified check.</Text>
+              </View>
+              <Toggle value={onb.verifiedOnly === true} onChange={(v) => updateOnb({ verifiedOnly: v })} testID="verified-only-toggle" />
+            </View>
+          </View>
+          <View style={s.card}>
+            <View style={s.rowToggle}>
+              <View style={{ flex: 1, paddingRight: 8 }}>
+                <Text style={s.rowLabel}>Hide people from my clan</Text>
+                <Text style={s.rowSub}>{onb.clan ? `People from the ${onb.clan} clan won't appear in Discover, Interests or picks.` : "Add your clan to your profile to use this."}</Text>
+              </View>
+              <Toggle value={onb.hideSameClan === true} onChange={(v) => updateOnb({ hideSameClan: v })} testID="hide-clan-toggle" />
+            </View>
+          </View>
+        </Section>
+
         <Section title="Photo Verification">
           <View style={s.card}>
             <View style={s.rowToggle}>
@@ -421,7 +443,8 @@ export default function SettingsScreen() {
           <Row label={t("manageSubscription")} onPress={() => router.push("/subscription")} testID="manage-sub-row" />
           <Row label={t("reportProblem")} onPress={() => router.push("/report")} testID="report-row" />
           <Row label="Send feedback" onPress={() => router.push("/feedback" as never)} testID="feedback-row" />
-          <Row label="Invite friends" onPress={shareInvite} testID="invite-row" />
+          <Row label="Dating safety tips" onPress={() => router.push("/date-safety" as never)} testID="safety-row" />
+          <Row label="Invite friends" onPress={() => shareInvite(referral.code)} testID="invite-row" />
           <Row label="Unmatched people" onPress={() => router.push("/unmatched" as never)} testID="unmatched-row" />
           <Row label="Blocked users" onPress={() => router.push("/blocked" as never)} testID="blocked-users-row" />
           <TouchableOpacity style={s.row} onPress={() => Alert.alert(t("logout"), t("logoutConfirm"), [

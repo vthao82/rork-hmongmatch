@@ -64,6 +64,14 @@ export type OnboardingData = {
   photos: string[];
   bio?: string;
   prompt?: { q: string; a: string };
+  /** Up to 3 answered profile prompts. */
+  prompts?: { q: string; a: string }[];
+  /** Invite code entered during sign-up (credited once by the server). */
+  referredByCode?: string;
+  /** Hide people from my own clan in Discover, Interests and picks. */
+  hideSameClan?: boolean;
+  /** Only show photo-verified people. */
+  verifiedOnly?: boolean;
   locationGranted?: boolean;
   /** Last enrollment screen reached — used to resume an unfinished sign-up. */
   resumeStep?: string;

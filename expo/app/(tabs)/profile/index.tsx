@@ -14,6 +14,7 @@ import { useTier } from "@/providers/TierProvider";
 import { useT } from "@/providers/LanguageProvider";
 import { auth } from "@/lib/firebase";
 import InviteCard from "@/components/InviteCard";
+import { profileCompleteness } from "@/lib/completeness";
 
 function TaskCard({ icon, title, sub, pct, onPress, done, testID }: { icon: React.ReactNode; title: string; sub: string; pct: string; onPress: () => void; done?: boolean; testID?: string }) {
   return (
@@ -60,10 +61,12 @@ export default function ProfileScreen() {
   }
   const displayName = data.name?.trim() ? data.name : currentUser.name;
   const photo = data.photos && data.photos.length > 0 ? data.photos[0] : currentUser.photos[0];
-  const photoCount = data.photos?.length ?? 0;
-  const hasBio = !!data.bio?.trim();
-  const base = 32;
-  const completion = Math.min(100, base + (photoCount >= 4 ? 38 : 0) + (hasBio ? 30 : 0));
+  const { pct: completion, tasks } = profileCompleteness(data);
+  const openTask = (id: string) => {
+    if (id === "verify") router.push("/photo-verify");
+    else if (id === "photos" || id === "bio") router.push({ pathname: "/edit-profile", params: { focus: id } });
+    else router.push("/edit-profile");
+  };
 
   return (
     <View style={[s.ct, { paddingTop: ins.top }]}>
@@ -110,12 +113,9 @@ export default function ProfileScreen() {
         </View>
         <Text style={s.progressSub}>{t("completeProfile")}</Text>
 
-        {photoCount < 4 && (
-          <TaskCard icon={<ImageIcon size={28} color={Colors.primary} />} title={t("addPhotosTitle")} sub={t("addPhotosSub", { n: photoCount })} pct="+28%" done={false} onPress={() => router.push({ pathname: "/edit-profile", params: { focus: "photos" } })} testID="task-photos" />
-        )}
-        {!hasBio && (
-          <TaskCard icon={<Type size={28} color={Colors.primary} />} title={t("addBioTitle")} sub={t("addBioSub")} pct="+30%" done={false} onPress={() => router.push({ pathname: "/edit-profile", params: { focus: "bio" } })} testID="task-bio" />
-        )}
+        {tasks.slice(0, 2).map((tk) => (
+          <TaskCard key={tk.id} icon={tk.id === "photos" ? <ImageIcon size={28} color={Colors.primary} /> : <Type size={28} color={Colors.primary} />} title={tk.title} sub={tk.sub} pct={`+${tk.pct}%`} done={false} onPress={() => openTask(tk.id)} testID={`task-${tk.id}`} />
+        ))}
 
         <View style={s.statsRow}>
         </View>

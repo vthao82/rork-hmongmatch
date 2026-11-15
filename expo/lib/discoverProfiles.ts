@@ -19,6 +19,7 @@ import {
 import { db, auth } from "@/lib/firebase";
 import type { Profile } from "@/mocks/profiles";
 import { useBlocks } from "@/providers/BlockProvider";
+import { useOnboarding } from "@/providers/OnboardingProvider";
 import { tsToMillis, isActiveNow, activeLabel } from "@/lib/presence";
 
 const QUEUE_LIMIT = 500;
@@ -82,7 +83,17 @@ function rowToProfile(id: string, row: DocumentData): Profile {
     hometownState: (row.hometownState as string) ?? null,
     genders: Array.isArray(row.genders) ? (row.genders as string[]) : [],
     seeking: Array.isArray(row.seeking) ? (row.seeking as string[]) : [],
+    prompts: Array.isArray(row.prompts) ? (row.prompts as { q: string; a: string }[]) : row.prompt?.q && row.prompt?.a ? [row.prompt] : [],
   };
+}
+
+export type SeePrefs = { myClan?: string | null; hideSameClan?: boolean; verifiedOnly?: boolean };
+
+/** Member's own "who I see" settings: verified-only and hide-my-clan. */
+export function passesPrefs(p: Profile, prefs: SeePrefs): boolean {
+  if (prefs.verifiedOnly && !p.verified) return false;
+  if (prefs.hideSameClan && prefs.myClan && norm(p.clan) === norm(prefs.myClan)) return false;
+  return true;
 }
 
 const SEEK_TO_GENDER: Record<string, string> = { men: "man", women: "woman", beyond: "beyond" };
@@ -208,7 +219,11 @@ export function useDiscoverProfiles() {
     load();
   }, [load]);
 
-  const visible = useMemo(() => profiles.filter((p) => !hidden.has(p.id)), [profiles, hidden]);
+  const { data: onb } = useOnboarding();
+  const visible = useMemo(
+    () => profiles.filter((p) => !hidden.has(p.id) && passesPrefs(p, { myClan: onb.clan, hideSameClan: onb.hideSameClan, verifiedOnly: onb.verifiedOnly })),
+    [profiles, hidden, onb.clan, onb.hideSameClan, onb.verifiedOnly]
+  );
   return { profiles: visible, loading, error, reload: load };
 }
 
@@ -309,6 +324,7 @@ export function useMyMatches() {
 /** Hook: live list of user ids who liked the current user and haven't been swiped on yet. */
 export function useLikedMe() {
   const [likerIds, setLikerIds] = useState<string[]>([]);
+  const [comments, setComments] = useState<Record<string, string>>({});
   const [mySwiped, setMySwiped] = useState<Set<string>>(new Set());
   const uid = auth.currentUser?.uid;
 
@@ -316,7 +332,12 @@ export function useLikedMe() {
     if (!uid) return;
     const unsubLikes = onSnapshot(
       collection(db, "users", uid, "likesReceived"),
-      (snap) => setLikerIds(snap.docs.map((d) => d.id)),
+      (snap) => {
+        setLikerIds(snap.docs.map((d) => d.id));
+        const c: Record<string, string> = {};
+        snap.docs.forEach((d) => { const v = d.data().comment; if (typeof v === "string" && v.trim()) c[d.id] = v; });
+        setComments(c);
+      },
       (e) => console.log("[useLikedMe] error", e)
     );
     const unsubMine = onSnapshot(
@@ -330,7 +351,7 @@ export function useLikedMe() {
     };
   }, [uid]);
 
-  return { likerIds: likerIds.filter((id) => !mySwiped.has(id)) };
+  return { likerIds: likerIds.filter((id) => !mySwiped.has(id)), comments };
 }
 
 /**
@@ -339,7 +360,8 @@ export function useLikedMe() {
  */
 export async function recordSwipe(
   targetUserId: string,
-  liked: boolean
+  liked: boolean,
+  comment?: string
 ): Promise<{ ok: boolean; isMatch?: boolean; matchId?: string; error?: string }> {
   const me = auth.currentUser;
   if (!me) return { ok: false, error: "Not signed in" };
@@ -357,7 +379,8 @@ export async function recordSwipe(
 
     // Mirror likes into the target's inbox so their "Likes You" list is live
     const inboxRef = doc(db, "users", targetUserId, "likesReceived", me.uid);
-    if (liked) await setDoc(inboxRef, { likerId: me.uid, createdAt: serverTimestamp() });
+    const note = comment?.trim().slice(0, 300);
+    if (liked) await setDoc(inboxRef, { likerId: me.uid, createdAt: serverTimestamp(), ...(note ? { comment: note } : {}) });
     else await deleteDoc(inboxRef).catch(() => {});
 
     if (!liked) return { ok: true, isMatch: false };

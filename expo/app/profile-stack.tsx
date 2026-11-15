@@ -15,6 +15,7 @@ import { useLikes } from "@/providers/LikesProvider";
 import { spendCategoryView, useCategoryViewsLeft, resetsInLabel } from "@/lib/categoryViews";
 import { NewBadge } from "@/components/NewBadge";
 import { dialectText, lookingForText } from "@/lib/profileLabels";
+import PromptCards from "@/components/PromptCards";
 
 /**
  * Swipeable profile viewer route. Drives the "tap a card → swipe up to next
@@ -106,10 +107,10 @@ export default function ProfileStackScreen() {
     router.push(`/chat/${profile.id}`);
   };
 
-  const onLike = () => {
+  const onLike = (comment?: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
     addLike(profile.id);
-    void recordSwipe(profile.id, true);
+    void recordSwipe(profile.id, true, comment);
     // Move to next on like so they can keep going through the list
     if (idx < total - 1) next();
     else router.back();
@@ -139,7 +140,7 @@ export default function ProfileStackScreen() {
             <ChevronUp size={26} color={idx === 0 ? Colors.textTertiary : Colors.text} />
             <Text style={[s.iconLbl, idx === 0 && { color: Colors.textTertiary }]}>Prev</Text>
           </Pressable>
-          <TouchableOpacity style={s.likeBtn} onPress={onLike} testID="stack-like">
+          <TouchableOpacity style={s.likeBtn} onPress={() => onLike()} testID="stack-like">
             <Heart size={22} color="#FFF" fill="#FFF" />
             <Text style={s.likeTxt}>Like</Text>
           </TouchableOpacity>
@@ -158,6 +159,7 @@ export default function ProfileStackScreen() {
             <Text style={s.st}>About</Text>
             <Text style={s.bt}>{profile.bio || "—"}</Text>
           </View>
+          <PromptCards prompts={profile.prompts} name={profile.name} onLike={(c) => onLike(c)} />
           <View style={s.se}>
             <Text style={s.st}>Details</Text>
             <View style={s.dc}>

@@ -20,6 +20,7 @@ export interface Profile {
   lastActiveAt?: number | null;
   showActiveStatus?: boolean;
   createdAtMs?: number | null;
+  prompts?: { q: string; a: string }[];
 }
 
 export interface Match {

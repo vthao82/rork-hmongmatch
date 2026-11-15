@@ -245,12 +245,25 @@ export const [TierProvider, useTier] = createContextHook(() => {
 
   // Complimentary Unlimited (e.g. Google Play reviewer) — set only by an admin, rules block self-grant
   const [complimentary, setComplimentary] = useState<boolean>(false);
+  // Free Unlimited week earned by inviting 3 friends (granted by the server)
+  const [referralUntil, setReferralUntil] = useState<number>(0);
+  const [, setTick] = useState<number>(0);
   useEffect(() => {
-    if (!user?.uid) { setComplimentary(false); return; }
-    return onSnapshot(doc(db, "users", user.uid), (s) => setComplimentary(s.data()?.complimentaryUnlimited === true), () => {});
+    if (!user?.uid) { setComplimentary(false); setReferralUntil(0); return; }
+    return onSnapshot(doc(db, "users", user.uid), (s) => {
+      setComplimentary(s.data()?.complimentaryUnlimited === true);
+      const until = s.data()?.referralUnlimitedUntil;
+      setReferralUntil(typeof until?.toMillis === "function" ? until.toMillis() : 0);
+    }, () => {});
   }, [user?.uid]);
+  useEffect(() => {
+    const left = referralUntil - Date.now();
+    if (left <= 0 || left > 2_000_000_000) return;
+    const t = setTimeout(() => setTick((n) => n + 1), left + 1000);
+    return () => clearTimeout(t);
+  }, [referralUntil]);
 
-  const isPaid = tier === "unlimited" || complimentary;
+  const isPaid = tier === "unlimited" || complimentary || referralUntil > Date.now();
 
   const checkAndPrompt = useCallback((next: Usage) => {
     if (isPaid) return;
