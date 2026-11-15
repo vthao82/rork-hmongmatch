@@ -67,6 +67,14 @@
           }
         },
         {
+          "client_id": "1004199539174-mv9k6b6qe97kchdgc2ks5f82thkhe1us.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.hmongdate.app",
+            "certificate_hash": "17a7668beba56d0466aeafd2b8f995d9f38da874"
+          }
+        },
+        {
           "client_id": "1004199539174-a947opurbaftcplnl7igaof0hu76h7il.apps.googleusercontent.com",
           "client_type": 3
         }
