@@ -1,9 +1,6 @@
 import { onDocumentCreated, onDocumentWritten } from "firebase-functions/v2/firestore";
 import { setGlobalOptions, logger } from "firebase-functions/v2";
 import { onSchedule } from "firebase-functions/v2/scheduler";
-import { onCall, HttpsError } from "firebase-functions/v2/https";
-import { defineSecret } from "firebase-functions/params";
-import { getStorage, getDownloadURL } from "firebase-admin/storage";
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 import { Expo, ExpoPushMessage } from "expo-server-sdk";
@@ -225,49 +222,3 @@ export const eventReminders = onSchedule({ schedule: "0 18 * * *", timeZone: "Am
   }
 });
 
-const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
-const IMAGE_MODELS = ["gemini-3.1-flash-image", "gemini-3.1-flash-image-preview"];
-
-async function geminiImage(prompt: string, key: string): Promise<{ data: string; mime: string }> {
-  let lastErr = "";
-  for (const model of IMAGE_MODELS) {
-    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "x-goog-api-key": key },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }],
-        generationConfig: { responseModalities: ["TEXT", "IMAGE"], imageConfig: { aspectRatio: "3:4" } },
-      }),
-    });
-    if (r.status === 404) { lastErr = `${model} not found`; continue; }
-    const j = (await r.json()) as any;
-    if (!r.ok) throw new HttpsError("internal", j?.error?.message ?? `Gemini error ${r.status}`);
-    const part = (j?.candidates?.[0]?.content?.parts ?? []).find((p: any) => p?.inlineData?.data);
-    if (!part) throw new HttpsError("internal", "No image came back. Try again.");
-    return { data: part.inlineData.data, mime: part.inlineData.mimeType ?? "image/png" };
-  }
-  throw new HttpsError("internal", lastErr);
-}
-
-/** Admin-only: AI photo for an approved suggested Interest card → Storage → card.image. */
-export const generateCardPhoto = onCall({ secrets: [GEMINI_API_KEY], timeoutSeconds: 120, memory: "512MiB" }, async (req) => {
-  const uid = req.auth?.uid;
-  if (!uid) throw new HttpsError("unauthenticated", "Sign in first.");
-  if ((await db.doc(`users/${uid}`).get()).get("isAdmin") !== true) throw new HttpsError("permission-denied", "Admins only.");
-  const cardId = String(req.data?.cardId ?? "");
-  const ref = db.doc(`interestCards/${cardId}`);
-  const card = await ref.get();
-  if (!cardId || !card.exists) throw new HttpsError("not-found", "Card not found.");
-  const label = String(card.get("label") ?? "");
-  const hint = String(req.data?.hint ?? "").trim().slice(0, 200);
-  const prompt = `Warm, realistic lifestyle photo for a Hmong dating app interest card called "${label}". `
-    + `Show Hmong-American young adults enjoying ${label}${hint ? ` (${hint})` : ""}. `
-    + "Natural light, vibrant but tasteful colors, portrait orientation, subject centered with space at the bottom for a caption. No text, no words, no logos, no watermarks.";
-  const img = await geminiImage(prompt, GEMINI_API_KEY.value());
-  const ext = img.mime.includes("jpeg") ? "jpg" : "png";
-  const file = getStorage().bucket().file(`interestCards/${cardId}-${Date.now()}.${ext}`);
-  await file.save(Buffer.from(img.data, "base64"), { contentType: img.mime, resumable: false });
-  const url = await getDownloadURL(file);
-  await ref.update({ image: url, imageUpdatedAt: FieldValue.serverTimestamp() });
-  return { image: url };
-});

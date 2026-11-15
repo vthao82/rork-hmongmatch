@@ -18,7 +18,7 @@ export default function SuggestCardModal({ group, onClose }: Props) {
     try {
       await suggestCard(group.id, label);
       onClose();
-      Alert.alert("Thanks for the idea!", `"${label.trim()}" was sent for review. Once approved it will appear in ${group.title}.`);
+      Alert.alert("Thanks for the idea!", `"${label.trim()}" was sent to our team. We review every idea and may add it to ${group.title} in a future update.`);
     } catch (e) {
       Alert.alert("Couldn't send", e instanceof Error ? e.message : "Please try again.");
     } finally {

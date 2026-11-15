@@ -7,7 +7,6 @@ import { ArrowLeft, BadgeCheck, MapPin, Users, Plus, Check, Lock } from "lucide-
 import Colors from "@/constants/colors";
 import { profiles as mockProfiles, currentUser, Profile } from "@/mocks/profiles";
 import { useAllProfiles, passesPrefs, useSeePrefs } from "@/lib/discoverProfiles";
-import { useCategoryGroups } from "@/lib/interestCards";
 import { memberOf, memberByProfile, cardKey } from "@/lib/categoryMembership";
 import { useOnboarding } from "@/providers/OnboardingProvider";
 import { useTier } from "@/providers/TierProvider";
@@ -89,7 +88,7 @@ export default function CategoryScreen() {
 
   // Parse "groupId:cardId" from the route param and look up the user-facing label.
   // Falls back to the raw string if the format isn't recognized (back-compat).
-  const groups = useCategoryGroups();
+  const groups = CATEGORY_GROUPS;
   const { title, cardId, groupId } = (() => {
     const parts = raw.split(":");
     if (parts.length === 2) {

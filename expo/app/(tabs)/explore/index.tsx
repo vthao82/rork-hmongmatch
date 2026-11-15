@@ -5,7 +5,6 @@ import { Image } from "expo-image";
 import { Lock, Crown, Plus, ChevronRight, CalendarDays } from "lucide-react-native";
 import MostCompatibleCard from "@/components/MostCompatibleCard";
 import SuggestCardModal from "@/components/SuggestCardModal";
-import { useCategoryGroups } from "@/lib/interestCards";
 import { useRouter } from "expo-router";
 import Colors from "@/constants/colors";
 import HmongMatchHeader from "@/components/HmongMatchHeader";
@@ -28,7 +27,7 @@ export default function InterestsTab() {
   const [lockOpen, setLockOpen] = useState<boolean>(false);
   const [seeAll, setSeeAll] = useState<string | null>(null);
   const [suggestFor, setSuggestFor] = useState<{ id: string; title: string } | null>(null);
-  const groups = useCategoryGroups();
+  const groups = CATEGORY_GROUPS;
 
   // Determine user's selected interests/preferences for highlighting their primary group
   const userTokens = useMemo(() => {

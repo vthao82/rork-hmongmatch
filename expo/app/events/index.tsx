@@ -7,7 +7,6 @@ import { useApprovedEvents, usePendingEvents, useMyEvents, useIsAdmin, type Hmon
 import { useOnboarding } from "@/providers/OnboardingProvider";
 import { usePendingCards, reviewCard } from "@/lib/interestCards";
 import { CATEGORY_GROUPS } from "@/constants/categories";
-import { ApprovedCardsAdmin } from "@/components/ApprovedCardsAdmin";
 
 export function EventRow({ e, onPress, badge }: { e: HmongEvent; onPress: () => void; badge?: string }) {
   return (
@@ -78,8 +77,6 @@ export default function EventsScreen() {
             ))}
           </View>
         )}
-
-        {isAdmin && <ApprovedCardsAdmin />}
 
         {isAdmin && pending.length > 0 && (
           <View style={s.section}>
