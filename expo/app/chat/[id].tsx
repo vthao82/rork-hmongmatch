@@ -20,6 +20,7 @@ import { useTypingPinger, useOtherTyping, markChatSeen, useOtherSeenAt } from "@
 import { useOnboarding } from "@/providers/OnboardingProvider";
 import { unmatchUser, useMyMatches } from "@/lib/discoverProfiles";
 import { useTier } from "@/providers/TierProvider";
+import OptionsSheet, { type SheetOption } from "@/components/OptionsSheet";
 import { useT } from "@/providers/LanguageProvider";
 import { CONVO_STARTERS } from "@/constants/prompts";
 
@@ -41,6 +42,7 @@ export default function ChatScreen() {
   const { data: onb } = useOnboarding();
   const receiptsOn = onb.showReadReceipts !== false;
   const otherSeenAt = useOtherSeenAt(matchId, id, receiptsOn);
+  const [menu, setMenu] = useState<SheetOption[] | null>(null);
   const [tx, setTx] = useState<string>("");
   const [sendingPhoto, setSendingPhoto] = useState<boolean>(false);
   const [viewerUrl, setViewerUrl] = useState<string | null>(null);
@@ -202,10 +204,7 @@ export default function ChatScreen() {
 
   const openSafetyMenu = () => {
     if (!pr) return;
-    Alert.alert(
-      pr.name,
-      "What would you like to do?",
-      [
+    setMenu([
         { text: "Date safety & share plans", onPress: () => router.push({ pathname: "/date-safety", params: { name: pr.name } }) },
         {
           text: "Report this user",
@@ -257,9 +256,7 @@ export default function ChatScreen() {
               ]
             ),
         },
-        { text: "Cancel", style: "cancel" },
-      ]
-    );
+      ]);
   };
 
   return (
@@ -359,6 +356,7 @@ export default function ChatScreen() {
         </Pressable>
       </Modal>
       <PhotoViewer photos={viewerUrl ? [viewerUrl] : []} startIndex={0} visible={!!viewerUrl} onClose={() => setViewerUrl(null)} />
+      <OptionsSheet visible={!!menu} title={pr?.name ?? ""} subtitle="What would you like to do?" options={menu ?? []} onClose={() => setMenu(null)} />
     </>
   );
 }

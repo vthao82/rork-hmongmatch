@@ -3,7 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from "rea
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import { Settings as SettingsIcon, Edit3, Image as ImageIcon, Type, Flame, Plus, Lock, Check, AlertTriangle, Eye } from "lucide-react-native";
+import { Settings as SettingsIcon, Edit3, Image as ImageIcon, Type, Flame, Plus, Lock, Check, AlertTriangle, Eye, LogOut, ShieldCheck } from "lucide-react-native";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import Colors from "@/constants/colors";
 import { currentUser } from "@/mocks/profiles";
@@ -15,6 +15,9 @@ import { useT } from "@/providers/LanguageProvider";
 import { auth } from "@/lib/firebase";
 import InviteCard from "@/components/InviteCard";
 import { profileCompleteness } from "@/lib/completeness";
+import { useAuth } from "@/providers/AuthProvider";
+import { useIsAdmin, usePendingEvents } from "@/lib/events";
+
 
 function TaskCard({ icon, title, sub, pct, onPress, done, testID }: { icon: React.ReactNode; title: string; sub: string; pct: string; onPress: () => void; done?: boolean; testID?: string }) {
   return (
@@ -55,6 +58,9 @@ export default function ProfileScreen() {
   const t = useT();
   const { data } = useOnboarding();
   const { isPaid, subEndsAt, cancelSubscription } = useTier();
+  const { signOut } = useAuth();
+  const isAdmin = useIsAdmin();
+  const pendingEvents = usePendingEvents(isAdmin);
 
   function formatEndDate(ts: number): string {
     return new Date(ts).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
@@ -197,6 +203,25 @@ export default function ProfileScreen() {
           <Text style={s.reportText}>{t("reportRow")}</Text>
         </TouchableOpacity>
 
+        {isAdmin && (
+          <TouchableOpacity style={s.reportRow} onPress={() => router.push("/events")} testID="admin-review-events">
+            <ShieldCheck size={18} color={Colors.gold} />
+            <Text style={s.reportText}>Review events{pendingEvents.length ? ` (${pendingEvents.length} waiting)` : ""}</Text>
+          </TouchableOpacity>
+        )}
+
+        <TouchableOpacity
+          style={s.signOut}
+          onPress={() => Alert.alert(t("logout"), t("logoutConfirm"), [
+            { text: t("cancel"), style: "cancel" },
+            { text: t("logout"), style: "destructive", onPress: async () => { await signOut(); router.replace("/(auth)/login" as never); } },
+          ])}
+          testID="profile-sign-out"
+        >
+          <LogOut size={18} color="#FFF" />
+          <Text style={s.signOutText}>{t("logout")}</Text>
+        </TouchableOpacity>
+
         <View style={{ height: 24 }} />
       </ScrollView>
     </View>
@@ -204,6 +229,8 @@ export default function ProfileScreen() {
 }
 
 const s = StyleSheet.create({
+  signOut: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, marginTop: 20, paddingVertical: 15, borderRadius: 999, borderWidth: 1.5, borderColor: "rgba(255,255,255,0.4)" },
+  signOutText: { color: "#FFF", fontSize: 15, fontWeight: "800" as const },
   ct: { flex: 1, backgroundColor: "transparent" },
   scroll: { paddingHorizontal: 16, paddingTop: 8 },
   topRow: { flexDirection: "row", alignItems: "center", gap: 12, paddingVertical: 8 },

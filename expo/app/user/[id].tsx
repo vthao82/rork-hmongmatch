@@ -17,6 +17,7 @@ import { useActiveLabel } from "@/lib/presence";
 import { NewBadge } from "@/components/NewBadge";
 import { unmatchUser } from "@/lib/discoverProfiles";
 import { dialectText, lookingForText } from "@/lib/profileLabels";
+import OptionsSheet, { type SheetOption } from "@/components/OptionsSheet";
 import PromptCards from "@/components/PromptCards";
 import LikeCommentModal from "@/components/LikeCommentModal";
 import { shareWithFamily } from "@/lib/shareProfile";
@@ -94,12 +95,10 @@ export default function UserProfileScreen() {
     });
   };
 
+  const [menu, setMenu] = useState<SheetOption[] | null>(null);
   const openSafetyMenu = () => {
     if (!p || isMe) return;
-    Alert.alert(
-      p.name,
-      "What would you like to do?",
-      [
+    setMenu([
         { text: "Share with family", onPress: () => void shareWithFamily(p) },
         {
           text: "Report this user",
@@ -151,9 +150,7 @@ export default function UserProfileScreen() {
               ]
             ),
         },
-        { text: "Cancel", style: "cancel" },
-      ]
-    );
+      ]);
   };
 
   return (
@@ -244,6 +241,7 @@ export default function UserProfileScreen() {
           <View style={{ height: 40 }} />
         </View>
       </ScrollView>
+      <OptionsSheet visible={!!menu} title={p.name} subtitle="What would you like to do?" options={menu ?? []} onClose={() => setMenu(null)} />
       <LikeCommentModal visible={commentOpen} name={p.name} onClose={() => setCommentOpen(false)} onSend={(c) => { setCommentOpen(false); onLike(c); }} />
     </>
   );
