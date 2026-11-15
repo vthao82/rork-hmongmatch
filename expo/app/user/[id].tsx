@@ -1,8 +1,8 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { PhotoCarousel } from "@/components/PhotoCarousel";
-import { MapPin, Globe, Heart, MessageCircle, X, MoreVertical } from "lucide-react-native";
+import { MapPin, Globe, Heart, MessageCircle, X, MoreVertical, ArrowLeft } from "lucide-react-native";
 import VerifiedBadge from "@/components/VerifiedBadge";
 import * as Haptics from "expo-haptics";
 import Colors from "@/constants/colors";
@@ -18,6 +18,8 @@ import { NewBadge } from "@/components/NewBadge";
 import { unmatchUser } from "@/lib/discoverProfiles";
 import { dialectText, lookingForText } from "@/lib/profileLabels";
 import OptionsSheet, { type SheetOption } from "@/components/OptionsSheet";
+import RedBackground from "@/components/RedBackground";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import PromptCards from "@/components/PromptCards";
 import LikeCommentModal from "@/components/LikeCommentModal";
 import { shareWithFamily } from "@/lib/shareProfile";
@@ -25,7 +27,8 @@ import { shareWithFamily } from "@/lib/shareProfile";
 export default function UserProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
-  const { byId } = useAllProfiles();
+  const { byId, loading } = useAllProfiles();
+  // NOTE: every hook must stay above the early returns below
   const { data } = useOnboarding();
   const myUid = auth.currentUser?.uid;
   const { isPaid } = useTier();
@@ -33,6 +36,8 @@ export default function UserProfileScreen() {
   const { matchIds } = useMyMatches();
   const activeText = useActiveLabel(id);
   const [commentOpen, setCommentOpen] = useState<boolean>(false);
+  const [menu, setMenu] = useState<SheetOption[] | null>(null);
+  const ins = useSafeAreaInsets();
 
   // 1) Live Firestore lookup
   // 2) Mock fallback (during loading or for legacy mocked IDs)
@@ -61,10 +66,11 @@ export default function UserProfileScreen() {
   if (!p) {
     return (
       <View style={s.cen}>
-        <Stack.Screen options={{ title: "Profile" }} />
-        <Text style={s.err}>Profile not found</Text>
+        <RedBackground />
+        <Stack.Screen options={{ headerShown: false }} />
+        {loading ? <ActivityIndicator color="#FFF" size="large" /> : <Text style={s.err}>Profile not found</Text>}
         <TouchableOpacity onPress={() => router.back()} style={{ marginTop: 14 }}>
-          <Text style={{ color: Colors.primary, fontWeight: "700" as const }}>Back</Text>
+          <Text style={{ color: Colors.goldLight, fontWeight: "700" as const }}>Back</Text>
         </TouchableOpacity>
       </View>
     );
@@ -72,6 +78,7 @@ export default function UserProfileScreen() {
 
   const isMe = id === myUid;
   const profile = p;
+  const uniqueInterests = Array.from(new Map((p.interests ?? []).map((i) => [i.trim().toLowerCase(), i.trim()])).values()).filter(Boolean);
 
   const onMessage = () => {
     if (!isPaid && !matchIds.includes(profile.id)) {
@@ -95,7 +102,6 @@ export default function UserProfileScreen() {
     });
   };
 
-  const [menu, setMenu] = useState<SheetOption[] | null>(null);
   const openSafetyMenu = () => {
     if (!p || isMe) return;
     setMenu([
@@ -155,32 +161,29 @@ export default function UserProfileScreen() {
 
   return (
     <>
-      <Stack.Screen
-        options={{
-          title: isMe ? "Your Profile" : p.name,
-          headerRight: !isMe
-            ? () => (
-                <TouchableOpacity
-                  onPress={openSafetyMenu}
-                  hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
-                  testID="safety-menu-btn"
-                >
-                  <MoreVertical size={22} color={Colors.text} />
-                </TouchableOpacity>
-              )
-            : undefined,
-        }}
-      />
-      <ScrollView style={s.ct} showsVerticalScrollIndicator={false}>
+      <Stack.Screen options={{ headerShown: false }} />
+      <View style={s.ct}>
+      <RedBackground />
+      <ScrollView showsVerticalScrollIndicator={false}>
         <View style={s.ph}>
           <PhotoCarousel key={p.id} photos={p.photos} />
+          <View style={[s.topBar, { top: ins.top + 8 }]}>
+            <TouchableOpacity onPress={() => router.back()} style={s.topBtn} testID="profile-back">
+              <ArrowLeft size={22} color="#FFF" />
+            </TouchableOpacity>
+            {!isMe && (
+              <TouchableOpacity onPress={openSafetyMenu} style={s.topBtn} testID="safety-menu-btn">
+                <MoreVertical size={22} color="#FFF" />
+              </TouchableOpacity>
+            )}
+          </View>
           <View style={s.pf} pointerEvents="none">
             <View style={s.nr}>
               <Text style={s.nm}>{p.name}{p.age ? `, ${p.age}` : ""}</Text>
               <VerifiedBadge verified={!!p.verified} size={22} />
               <NewBadge createdAtMs={p.createdAtMs} inline />
             </View>
-            {p.clan ? <Text style={s.cl}>{p.clan} Clan</Text> : null}
+            {p.clan && p.clan !== "—" ? <View style={s.clanPill}><Text style={s.cl}>{p.clan} Clan</Text></View> : null}
             {!isMe && activeText ? (
               <View style={s.activeRow} testID="profile-active-status">
                 {activeText === "Active now" && <View style={s.activeDot} />}
@@ -192,7 +195,7 @@ export default function UserProfileScreen() {
         <View style={s.cn}>
           <View style={s.ab}>
             <TouchableOpacity style={s.pb} onPress={() => router.back()} testID="back-from-profile">
-              <X size={24} color={Colors.nope} />
+              <X size={24} color="#FFF" />
             </TouchableOpacity>
             {!isMe && (
               <TouchableOpacity
@@ -221,26 +224,27 @@ export default function UserProfileScreen() {
             </TouchableOpacity>
           )}
           {p.bio ? (
-            <View style={s.se}><Text style={s.st}>About</Text><Text style={s.bt}>{p.bio}</Text></View>
+            <View style={[s.glass, s.se]}><Text style={s.st}>ABOUT</Text><Text style={s.bt}>{p.bio}</Text></View>
           ) : null}
-          <PromptCards prompts={p.prompts} name={p.name} onLike={isMe ? undefined : (c) => onLike(c)} />
+          <PromptCards prompts={p.prompts} name={p.name} dark onLike={isMe ? undefined : (c) => onLike(c)} />
           <View style={s.se}>
-            <Text style={s.st}>Details</Text>
-            <View style={s.dc}>
-              <View style={s.di}><MapPin size={16} color={Colors.primary} /><Text style={s.dt}>{p.location}{p.distance ? ` · ${p.distance}` : ""}</Text></View>
-              {dialectText(p.languages) ? <View style={s.di}><Globe size={16} color={Colors.primary} /><Text style={s.dt} testID="profile-dialect">{dialectText(p.languages)}</Text></View> : null}
-              {p.lookingFor ? <View style={s.di}><Heart size={16} color={Colors.primary} /><Text style={s.dt} testID="profile-looking-for">{lookingForText(p.lookingFor)}</Text></View> : null}
+            <Text style={[s.st, { marginLeft: 4 }]}>DETAILS</Text>
+            <View style={[s.glass, s.dc]}>
+              <View style={s.di}><MapPin size={16} color={Colors.gold} /><Text style={s.dt}>{p.location}{p.distance ? ` · ${p.distance}` : ""}</Text></View>
+              {dialectText(p.languages) ? <View style={s.di}><Globe size={16} color={Colors.gold} /><Text style={s.dt} testID="profile-dialect">{dialectText(p.languages)}</Text></View> : null}
+              {p.lookingFor ? <View style={s.di}><Heart size={16} color={Colors.gold} /><Text style={s.dt} testID="profile-looking-for">{lookingForText(p.lookingFor)}</Text></View> : null}
             </View>
           </View>
-          {p.interests?.length ? (
+          {uniqueInterests.length ? (
             <View style={s.se}>
-              <Text style={s.st}>Interests</Text>
-              <View style={s.ir}>{p.interests.map(i => <View key={i} style={s.ic}><Text style={s.it}>{i}</Text></View>)}</View>
+              <Text style={[s.st, { marginLeft: 4 }]}>INTERESTS</Text>
+              <View style={s.ir}>{uniqueInterests.map(i => <View key={i} style={s.ic}><Text style={s.it}>{i}</Text></View>)}</View>
             </View>
           ) : null}
           <View style={{ height: 40 }} />
         </View>
       </ScrollView>
+      </View>
       <OptionsSheet visible={!!menu} title={p.name} subtitle="What would you like to do?" options={menu ?? []} onClose={() => setMenu(null)} />
       <LikeCommentModal visible={commentOpen} name={p.name} onClose={() => setCommentOpen(false)} onSend={(c) => { setCommentOpen(false); onLike(c); }} />
     </>
@@ -262,32 +266,36 @@ function calcAgeFromBirthday(b: string): number {
 }
 
 const s = StyleSheet.create({
-  ct: { flex: 1, backgroundColor: Colors.background },
-  cen: { flex: 1, justifyContent: "center" as const, alignItems: "center" as const, backgroundColor: Colors.background },
-  err: { fontSize: 16, color: Colors.textSecondary },
-  ph: { position: "relative" as const, backgroundColor: "#000" },
-  pf: { position: "absolute" as const, bottom: 20, left: 20, right: 20 },
-  nr: { flexDirection: "row" as const, alignItems: "center" as const, gap: 8 },
-  nm: { fontSize: 30, fontWeight: "700" as const, color: "#FFF", textShadowColor: "rgba(0,0,0,0.75)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },
-  cl: { fontSize: 16, fontWeight: "600" as const, color: Colors.accentLight, marginTop: 4, textShadowColor: "rgba(0,0,0,0.75)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },
-  cn: { paddingHorizontal: 20, paddingTop: 16 },
-  activeRow: { flexDirection: "row" as const, alignItems: "center" as const, gap: 6, marginTop: 6 },
+  ct: { flex: 1, backgroundColor: Colors.indigo },
+  cen: { flex: 1, justifyContent: "center" as const, alignItems: "center" as const, backgroundColor: Colors.indigo },
+  err: { fontSize: 16, color: "rgba(255,255,255,0.75)" },
+  ph: { position: "relative" as const, backgroundColor: "#000", borderBottomLeftRadius: 28, borderBottomRightRadius: 28, overflow: "hidden" as const },
+  topBar: { position: "absolute" as const, left: 16, right: 16, flexDirection: "row" as const, justifyContent: "space-between" as const },
+  topBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: "rgba(0,0,0,0.4)", alignItems: "center" as const, justifyContent: "center" as const },
+  pf: { position: "absolute" as const, bottom: 22, left: 20, right: 20 },
+  nr: { flexDirection: "row" as const, alignItems: "center" as const, gap: 8, flexWrap: "wrap" as const },
+  nm: { fontSize: 34, fontWeight: "800" as const, color: "#FFF", letterSpacing: -0.8, textShadowColor: "rgba(0,0,0,0.75)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 8 },
+  clanPill: { alignSelf: "flex-start" as const, marginTop: 8, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 999, backgroundColor: "rgba(212,168,67,0.9)" },
+  cl: { fontSize: 13, fontWeight: "800" as const, color: Colors.indigo, letterSpacing: 0.4 },
+  cn: { paddingHorizontal: 18, paddingTop: 20 },
+  activeRow: { flexDirection: "row" as const, alignItems: "center" as const, gap: 6, marginTop: 8 },
   activeDot: { width: 9, height: 9, borderRadius: 5, backgroundColor: Colors.online },
   activeTxt: { color: "#FFF", fontSize: 13, fontWeight: "600" as const, textShadowColor: "rgba(0,0,0,0.75)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },
-  ab: { flexDirection: "row" as const, justifyContent: "center" as const, alignItems: "center" as const, gap: 16, marginBottom: 24 },
-  pb: { width: 52, height: 52, borderRadius: 26, backgroundColor: "#FFF", justifyContent: "center" as const, alignItems: "center" as const },
-  mb: { flexDirection: "row" as const, alignItems: "center" as const, gap: 8, backgroundColor: Colors.primary, paddingHorizontal: 28, paddingVertical: 14, borderRadius: 28 },
-  mt: { color: "#FFF", fontSize: 16, fontWeight: "600" as const },
-  lb: { width: 52, height: 52, borderRadius: 26, backgroundColor: "#FFF", justifyContent: "center" as const, alignItems: "center" as const },
-  se: { marginBottom: 24 },
-  commentLink: { alignSelf: "center", marginTop: -8, marginBottom: 20, paddingVertical: 6 },
-  commentLinkText: { color: Colors.primary, fontWeight: "700" as const, fontSize: 14 },
-  st: { fontSize: 18, fontWeight: "700" as const, color: Colors.text, marginBottom: 10 },
-  bt: { fontSize: 15, color: Colors.textSecondary, lineHeight: 24 },
-  dc: { backgroundColor: Colors.surface, borderRadius: 16, padding: 16, gap: 14 },
-  di: { flexDirection: "row" as const, alignItems: "center" as const, gap: 10 },
-  dt: { fontSize: 15, color: Colors.text },
+  ab: { flexDirection: "row" as const, justifyContent: "center" as const, alignItems: "center" as const, gap: 16, marginBottom: 22 },
+  pb: { width: 54, height: 54, borderRadius: 27, backgroundColor: "rgba(255,255,255,0.12)", borderWidth: 1, borderColor: "rgba(255,255,255,0.25)", justifyContent: "center" as const, alignItems: "center" as const },
+  mb: { flexDirection: "row" as const, alignItems: "center" as const, gap: 8, backgroundColor: Colors.crimson, paddingHorizontal: 28, paddingVertical: 15, borderRadius: 28, borderWidth: 1, borderColor: "rgba(255,255,255,0.2)" },
+  mt: { color: "#FFF", fontSize: 16, fontWeight: "800" as const },
+  lb: { width: 54, height: 54, borderRadius: 27, backgroundColor: "#FFF", justifyContent: "center" as const, alignItems: "center" as const },
+  glass: { backgroundColor: "rgba(255,255,255,0.08)", borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", borderRadius: 20, padding: 18 },
+  se: { marginBottom: 18 },
+  commentLink: { alignSelf: "center" as const, marginTop: -8, marginBottom: 20, paddingVertical: 6 },
+  commentLinkText: { color: Colors.goldLight, fontWeight: "700" as const, fontSize: 14 },
+  st: { fontSize: 12, fontWeight: "800" as const, color: Colors.goldLight, letterSpacing: 1.6, marginBottom: 10 },
+  bt: { fontSize: 17, color: "#FFF", lineHeight: 26, fontWeight: "500" as const },
+  dc: { gap: 14 },
+  di: { flexDirection: "row" as const, alignItems: "center" as const, gap: 12 },
+  dt: { fontSize: 15, color: "#FFF", flex: 1, fontWeight: "600" as const },
   ir: { flexDirection: "row" as const, flexWrap: "wrap" as const, gap: 8 },
-  ic: { backgroundColor: Colors.surfaceAlt, paddingHorizontal: 16, paddingVertical: 10, borderRadius: 20 },
-  it: { fontSize: 14, fontWeight: "500" as const, color: Colors.text },
+  ic: { backgroundColor: "rgba(255,255,255,0.1)", borderWidth: 1, borderColor: "rgba(212,168,67,0.45)", paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999 },
+  it: { fontSize: 14, fontWeight: "700" as const, color: "#FFF" },
 });

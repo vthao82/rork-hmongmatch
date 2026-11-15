@@ -4,7 +4,7 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { Sparkles } from "lucide-react-native";
 import Colors from "@/constants/colors";
-import { useAllProfiles, fitsSeeking, passesPrefs } from "@/lib/discoverProfiles";
+import { useAllProfiles, passesPrefs, useSeePrefs } from "@/lib/discoverProfiles";
 import { useOnboarding } from "@/providers/OnboardingProvider";
 import { useBlocks } from "@/providers/BlockProvider";
 import { mostCompatibleToday } from "@/lib/compatibility";
@@ -17,14 +17,14 @@ export default function MostCompatibleCard() {
   const { data } = useOnboarding();
   const { hidden } = useBlocks();
   const myUid = auth.currentUser?.uid;
+  const prefs = useSeePrefs();
 
   const pick = useMemo(() => {
-    const prefs = { myClan: data.clan, hideSameClan: data.hideSameClan, verifiedOnly: data.verifiedOnly };
     const list = Object.values(byId).filter(
-      (p) => p.id !== myUid && !p.id.startsWith("seed-") && p.photos.length > 0 && !hidden.has(p.id) && fitsSeeking(data.seeking, p.genders) && passesPrefs(p, prefs)
+      (p) => p.id !== myUid && !p.id.startsWith("seed-") && p.photos.length > 0 && !hidden.has(p.id) && passesPrefs(p, prefs)
     );
     return mostCompatibleToday(data, list);
-  }, [byId, data, hidden, myUid]);
+  }, [byId, data, hidden, myUid, prefs]);
 
   if (!pick) return null;
   const p = pick.profile;

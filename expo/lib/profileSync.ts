@@ -50,6 +50,7 @@ export type ProfileRow = {
   extras: Record<string, unknown>;
   prompt: { q: string; a: string } | null;
   prompts: { q: string; a: string }[];
+  categories: string[];
   hideSameClan: boolean;
   verifiedOnly: boolean;
   updatedAt?: Timestamp;
@@ -99,6 +100,7 @@ function toProfileRow(userId: string, d: OnboardingData): Omit<ProfileRow, "upda
     extras: (d.extras ?? {}) as Record<string, unknown>,
     prompt: d.prompt ?? null,
     prompts: (d.prompts ?? []).filter((p) => p.q && p.a?.trim()).slice(0, 3),
+    categories: Array.from(new Set(d.categories ?? [])),
     hideSameClan: d.hideSameClan ?? false,
     verifiedOnly: d.verifiedOnly ?? false,
   };

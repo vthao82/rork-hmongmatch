@@ -1,10 +1,12 @@
 import React, { useMemo, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { CalendarDays, MapPin, Plus, ShieldCheck, Users } from "lucide-react-native";
 import Colors from "@/constants/colors";
 import { useApprovedEvents, usePendingEvents, useMyEvents, useIsAdmin, type HmongEvent } from "@/lib/events";
 import { useOnboarding } from "@/providers/OnboardingProvider";
+import { usePendingCards, reviewCard } from "@/lib/interestCards";
+import { CATEGORY_GROUPS } from "@/constants/categories";
 
 export function EventRow({ e, onPress, badge }: { e: HmongEvent; onPress: () => void; badge?: string }) {
   return (
@@ -30,6 +32,8 @@ export default function EventsScreen() {
   const approved = useApprovedEvents();
   const pending = usePendingEvents(isAdmin);
   const mine = useMyEvents();
+  const pendingCards = usePendingCards(isAdmin);
+  const review = (id: string, status: "approved" | "rejected") => reviewCard(id, status).catch(() => Alert.alert("Couldn't update", "Please try again."));
   const [nearOnly, setNearOnly] = useState<boolean>(false);
 
   const todayStart = new Date().setHours(0, 0, 0, 0);
@@ -57,6 +61,22 @@ export default function EventsScreen() {
             </TouchableOpacity>
           ) : null}
         </View>
+
+        {isAdmin && pendingCards.length > 0 && (
+          <View style={s.section} testID="requested-cards">
+            <View style={s.secHead}><ShieldCheck size={16} color={Colors.primary} /><Text style={s.secTitle}>Requested Interest cards ({pendingCards.length})</Text></View>
+            {pendingCards.map((c) => (
+              <View key={c.id} style={s.reqRow} testID={`requested-card-${c.id}`}>
+                <View style={{ flex: 1 }}>
+                  <Text style={s.title}>{c.label}</Text>
+                  <Text style={s.metaText}>In {CATEGORY_GROUPS.find((g) => g.id === c.groupId)?.title ?? c.groupId}</Text>
+                </View>
+                <TouchableOpacity style={[s.reqBtn, { backgroundColor: Colors.like }]} onPress={() => review(c.id, "approved")} testID={`approve-card-${c.id}`}><Text style={s.reqBtnText}>Approve</Text></TouchableOpacity>
+                <TouchableOpacity style={[s.reqBtn, { backgroundColor: Colors.nope }]} onPress={() => review(c.id, "rejected")} testID={`reject-card-${c.id}`}><Text style={s.reqBtnText}>Reject</Text></TouchableOpacity>
+              </View>
+            ))}
+          </View>
+        )}
 
         {isAdmin && pending.length > 0 && (
           <View style={s.section}>
@@ -104,5 +124,8 @@ const s = StyleSheet.create({
   title: { fontSize: 16, fontWeight: "700" as const, color: Colors.text },
   meta: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 3 },
   metaText: { color: Colors.textSecondary, fontSize: 13, flex: 1 },
+  reqRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.borderLight },
+  reqBtn: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 999 },
+  reqBtnText: { color: "#FFF", fontWeight: "800" as const, fontSize: 12 },
   badge: { color: Colors.primary, fontSize: 12, fontWeight: "800" as const },
 });

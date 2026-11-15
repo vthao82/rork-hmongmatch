@@ -160,12 +160,21 @@ export default function BrowseScreen() {
   }, [history, consumeRewind, isPaid]);
 
   const toggleBoost = useCallback(() => {
-    if (boostActive) stopBoost();
-    else {
-      const ok = startBoost();
-      if (!ok) setShowLimitModal(true);
+    if (boostActive) {
+      Alert.alert("Turn off boost?", "Your boost for this hour will end now and still counts toward this month.", [
+        { text: "Keep boosting", style: "cancel" },
+        { text: "Turn off", style: "destructive", onPress: stopBoost },
+      ]);
+      return;
     }
-  }, [boostActive, startBoost, stopBoost, setShowLimitModal]);
+    if (startBoost()) {
+      Alert.alert("Boost is on", "Your profile is boosted and will expire in 1 hour.");
+    } else if (!isPaid) {
+      setShowLimitModal(true);
+    } else {
+      Alert.alert("No boosts left", "You've used your boosts for this month. They refresh 30 days after each boost.");
+    }
+  }, [boostActive, startBoost, stopBoost, setShowLimitModal, isPaid]);
 
   return (
     <View style={[st.ct, { paddingTop: ins.top }]}>

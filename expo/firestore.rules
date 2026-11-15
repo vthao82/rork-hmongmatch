@@ -53,7 +53,10 @@ service cloud.firestore {
       allow update: if request.auth != null && request.auth.uid == uid
                     && !request.resource.data.diff(resource.data).affectedKeys().hasAny(serverOnlyUserFields())
                     && (!('referredByCode' in resource.data)
-                        || !request.resource.data.diff(resource.data).affectedKeys().hasAny(['referredByCode']));
+                        || !request.resource.data.diff(resource.data).affectedKeys().hasAny(['referredByCode']))
+                    && (!request.resource.data.diff(resource.data).affectedKeys().hasAny(['boostedUntil'])
+                        || (request.resource.data.boostedUntil is number
+                            && request.resource.data.boostedUntil <= request.time.toMillis() + 3700000));
       allow delete: if request.auth != null && request.auth.uid == uid;
 
       // Swipes subcollection — owner-only
@@ -175,6 +178,19 @@ service cloud.firestore {
                         && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['going'])
                         && onlyOwnChange('going'));
       allow delete: if request.auth != null && (resource.data.createdBy == request.auth.uid || isAdmin());
+    }
+
+    // -------- Suggested Interest cards (members suggest, admins approve) --------
+    match /interestCards/{cardId} {
+      allow read: if request.auth != null
+                  && (resource.data.status == 'approved' || resource.data.createdBy == request.auth.uid || isAdmin());
+      allow create: if request.auth != null
+                    && request.resource.data.createdBy == request.auth.uid
+                    && request.resource.data.status == 'pending'
+                    && request.resource.data.label is string
+                    && request.resource.data.label.size() > 0 && request.resource.data.label.size() <= 30
+                    && request.resource.data.groupId is string;
+      allow update, delete: if isAdmin();
     }
 
     // -------- Tester feedback (write-only for members; admins read in Console) --------

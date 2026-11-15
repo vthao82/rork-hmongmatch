@@ -4,6 +4,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import { Lock, Crown, Plus, ChevronRight, CalendarDays } from "lucide-react-native";
 import MostCompatibleCard from "@/components/MostCompatibleCard";
+import SuggestCardModal from "@/components/SuggestCardModal";
+import { useCategoryGroups } from "@/lib/interestCards";
 import { useRouter } from "expo-router";
 import Colors from "@/constants/colors";
 import HmongMatchHeader from "@/components/HmongMatchHeader";
@@ -25,6 +27,8 @@ export default function InterestsTab() {
   const { data } = useOnboarding();
   const [lockOpen, setLockOpen] = useState<boolean>(false);
   const [seeAll, setSeeAll] = useState<string | null>(null);
+  const [suggestFor, setSuggestFor] = useState<{ id: string; title: string } | null>(null);
+  const groups = useCategoryGroups();
 
   // Determine user's selected interests/preferences for highlighting their primary group
   const userTokens = useMemo(() => {
@@ -41,7 +45,7 @@ export default function InterestsTab() {
   // Auto-place: sort groups by how many cards match this user's enrollment.
   // Groups with at least one matching card float to the top.
   const sortedGroups = useMemo(() => {
-    const matchScore = (group: typeof CATEGORY_GROUPS[number]) => {
+    const matchScore = (group: (typeof groups)[number]) => {
       return group.cards.reduce((sum, card) => {
         const lc = card.label.toLowerCase();
         const hit = userTokens.some(
@@ -54,7 +58,7 @@ export default function InterestsTab() {
         return sum + (hit ? 1 : 0);
       }, 0);
     };
-    return [...CATEGORY_GROUPS].sort((a, b) => {
+    return [...groups].sort((a, b) => {
       const sa = matchScore(a);
       const sb = matchScore(b);
       if (sb !== sa) return sb - sa;
@@ -62,7 +66,7 @@ export default function InterestsTab() {
       if (a.freeAccess !== b.freeAccess) return a.freeAccess ? -1 : 1;
       return 0;
     });
-  }, [userTokens]);
+  }, [userTokens, groups]);
 
   const goCategory = (groupId: string, cardId: string, freeAccess: boolean) => {
     if (!freeAccess && !isPaid) {
@@ -106,6 +110,10 @@ export default function InterestsTab() {
                     )}
                   </View>
                 </View>
+                <TouchableOpacity onPress={() => setSuggestFor({ id: group.id, title: group.title })} style={s.suggestBtn} testID={`suggest-${group.id}`}>
+                  <Plus size={12} color={Colors.accent} />
+                  <Text style={s.suggestTxt}>Suggest</Text>
+                </TouchableOpacity>
                 {group.cards.length > 4 && (
                   <TouchableOpacity onPress={() => setSeeAll(seeAll === group.id ? null : group.id)} testID={`seeall-${group.id}`}>
                     <Text style={s.seeAll}>{seeAll === group.id ? t("showLess") : t("seeAll")}</Text>
@@ -146,6 +154,7 @@ export default function InterestsTab() {
         <View style={{ height: 32 }} />
       </ScrollView>
 
+      <SuggestCardModal group={suggestFor} onClose={() => setSuggestFor(null)} />
       <Modal visible={lockOpen} transparent animationType="fade" onRequestClose={() => setLockOpen(false)}>
         <View style={s.modal}>
           <View style={s.modalCard}>
@@ -196,4 +205,6 @@ const s = StyleSheet.create({
   eventsIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: Colors.gold, alignItems: "center", justifyContent: "center" },
   eventsTitle: { color: "#FFF", fontSize: 16, fontWeight: "800" as const },
   eventsSub: { color: "rgba(255,255,255,0.7)", fontSize: 12, marginTop: 2 },
+  suggestBtn: { flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, borderWidth: 1, borderColor: "rgba(212,168,67,0.6)", marginRight: 10 },
+  suggestTxt: { color: Colors.accent, fontSize: 12, fontWeight: "700" as const },
 });

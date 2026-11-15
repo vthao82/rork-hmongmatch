@@ -55,14 +55,17 @@ export default function EditProfileScreen() {
           return;
         }
       }
+      // Empty slot → pick several at once; existing photo → replace it (with cropping)
+      const free = 6 - photos.length;
+      const multi = idx >= photos.length && free > 1;
       const res = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
         quality: 0.85,
-        allowsEditing: true,
-        aspect: [3, 4],
+        ...(multi ? { allowsMultipleSelection: true, selectionLimit: free, orderedSelection: true } : { allowsEditing: true, aspect: [3, 4] as [number, number] }),
       });
-      if (!res.canceled && res.assets[0]) {
+      if (!res.canceled && res.assets.length) {
         setPhotos(prev => {
+          if (multi) return [...prev, ...res.assets.map((a) => a.uri)].slice(0, 6);
           const next = [...prev];
           next[idx] = res.assets[0].uri;
           return next.filter(Boolean);
@@ -71,7 +74,7 @@ export default function EditProfileScreen() {
     } catch (e) {
       console.log("pick error", e);
     }
-  }, []);
+  }, [photos.length]);
 
   const removePhoto = useCallback((idx: number) => {
     setPhotos(prev => prev.filter((_, i) => i !== idx));

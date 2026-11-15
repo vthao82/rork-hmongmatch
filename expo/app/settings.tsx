@@ -7,7 +7,7 @@ import { ArrowLeft, MapPin, ChevronRight, Check, X as XIcon, Crown } from "lucid
 import Colors from "@/constants/colors";
 import { useTier } from "@/providers/TierProvider";
 import { useT } from "@/providers/LanguageProvider";
-import { useOnboarding } from "@/providers/OnboardingProvider";
+import { useOnboarding, type SeekingId } from "@/providers/OnboardingProvider";
 import { useAuth } from "@/providers/AuthProvider";
 import { loadPushPrefs, savePushPrefs, syncPushToken, DEFAULT_PUSH_PREFS, type PushPrefs } from "@/lib/notifications";
 import { deleteMyAccount } from "@/lib/deleteAccount";
@@ -174,8 +174,22 @@ export default function SettingsScreen() {
   // Keep local state in sync if OnboardingProvider hydrates later
   useEffect(() => { setPhotoVerifiedChat(!!onb.photoVerified); }, [onb.photoVerified]);
   const [location, setLocation] = useState<string>("Little Canada, Minnesota");
-  const [ageLow, setAgeLow] = useState<number>(21);
-  const [ageHigh, setAgeHigh] = useState<number>(45);
+  const [ageLow, setAgeLow] = useState<number>(onb.ageMin ?? 18);
+  const [ageHigh, setAgeHigh] = useState<number>(onb.ageMax ?? 99);
+  const [ageMinText, setAgeMinText] = useState<string>(String(onb.ageMin ?? 18));
+  const [ageMaxText, setAgeMaxText] = useState<string>(String(onb.ageMax ?? 99));
+  const saveAges = () => {
+    let lo = Math.min(99, Math.max(18, parseInt(ageMinText, 10) || 18));
+    let hi = Math.min(99, Math.max(18, parseInt(ageMaxText, 10) || 99));
+    if (lo > hi) [lo, hi] = [hi, lo];
+    setAgeLow(lo); setAgeHigh(hi); setAgeMinText(String(lo)); setAgeMaxText(String(hi));
+    if (lo !== onb.ageMin || hi !== onb.ageMax) {
+      updateOnb({ ageMin: lo, ageMax: hi });
+      persistPref({ ageLow: lo, ageHigh: hi });
+      setSavedToast(true);
+      setTimeout(() => setSavedToast(false), 1500);
+    }
+  };
 
   const [values, setValues] = useState<Record<string, string[]>>({
     interestedIn: ["women"], lookingFor: [], languages: ["Hmong", "English"],
@@ -210,8 +224,8 @@ export default function SettingsScreen() {
           if (p.usOnly !== undefined) setUsOnly(p.usOnly);
           if (p.distance !== undefined) setDistance(p.distance);
           if (p.location) setLocation(p.location);
-          if (p.ageLow !== undefined) setAgeLow(p.ageLow);
-          if (p.ageHigh !== undefined) setAgeHigh(p.ageHigh);
+          if (p.ageLow !== undefined && onb.ageMin === undefined) { setAgeLow(p.ageLow); setAgeMinText(String(p.ageLow)); }
+          if (p.ageHigh !== undefined && onb.ageMax === undefined) { setAgeHigh(p.ageHigh); setAgeMaxText(String(p.ageHigh)); }
         } catch (_e) {} }
       } catch (e) { console.log("settings hydrate", e); }
     })();
@@ -231,10 +245,12 @@ export default function SettingsScreen() {
     if (!picker) return;
     const next = { ...values, [picker.key]: vals };
     setValues(next);
+    // "Interested in" drives who appears in Discover, Interests and picks
+    if (picker.key === "interestedIn") updateOnb({ seeking: vals as SeekingId[] });
     try { await AsyncStorage.setItem(ADV_KEY, JSON.stringify(next)); } catch (e) { console.log("adv save", e); }
     setSavedToast(true);
     setTimeout(() => setSavedToast(false), 1500);
-  }, [picker, values]);
+  }, [picker, values, updateOnb]);
 
   const displayValue = (k: string): string => {
     const cfg = PICKERS[k];
@@ -244,7 +260,12 @@ export default function SettingsScreen() {
     return labels.length === 1 ? labels[0] : `${labels[0]} +${labels.length - 1}`;
   };
 
-  const interestedInLabel = useMemo(() => displayValue("interestedIn"), [values]);
+  const interestedInLabel = useMemo(() => {
+    const seek = onb.seeking ?? [];
+    if (!seek.length) return displayValue("interestedIn");
+    const names: Record<string, string> = { women: "Women", men: "Men", everyone: "Everyone", beyond: "Beyond Binary" };
+    return seek.length === 1 ? names[seek[0]] ?? seek[0] : `${names[seek[0]] ?? seek[0]} +${seek.length - 1}`;
+  }, [values, onb.seeking]);
 
   const onWorldwide = (v: boolean) => { setWorldwide(v); if (v) setUsOnly(false); persistPref({ worldwide: v, usOnly: v ? false : usOnly }); };
   const onUSOnly = (v: boolean) => { setUsOnly(v); if (v) setWorldwide(false); persistPref({ usOnly: v, worldwide: v ? false : worldwide }); };
@@ -348,7 +369,12 @@ export default function SettingsScreen() {
               <Text style={s.rowLabel}>{t("ageRange")}</Text>
               <Text style={s.rowValue}>{ageLow} - {ageHigh}</Text>
             </View>
-            <RangeSlider low={ageLow} high={ageHigh} onChange={(l, h) => { setAgeLow(l); setAgeHigh(h); persistPref({ ageLow: l, ageHigh: h }); }} />
+            <View style={s.ageRow}>
+              <TextInput value={ageMinText} onChangeText={(v) => setAgeMinText(v.replace(/[^0-9]/g, ""))} onEndEditing={saveAges} keyboardType="number-pad" maxLength={2} style={s.ageInput} placeholder="18" placeholderTextColor="rgba(255,255,255,0.35)" testID="age-min-input" />
+              <Text style={s.ageDash}>to</Text>
+              <TextInput value={ageMaxText} onChangeText={(v) => setAgeMaxText(v.replace(/[^0-9]/g, ""))} onEndEditing={saveAges} keyboardType="number-pad" maxLength={2} style={s.ageInput} placeholder="99" placeholderTextColor="rgba(255,255,255,0.35)" testID="age-max-input" />
+              <TouchableOpacity style={s.ageSave} onPress={saveAges} testID="age-save"><Text style={s.ageSaveText}>Save</Text></TouchableOpacity>
+            </View>
           </View>
         </Section>
 
@@ -558,6 +584,11 @@ const s = StyleSheet.create({
   rowLabel: { color: "#FFF", fontSize: 15, fontWeight: "600" as const, flexShrink: 1 },
   rowRight: { flexDirection: "row", alignItems: "center", gap: 8, maxWidth: "55%" },
   rowValue: { color: "rgba(255,255,255,0.65)", fontSize: 14 },
+  ageRow: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 12 },
+  ageInput: { width: 64, textAlign: "center", borderWidth: 1, borderColor: "rgba(255,255,255,0.25)", borderRadius: 12, paddingVertical: 10, color: "#FFF", fontSize: 18, fontWeight: "800" },
+  ageDash: { color: "rgba(255,255,255,0.7)", fontSize: 14 },
+  ageSave: { marginLeft: "auto", backgroundColor: Colors.primary, borderRadius: 999, paddingHorizontal: 18, paddingVertical: 10 },
+  ageSaveText: { color: "#FFF", fontWeight: "800" },
   rowTop: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 10 },
   rowToggle: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
   rowSub: { color: "rgba(255,255,255,0.55)", fontSize: 12, marginTop: 4, lineHeight: 17 },

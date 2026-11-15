@@ -22,7 +22,7 @@ function RootLayoutNav() {
       <Stack.Screen name="index" options={{ headerShown: false }} />
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-      <Stack.Screen name="user/[id]" options={{ title: "Profile" }} />
+      <Stack.Screen name="user/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="chat/[id]" options={{ title: "Chat" }} />
       <Stack.Screen name="subscription" options={{ headerShown: false, presentation: "modal" }} />
       <Stack.Screen name="settings" options={{ headerShown: false }} />

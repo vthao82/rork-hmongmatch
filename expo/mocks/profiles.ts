@@ -21,6 +21,12 @@ export interface Profile {
   showActiveStatus?: boolean;
   createdAtMs?: number | null;
   prompts?: { q: string; a: string }[];
+  categories?: string[];
+  dialect?: string | null;
+  education?: string | null;
+  work?: string | null;
+  religion?: string | null;
+  boostedUntil?: number | null;
 }
 
 export interface Match {

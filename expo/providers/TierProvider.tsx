@@ -10,7 +10,7 @@ import {
   purchasePackage as rcPurchasePackage,
   restorePurchases as rcRestorePurchases,
 } from "@/lib/revenuecat";
-import { doc, onSnapshot } from "firebase/firestore";
+import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { useAuth } from "@/providers/AuthProvider";
 
@@ -36,12 +36,12 @@ export const FREE_LIMITS = {
   swipes: 25,
   rewinds: 10,
   messages: 5,
-  boostMin: 30,
+  boostMin: 60,
   boostsPerMonth: 1,
 };
 
 export const UNLIMITED_LIMITS = {
-  boostMin: 30,
+  boostMin: 60,
   boostsPerMonth: 2,
 };
 
@@ -364,16 +364,29 @@ export const [TierProvider, useTier] = createContextHook(() => {
     };
     setUsage(next);
     persistUsage(next);
+    // Publish so other members' Discover shows this profile first until it expires
+    if (uid) setDoc(doc(db, "users", uid), { boostedUntil: next.boostActiveUntil }, { merge: true }).catch((e) => console.log("[boost] publish", e));
     return true;
-  }, [isPaid, usage, persistUsage]);
+  }, [isPaid, usage, persistUsage, uid]);
 
   const stopBoost = useCallback(() => {
     const next: Usage = { ...usage, boostActiveUntil: undefined };
     setUsage(next);
     persistUsage(next);
-  }, [usage, persistUsage]);
+    if (uid) setDoc(doc(db, "users", uid), { boostedUntil: 0 }, { merge: true }).catch(() => {});
+  }, [usage, persistUsage, uid]);
+
+  // Turn the boost off automatically the moment it expires
+  const [, setBoostTick] = useState<number>(0);
+  useEffect(() => {
+    const left = (usage.boostActiveUntil ?? 0) - Date.now();
+    if (left <= 0) return;
+    const t = setTimeout(() => setBoostTick((n) => n + 1), left + 500);
+    return () => clearTimeout(t);
+  }, [usage.boostActiveUntil]);
 
   const boostActive = !!(usage.boostActiveUntil && usage.boostActiveUntil > Date.now());
+  const boostsLeft = Math.max(0, (isPaid ? UNLIMITED_LIMITS.boostsPerMonth : FREE_LIMITS.boostsPerMonth) - (usage.boostHistory ?? []).filter((ts) => Date.now() - ts < 30 * 24 * 60 * 60 * 1000).length);
 
   const remaining = {
     likes: isPaid ? Infinity : Math.max(0, FREE_LIMITS.likes - usage.likes),
@@ -386,6 +399,7 @@ export const [TierProvider, useTier] = createContextHook(() => {
   return {
     tier,
     isPaid,
+    boostsLeft,
     subEndsAt,
     cancelSubscription,
     upgrade,

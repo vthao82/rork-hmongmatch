@@ -72,6 +72,11 @@ export type OnboardingData = {
   hideSameClan?: boolean;
   /** Only show photo-verified people. */
   verifiedOnly?: boolean;
+  /** Interest cards I added myself ("groupId:cardId"). */
+  categories?: string[];
+  /** Age range I want to see. */
+  ageMin?: number;
+  ageMax?: number;
   locationGranted?: boolean;
   /** Last enrollment screen reached — used to resume an unfinished sign-up. */
   resumeStep?: string;

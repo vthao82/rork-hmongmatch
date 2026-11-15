@@ -17,6 +17,7 @@ import InviteCard from "@/components/InviteCard";
 import { profileCompleteness } from "@/lib/completeness";
 import { useAuth } from "@/providers/AuthProvider";
 import { useIsAdmin, usePendingEvents } from "@/lib/events";
+import { usePendingCards } from "@/lib/interestCards";
 
 
 function TaskCard({ icon, title, sub, pct, onPress, done, testID }: { icon: React.ReactNode; title: string; sub: string; pct: string; onPress: () => void; done?: boolean; testID?: string }) {
@@ -61,6 +62,8 @@ export default function ProfileScreen() {
   const { signOut } = useAuth();
   const isAdmin = useIsAdmin();
   const pendingEvents = usePendingEvents(isAdmin);
+  const pendingCards = usePendingCards(isAdmin);
+  const waiting = pendingEvents.length + pendingCards.length;
 
   function formatEndDate(ts: number): string {
     return new Date(ts).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
@@ -206,7 +209,7 @@ export default function ProfileScreen() {
         {isAdmin && (
           <TouchableOpacity style={s.reportRow} onPress={() => router.push("/events")} testID="admin-review-events">
             <ShieldCheck size={18} color={Colors.gold} />
-            <Text style={s.reportText}>Review events{pendingEvents.length ? ` (${pendingEvents.length} waiting)` : ""}</Text>
+            <Text style={s.reportText}>Review events or requested changes{waiting ? ` (${waiting} waiting)` : ""}</Text>
           </TouchableOpacity>
         )}
 

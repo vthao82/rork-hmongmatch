@@ -83,14 +83,32 @@ function rowToProfile(id: string, row: DocumentData): Profile {
     hometownState: (row.hometownState as string) ?? null,
     genders: Array.isArray(row.genders) ? (row.genders as string[]) : [],
     seeking: Array.isArray(row.seeking) ? (row.seeking as string[]) : [],
+    categories: Array.isArray(row.categories) ? (row.categories as string[]) : [],
+    dialect: (row.dialect as string) ?? null,
+    education: (row.education as string) ?? null,
+    work: (row.work as string) ?? null,
+    religion: (row.religion as string) ?? null,
+    boostedUntil: typeof row.boostedUntil === "number" ? row.boostedUntil : null,
     prompts: Array.isArray(row.prompts) ? (row.prompts as { q: string; a: string }[]) : row.prompt?.q && row.prompt?.a ? [row.prompt] : [],
   };
 }
 
-export type SeePrefs = { myClan?: string | null; hideSameClan?: boolean; verifiedOnly?: boolean };
+export type SeePrefs = { myClan?: string | null; hideSameClan?: boolean; verifiedOnly?: boolean; seeking?: string[]; ageMin?: number; ageMax?: number };
 
-/** Member's own "who I see" settings: verified-only and hide-my-clan. */
+/** My "who I see" settings from Settings, applied live everywhere. */
+export function useSeePrefs(): SeePrefs {
+  const { data } = useOnboarding();
+  return useMemo(
+    () => ({ myClan: data.clan, hideSameClan: data.hideSameClan, verifiedOnly: data.verifiedOnly, seeking: data.seeking, ageMin: data.ageMin, ageMax: data.ageMax }),
+    [data.clan, data.hideSameClan, data.verifiedOnly, data.seeking, data.ageMin, data.ageMax]
+  );
+}
+
+/** Member's own "who I see" settings: interested in, age range, verified-only and hide-my-clan. */
 export function passesPrefs(p: Profile, prefs: SeePrefs): boolean {
+  if (prefs.seeking && !fitsSeeking(prefs.seeking, p.genders)) return false;
+  if (p.age && prefs.ageMin && p.age < prefs.ageMin) return false;
+  if (p.age && prefs.ageMax && p.age > prefs.ageMax) return false;
   if (prefs.verifiedOnly && !p.verified) return false;
   if (prefs.hideSameClan && prefs.myClan && norm(p.clan) === norm(prefs.myClan)) return false;
   return true;
@@ -172,14 +190,12 @@ export function useDiscoverProfiles() {
       // Load my own profile so we can sort others by location proximity
       let myCity: string | null = null;
       let myState: string | null = null;
-      let mySeeking: string[] = [];
       try {
         const meSnap = await getDoc(doc(db, "users", me.uid));
         if (meSnap.exists()) {
           const r = meSnap.data();
           myCity = (r.hometownCity as string) ?? null;
           myState = (r.hometownState as string) ?? null;
-          mySeeking = Array.isArray(r.seeking) ? (r.seeking as string[]) : [];
         }
       } catch (e) {
         console.log("[discover] my profile fetch failed (continuing)", e);
@@ -200,7 +216,6 @@ export function useDiscoverProfiles() {
         // Require at least one photo so swipe cards look right
         const hasPhotos = Array.isArray(row.photos) && row.photos.length > 0;
         if (!hasPhotos) return;
-        if (!fitsSeeking(mySeeking, row.genders as string[])) return;
         list.push(rowToProfile(d.id, row));
       });
 
@@ -219,11 +234,14 @@ export function useDiscoverProfiles() {
     load();
   }, [load]);
 
-  const { data: onb } = useOnboarding();
-  const visible = useMemo(
-    () => profiles.filter((p) => !hidden.has(p.id) && passesPrefs(p, { myClan: onb.clan, hideSameClan: onb.hideSameClan, verifiedOnly: onb.verifiedOnly })),
-    [profiles, hidden, onb.clan, onb.hideSameClan, onb.verifiedOnly]
-  );
+  const prefs = useSeePrefs();
+  const visible = useMemo(() => {
+    const now = Date.now();
+    const list = profiles.filter((p) => !hidden.has(p.id) && passesPrefs(p, prefs));
+    // Boosted profiles go to the front while their boost is active
+    const boosted = list.filter((p) => (p.boostedUntil ?? 0) > now);
+    return boosted.length ? [...boosted, ...list.filter((p) => !((p.boostedUntil ?? 0) > now))] : list;
+  }, [profiles, hidden, prefs]);
   return { profiles: visible, loading, error, reload: load };
 }
 

@@ -1,12 +1,14 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Alert } from "react-native";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import { ArrowLeft, BadgeCheck, MapPin, Users, Plus, Check, Lock } from "lucide-react-native";
 import Colors from "@/constants/colors";
 import { profiles as mockProfiles, currentUser, Profile } from "@/mocks/profiles";
-import { useAllProfiles, passesPrefs } from "@/lib/discoverProfiles";
+import { useAllProfiles, passesPrefs, useSeePrefs } from "@/lib/discoverProfiles";
+import { useCategoryGroups } from "@/lib/interestCards";
+import { memberOf, memberByProfile, cardKey } from "@/lib/categoryMembership";
 import { useOnboarding } from "@/providers/OnboardingProvider";
 import { useTier } from "@/providers/TierProvider";
 import { useT } from "@/providers/LanguageProvider";
@@ -87,12 +89,12 @@ export default function CategoryScreen() {
 
   // Parse "groupId:cardId" from the route param and look up the user-facing label.
   // Falls back to the raw string if the format isn't recognized (back-compat).
+  const groups = useCategoryGroups();
   const { title, cardId, groupId } = (() => {
     const parts = raw.split(":");
     if (parts.length === 2) {
       const [g, c] = parts;
-      const group = CATEGORY_GROUPS.find((x) => x.id === g);
-      const card = group?.cards.find((x) => x.id === c);
+      const card = groups.find((x) => x.id === g)?.cards.find((x) => x.id === c);
       if (card) return { title: card.label, cardId: c, groupId: g };
     }
     return { title: raw, cardId: "", groupId: "" };
@@ -101,59 +103,44 @@ export default function CategoryScreen() {
   const { data, update } = useOnboarding();
   const { byId: liveById } = useAllProfiles();
   const { isPaid } = useTier();
+  const prefs = useSeePrefs();
   const remaining = useCategoryViewsLeft(isPaid);
   const resetsIn = useResetsIn();
-  // Determine whether the current user belongs to this category based on
-  // their stored enrollment data (clan, dialect, education, work, state,
-  // religion, lookingFor, interests). This is what makes them appear in
-  // "Thao Clan", "Work from home", "College" etc. without manual self-add.
-  const inCategory = (() => {
-    if (!cardId || !groupId) {
-      return (data.interests ?? []).includes(title);
+  const myFields = { ...data, dialect: data.dialect, hometownState: (data as { hometownState?: string }).hometownState, religion: (data as { religion?: string }).religion };
+  const inCategory = memberOf(myFields, groupId, cardId, title);
+  const fromProfile = !!groupId && !!cardId && memberByProfile(myFields, groupId, cardId);
+
+  const toggleSelf = () => {
+    if (groupId === "goals" && cardId) { update({ lookingFor: inCategory ? undefined : (cardId as any) }); return; }
+    if (fromProfile) {
+      Alert.alert("From your profile", `You're in ${title} because of your profile answers. Edit your profile to change it.`, [
+        { text: "OK", style: "cancel" },
+        { text: "Edit profile", onPress: () => router.push("/edit-profile") },
+      ]);
+      return;
     }
-    const lc = (v: string | undefined) => (v ?? "").toString().toLowerCase();
-    switch (groupId) {
-      case "goals":
-        return data.lookingFor === cardId;
-      case "clan":
-        return lc(data.clan) === cardId;
-      case "dialect":
-        return lc(data.dialect).includes(cardId);
-      case "education":
-        return lc(data.education).includes(cardId) || lc(data.education).replace(/\s/g, "") === cardId;
-      case "work":
-        return lc(data.work).includes(cardId);
-      case "state": {
-        const s = lc((data as { hometownState?: string }).hometownState);
-        if (cardId === "mn") return s.includes("minnesota");
-        if (cardId === "ca") return s.includes("california");
-        if (cardId === "wi") return s.includes("wisconsin");
-        if (cardId === "nc") return s.includes("north carolina");
-        return s === cardId;
-      }
-      case "religion":
-        return lc((data as { religion?: string }).religion).includes(cardId);
-      case "lifestyle":
-        if (cardId === "wants-kids") return /want/i.test((data as { family?: string }).family ?? "");
-        if (cardId === "child-free") return /no|child.?free/i.test((data as { family?: string }).family ?? "");
-        if (cardId === "family") return /family/i.test((data as { family?: string }).family ?? "") || (data.interests ?? []).includes("Family First");
-        return false;
-      default:
-        // Generic fallback: interests array match
-        return (data.interests ?? []).includes(title);
+    const key = groupId && cardId ? cardKey(groupId, cardId) : "";
+    const cats = data.categories ?? [];
+    if (inCategory) {
+      update({ categories: cats.filter((c) => c !== key), interests: (data.interests ?? []).filter((i) => i !== title) });
+    } else if (key) {
+      update({ categories: Array.from(new Set([...cats, key])) });
+    } else {
+      update({ interests: Array.from(new Set([...(data.interests ?? []), title])) });
     }
-  })();
+  };
 
   const { filtered, subtitle } = useMemo(() => {
     const entry = CATEGORY_MAP[title];
     // Prefer live Firestore profiles; fall back to mocks if empty during load
     const liveList = Object.values(liveById);
-    const all: Profile[] = liveList.length > 0 ? liveList : mockProfiles;
+    const all: Profile[] = liveList;
     // Exclude current user from the base list (we'll add them at the top if they match)
     const myUid = auth.currentUser?.uid;
     const baseFull = myUid ? all.filter((p) => p.id !== myUid) : all;
-    const prefs = { myClan: data.clan, hideSameClan: data.hideSameClan, verifiedOnly: data.verifiedOnly };
-    const base = (entry ? baseFull.filter(entry.match) : baseFull).filter((p) => passesPrefs(p, prefs));
+    const inCard = (p: Profile) =>
+      memberOf({ ...p, dialect: p.dialect ?? p.languages?.[0] }, groupId, cardId, title) || (!!entry && entry.match(p));
+    const base = baseFull.filter((p) => inCard(p) && passesPrefs(p, prefs));
     const sub = entry?.subtitle ?? t("peopleInterested");
     if (inCategory) {
       const meLive = myUid ? liveById[myUid] : null;
@@ -173,7 +160,7 @@ export default function CategoryScreen() {
       return { filtered: [me, ...base], subtitle: sub };
     }
     return { filtered: base, subtitle: sub };
-  }, [title, inCategory, data, liveById]);
+  }, [title, inCategory, data, liveById, prefs, groupId, cardId]);
 
   return (
     <View style={[s.ct, { paddingTop: ins.top }]}>
@@ -198,16 +185,7 @@ export default function CategoryScreen() {
         </View>
       )}
       <TouchableOpacity
-        onPress={() => {
-          if (groupId === "goals" && cardId) {
-            // Relationship Goals card → toggle lookingFor instead of interests
-            update({ lookingFor: inCategory ? undefined : (cardId as any) });
-          } else {
-            const cur = data.interests ?? [];
-            const next = inCategory ? cur.filter(x => x !== title) : [...cur, title];
-            update({ interests: next });
-          }
-        }}
+        onPress={toggleSelf}
         activeOpacity={0.85}
         style={[s.addSelf, inCategory && s.addSelfOn]}
         testID="add-self-category"
