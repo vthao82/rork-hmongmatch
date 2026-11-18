@@ -1,5 +1,6 @@
 import React, { memo } from "react";
 import { Image, Dimensions, Platform, View } from "react-native";
+import { WEB_STEP_WIDTH } from "@/lib/webSetup";
 
 type Props = { size?: number; width?: number; fullWidth?: boolean };
 
@@ -8,7 +9,7 @@ const MARK = 0.93;
 const RATIO = 4.08;
 
 function HmongLogo({ size = 96, width, fullWidth }: Props) {
-  const screenW = Dimensions.get("window").width;
+  const screenW = Platform.OS === "web" ? Math.min(Dimensions.get("window").width, WEB_STEP_WIDTH) : Dimensions.get("window").width;
   const w = fullWidth ? screenW - 16 : (width ?? size * 2.4);
   const h = fullWidth ? w / 1.2 : w / 2.4;
   if (Platform.OS === "web") {

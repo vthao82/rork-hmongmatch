@@ -3,7 +3,7 @@ import { View, StyleSheet, Platform, ActivityIndicator } from "react-native";
 import { useAuth } from "@/providers/AuthProvider";
 import { usePathname, Redirect } from "expo-router";
 import RedBackground from "@/components/RedBackground";
-import { WEB_FRAME_WIDTH } from "@/lib/webSetup";
+import { WEB_FRAME_WIDTH, WEB_STEP_WIDTH } from "@/lib/webSetup";
 import { WebAlertHost } from "@/components/web/WebAlertHost";
 
 /** In browsers the app sits in a centered column over the red background; the landing page stays full width. */
@@ -18,11 +18,14 @@ export function WebFrame({ children }: { children: React.ReactNode }) {
   return (
     <View style={s.page}>
       <RedBackground />
-      <View style={full ? s.full : s.column}>{children}</View>
+      <View style={full ? s.full : [s.column, STEPS.has(path.slice(1)) && { maxWidth: WEB_STEP_WIDTH }]}>{children}</View>
       <WebAlertHost />
     </View>
   );
 }
+
+// Sign-up steps use a compact centered column like the login form
+const STEPS = new Set(["bio", "birthday", "clan", "complete", "dialect", "distance", "education", "extras", "gender", "hometown", "interests", "invite-code", "lifestyle", "location", "looking-for", "name", "orientation", "photo-verify", "photos", "prompts", "religion", "rules", "seeking", "terms", "work"]);
 
 const PRIVATE = ["/explore", "/interests", "/likes", "/profile", "/user", "/chat", "/events", "/settings", "/subscription", "/category", "/profile-stack", "/edit-profile", "/blocked", "/unmatched", "/date-safety", "/report", "/feedback"];
 

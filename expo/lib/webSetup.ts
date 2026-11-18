@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Alert, Dimensions, Platform, type AlertButton } from "react-native";
 
 /** Width of the app column in browsers: wide on computers, phone-width on small windows. */
+export const WEB_STEP_WIDTH = 520;
 export const WEB_FRAME_WIDTH = typeof window !== "undefined" && window.innerWidth >= 1024 ? 1240 : 480;
 
 export type WebAlert = { title: string; message?: string; buttons: AlertButton[] };

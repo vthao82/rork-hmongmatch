@@ -11,7 +11,8 @@ import { useT } from "@/providers/LanguageProvider";
 import { useAuth } from "@/providers/AuthProvider";
 import { uploadPhotoAsync, isRemoteUrl, newPhotoId } from "@/lib/photoUpload";
 
-const { width } = Dimensions.get("window");
+import { WEB_STEP_WIDTH } from "@/lib/webSetup";
+const width = Platform.OS === "web" ? Math.min(Dimensions.get("window").width, WEB_STEP_WIDTH) : Dimensions.get("window").width;
 const GAP = 10;
 const PAD = 24;
 const SLOT = (width - PAD * 2 - GAP * 2) / 3;
