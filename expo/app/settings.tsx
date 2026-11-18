@@ -1,4 +1,5 @@
 import { WEB_READABLE } from "@/lib/webSetup";
+import RedBackground from "@/components/RedBackground";
 import React, { useState, useCallback, useMemo, useEffect } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Platform, Modal, TextInput, Alert, Linking } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -274,6 +275,7 @@ export default function SettingsScreen() {
   return (
     <View style={[s.ct, { paddingTop: ins.top }]}>
       <Stack.Screen options={{ headerShown: false }} />
+      {Platform.OS === "web" ? <RedBackground /> : null}
       <View style={s.header}>
         <TouchableOpacity onPress={() => router.back()} testID="back-settings">
           <ArrowLeft size={24} color={Colors.primary} />
