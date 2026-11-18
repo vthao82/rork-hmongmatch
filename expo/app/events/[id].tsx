@@ -1,5 +1,5 @@
-import React, { useRef } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Switch, KeyboardAvoidingView, Platform } from "react-native";
+import React, { useEffect, useRef, useState } from "react";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Switch, KeyboardAvoidingView, Platform, Keyboard } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { MapPin, CalendarDays, Check, X } from "lucide-react-native";
 import Colors from "@/constants/colors";
@@ -13,6 +13,18 @@ import { auth } from "@/lib/firebase";
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const scrollRef = useRef<ScrollView>(null);
+  const [kb, setKb] = useState<number>(0);
+  const typing = useRef<boolean>(false);
+  // Android draws edge-to-edge, so the screen doesn't shrink for the keyboard; pad the content by its height instead
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+    const show = Keyboard.addListener("keyboardDidShow", (e) => {
+      setKb(e.endCoordinates.height);
+      if (typing.current) setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 80);
+    });
+    const hide = Keyboard.addListener("keyboardDidHide", () => { setKb(0); typing.current = false; });
+    return () => { show.remove(); hide.remove(); };
+  }, []);
   const router = useRouter();
   const isAdmin = useIsAdmin();
   const approved = useApprovedEvents();
@@ -51,8 +63,8 @@ export default function EventDetailScreen() {
   return (
     <>
       <Stack.Screen options={{ title: "Event" }} />
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"} keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}>
-      <ScrollView ref={scrollRef} style={s.ct} contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled" testID="event-detail">
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={90} enabled={Platform.OS === "ios"}>
+      <ScrollView ref={scrollRef} style={s.ct} contentContainerStyle={[s.scroll, kb > 0 && { paddingBottom: 60 + kb }]} keyboardShouldPersistTaps="handled" testID="event-detail">
         {e.status !== "approved" ? <Text style={s.status} testID="event-status">{e.status === "pending" ? "Waiting for approval" : "Not approved"}</Text> : null}
         <Text style={s.title}>{e.title}</Text>
         <View style={s.meta}><CalendarDays size={16} color={Colors.primary} /><Text style={s.metaText}>{new Date(e.startsAt).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}{e.timeText ? ` · ${e.timeText}` : ""}</Text></View>
@@ -90,7 +102,7 @@ export default function EventDetailScreen() {
         )}
 
         {e.status === "approved" && <EventAttendees total={e.going.length} attendees={attendees} canSee={going} />}
-        {e.status === "approved" && <EventComments onInputFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 350)} eventId={e.id} people={people} hidden={hidden} isAdmin={isAdmin} />}
+        {e.status === "approved" && <EventComments onInputFocus={() => { typing.current = true; setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 350); }} eventId={e.id} people={people} hidden={hidden} isAdmin={isAdmin} />}
       </ScrollView>
       </KeyboardAvoidingView>
     </>
