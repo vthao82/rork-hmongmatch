@@ -16,7 +16,10 @@ import { useT } from "@/providers/LanguageProvider";
 
 const SW = Dimensions.get("window").width;
 const GAP = 12;
-const HALF = (SW - 32 - GAP) / 2;
+// Wide browser windows: 4 per row so cards keep the phone's shape and show the whole picture
+const PER_ROW = SW >= 900 ? 4 : 2;
+const HALF = (SW - 32 - GAP * (PER_ROW - 1)) / PER_ROW;
+const CARD_H = PER_ROW === 4 ? HALF : 170;
 
 export default function InterestsTab() {
   const ins = useSafeAreaInsets();
@@ -127,7 +130,7 @@ export default function InterestsTab() {
                   return (
                     <TouchableOpacity
                       key={card.id}
-                      style={[s.card, { width: HALF, height: 170 }, highlight && s.cardHighlight]}
+                      style={[s.card, { width: HALF, height: CARD_H }, highlight && s.cardHighlight]}
                       onPress={() => goCategory(group.id, card.id, group.freeAccess)}
                       activeOpacity={0.85}
                       testID={`cat-${group.id}-${card.id}`}
