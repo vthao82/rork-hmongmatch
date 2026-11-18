@@ -275,9 +275,9 @@ export default function SettingsScreen() {
   return (
     <View style={[s.ct, { paddingTop: ins.top }]}>
       <Stack.Screen options={{ headerShown: false }} />
-      {Platform.OS === "web" ? <RedBackground /> : null}
+      <RedBackground />
       <View style={s.header}>
-        <TouchableOpacity onPress={() => router.back()} testID="back-settings">
+        <TouchableOpacity onPress={() => (router.canGoBack() ? router.back() : router.replace("/(tabs)/profile"))} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }} testID="back-settings">
           <ArrowLeft size={24} color={Colors.primary} />
         </TouchableOpacity>
         <Text style={s.headerTitle}>{t("settings")}</Text>
