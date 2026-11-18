@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Switch, KeyboardAvoidingView, Platform } from "react-native";
 import { Stack, useLocalSearchParams, useRouter } from "expo-router";
 import { MapPin, CalendarDays, Check, X } from "lucide-react-native";
@@ -12,6 +12,7 @@ import { auth } from "@/lib/firebase";
 
 export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const scrollRef = useRef<ScrollView>(null);
   const router = useRouter();
   const isAdmin = useIsAdmin();
   const approved = useApprovedEvents();
@@ -50,8 +51,8 @@ export default function EventDetailScreen() {
   return (
     <>
       <Stack.Screen options={{ title: "Event" }} />
-      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : undefined} keyboardVerticalOffset={90}>
-      <ScrollView style={s.ct} contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled" testID="event-detail">
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"} keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}>
+      <ScrollView ref={scrollRef} style={s.ct} contentContainerStyle={s.scroll} keyboardShouldPersistTaps="handled" testID="event-detail">
         {e.status !== "approved" ? <Text style={s.status} testID="event-status">{e.status === "pending" ? "Waiting for approval" : "Not approved"}</Text> : null}
         <Text style={s.title}>{e.title}</Text>
         <View style={s.meta}><CalendarDays size={16} color={Colors.primary} /><Text style={s.metaText}>{new Date(e.startsAt).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" })}{e.timeText ? ` · ${e.timeText}` : ""}</Text></View>
@@ -89,7 +90,7 @@ export default function EventDetailScreen() {
         )}
 
         {e.status === "approved" && <EventAttendees total={e.going.length} attendees={attendees} canSee={going} />}
-        {e.status === "approved" && <EventComments eventId={e.id} people={people} hidden={hidden} isAdmin={isAdmin} />}
+        {e.status === "approved" && <EventComments onInputFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 350)} eventId={e.id} people={people} hidden={hidden} isAdmin={isAdmin} />}
       </ScrollView>
       </KeyboardAvoidingView>
     </>

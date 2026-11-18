@@ -88,7 +88,7 @@ function toProfileRow(userId: string, d: OnboardingData): Omit<ProfileRow, "upda
     religionOther: d.religionOther ?? null,
     education: d.education ?? null,
     interests: d.interests ?? [],
-    photos: d.photos ?? [],
+    photos: (d.photos ?? []).filter((u) => /^https?:\/\//i.test(u)),
     mainPhotoIndex: d.mainPhotoIndex ?? 0,
     photoVerified: d.photoVerified ?? false,
     showActiveStatus: d.showActiveStatus ?? true,
@@ -116,7 +116,9 @@ export async function syncProfile(
 ): Promise<{ ok: boolean; error?: string }> {
   if (!userId) return { ok: false, error: "Missing userId" };
   try {
-    const row = toProfileRow(userId, data);
+    const row: Partial<ReturnType<typeof toProfileRow>> = toProfileRow(userId, data);
+    // Never wipe cloud photos with phone-only ones that haven't uploaded yet
+    if (row.photos?.length === 0 && (data.photos ?? []).length > 0) delete row.photos;
     const ref = doc(db, "users", userId);
 
     // Check if doc exists to decide createdAt vs updatedAt

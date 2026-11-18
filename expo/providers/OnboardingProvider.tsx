@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { doc, getDoc, setDoc, deleteDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 import { syncProfile } from "@/lib/profileSync";
+import { uploadPhotoAsync, isRemoteUrl, newPhotoId } from "@/lib/photoUpload";
 import { useAuth } from "@/providers/AuthProvider";
 
 export type GenderId = "man" | "woman" | "beyond";
@@ -248,5 +249,23 @@ export const [OnboardingProvider, useOnboarding] = createContextHook(() => {
   }, []);
 
   const hydrated = !authLoading && hydratedFor === (uid ?? "");
+
+  // Self-repair: upload any phone-only photos left from older app versions
+  useEffect(() => {
+    if (!hydrated || !uid || !completed) return;
+    const local = (data.photos ?? []).filter((u) => !isRemoteUrl(u));
+    if (local.length === 0) return;
+    let cancelled = false;
+    (async () => {
+      const fixed: string[] = [];
+      for (const u of data.photos ?? []) {
+        if (isRemoteUrl(u)) { fixed.push(u); continue; }
+        try { fixed.push(await uploadPhotoAsync(uid, u, newPhotoId())); } catch { /* file gone from phone; drop it */ }
+      }
+      if (!cancelled && fixed.length > 0) update({ photos: fixed, mainPhotoIndex: Math.min(data.mainPhotoIndex ?? 0, fixed.length - 1) });
+    })();
+    return () => { cancelled = true; };
+  }, [hydrated, uid, completed, data.photos]);
+
   return { data, update, finish, reset, hydrated, completed };
 });

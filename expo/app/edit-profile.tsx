@@ -4,6 +4,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
 import { useRouter, Stack, useLocalSearchParams } from "expo-router";
 import { X, Plus, Check, ChevronRight, Star, BadgeCheck, Camera } from "lucide-react-native";
+import { ActivityIndicator } from "react-native";
+import { auth } from "@/lib/firebase";
+import { uploadPhotoAsync, isRemoteUrl, newPhotoId } from "@/lib/photoUpload";
 import * as ImagePicker from "expo-image-picker";
 import Colors from "@/constants/colors";
 import { useOnboarding } from "@/providers/OnboardingProvider";
@@ -88,11 +91,28 @@ export default function EditProfileScreen() {
     });
   }, []);
 
-  const save = useCallback(() => {
-    update({ name: name.trim(), bio, photos, interests, mainPhotoIndex, prompts: prompts.filter((p) => p.a.trim()) });
-    console.log("profile saved", { name, bio, photoCount: photos.length, interestCount: interests.length });
-    router.back();
-  }, [name, bio, photos, interests, router, update, mainPhotoIndex, prompts]);
+  const [saving, setSaving] = useState<boolean>(false);
+  const save = useCallback(async () => {
+    const uid = auth.currentUser?.uid;
+    if (!uid || saving) return;
+    setSaving(true);
+    // New picks are phone-only files until uploaded; only cloud links are saved
+    const uploaded: string[] = [];
+    let failed = 0;
+    for (const uri of photos) {
+      if (isRemoteUrl(uri)) { uploaded.push(uri); continue; }
+      try { uploaded.push(await uploadPhotoAsync(uid, uri, newPhotoId())); } catch (e) { failed++; console.log("[edit-profile] upload failed", e); }
+    }
+    setSaving(false);
+    setPhotos(uploaded);
+    if (uploaded.length === 0) {
+      Alert.alert("Add a photo", "We couldn't upload your photos. Please add at least one photo and try again.");
+      return;
+    }
+    update({ name: name.trim(), bio, photos: uploaded, interests, mainPhotoIndex: Math.min(mainPhotoIndex, uploaded.length - 1), prompts: prompts.filter((p) => p.a.trim()) });
+    if (failed > 0) Alert.alert("Some photos didn't upload", `${failed} photo${failed > 1 ? "s" : ""} couldn't be uploaded. Please add ${failed > 1 ? "them" : "it"} again.`);
+    else router.back();
+  }, [name, bio, photos, interests, router, update, mainPhotoIndex, prompts, saving]);
 
   const slots = Array.from({ length: 6 }, (_, i) => photos[i] ?? null);
 
@@ -104,8 +124,8 @@ export default function EditProfileScreen() {
           <X size={24} color="#FFF" />
         </TouchableOpacity>
         <Text style={s.headerTitle}>{t("editProfile")}</Text>
-        <TouchableOpacity onPress={save} testID="save-profile">
-          <Text style={s.done}>{t("done")}</Text>
+        <TouchableOpacity onPress={() => void save()} disabled={saving} testID="save-profile">
+          {saving ? <ActivityIndicator color="#FFF" /> : <Text style={s.done}>{t("done")}</Text>}
         </TouchableOpacity>
       </View>
 

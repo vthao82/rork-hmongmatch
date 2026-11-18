@@ -35,7 +35,7 @@ function CommentRow({ c, who, isReply, canDelete, onReply, onDelete }: { c: Even
   );
 }
 
-export function EventComments({ eventId, people, hidden, isAdmin }: { eventId: string; people: Record<string, Person>; hidden: Set<string>; isAdmin: boolean }) {
+export function EventComments({ eventId, people, hidden, isAdmin, onInputFocus }: { eventId: string; people: Record<string, Person>; hidden: Set<string>; isAdmin: boolean; onInputFocus?: () => void }) {
   const me = auth.currentUser?.uid ?? "";
   const comments = useEventComments(eventId, true);
   const [text, setText] = useState<string>("");
@@ -69,7 +69,7 @@ export function EventComments({ eventId, people, hidden, isAdmin }: { eventId: s
     { text: "Delete", style: "destructive", onPress: () => deleteEventComment(eventId, c.id).catch(() => Alert.alert("Couldn't delete", "Please try again.")) },
   ]);
   const row = (c: EventComment, isReply?: boolean) => (
-    <CommentRow key={c.id} c={c} who={who(c.uid)} isReply={isReply} canDelete={c.uid === me || isAdmin} onReply={() => setReplyTo(c)} onDelete={() => del(c)} />
+    <CommentRow key={c.id} c={c} who={who(c.uid)} isReply={isReply} canDelete={c.uid === me || isAdmin} onReply={() => { setReplyTo(c); onInputFocus?.(); }} onDelete={() => del(c)} />
   );
 
   return (
@@ -97,6 +97,7 @@ export function EventComments({ eventId, people, hidden, isAdmin }: { eventId: s
           placeholderTextColor={Colors.textSecondary}
           maxLength={500}
           multiline
+          onFocus={onInputFocus}
           testID="event-comment-input"
         />
         <TouchableOpacity style={[s.send, !text.trim() && { opacity: 0.4 }]} onPress={() => void send()} disabled={!text.trim() || sending} testID="event-comment-send">

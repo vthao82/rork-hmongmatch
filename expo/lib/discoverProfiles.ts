@@ -69,7 +69,7 @@ function rowToProfile(id: string, row: DocumentData): Profile {
     location: locationLabel(row),
     distance: "Nearby",
     bio: (row.bio as string) ?? "",
-    photos: Array.isArray(row.photos) ? (row.photos as string[]) : [],
+    photos: Array.isArray(row.photos) ? (row.photos as string[]).filter((u) => /^https?:\/\//i.test(u)) : [],
     interests: Array.isArray(row.interests) ? (row.interests as string[]) : [],
     languages: row.dialect === "other" ? (row.dialectOther ? [row.dialectOther as string] : []) : row.dialect ? [row.dialect as string] : [],
     lookingFor: (row.lookingFor as string) ?? "",
@@ -214,7 +214,7 @@ export function useDiscoverProfiles() {
         if (d.id.startsWith("seed-")) return;
         const row = d.data();
         // Require at least one photo so swipe cards look right
-        const hasPhotos = Array.isArray(row.photos) && row.photos.length > 0;
+        const hasPhotos = Array.isArray(row.photos) && row.photos.some((u: unknown) => typeof u === "string" && /^https?:\/\//i.test(u));
         if (!hasPhotos) return;
         list.push(rowToProfile(d.id, row));
       });
