@@ -22,14 +22,15 @@
             "CFBundleURLSchemes": [
               "rork-app"
             ]
-          },
-          {
-            "CFBundleURLSchemes": [
-              "rork-app"
-            ]
           }
-        ]
-      }
+        ],
+        "NSPhotoLibraryUsageDescription": "Hmong Date needs your photos so you can add pictures to your profile and send photos in chat.",
+        "NSCameraUsageDescription": "Hmong Date uses the camera for your verification selfie and profile photos.",
+        "NSLocationWhenInUseUsageDescription": "Hmong Date uses your location to show people near you.",
+        "ITSAppUsesNonExemptEncryption": false
+      },
+      "googleServicesFile": "./GoogleService-Info.plist",
+      "usesAppleSignIn": true
     },
     "android": {
       "googleServicesFile": "./google-services.json",
@@ -55,7 +56,13 @@
       ]
     },
     "web": {
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/favicon.png",
+      "output": "single",
+      "name": "Hmong Date",
+      "shortName": "Hmong Date",
+      "themeColor": "#320411",
+      "backgroundColor": "#320411",
+      "description": "Hmong Date \u2014 meet Hmong singles who share your culture, clan values and traditions."
     },
     "plugins": [
       [
@@ -71,7 +78,13 @@
           "color": "#C0152F"
         }
       ],
-      "@react-native-google-signin/google-signin"
+      [
+        "@react-native-google-signin/google-signin",
+        {
+          "iosUrlScheme": "com.googleusercontent.apps.1004199539174-uqf0s0qk2gbd7i2n3b4qn2es81dqm45p"
+        }
+      ],
+      "expo-apple-authentication"
     ],
     "experiments": {},
     "extra": {

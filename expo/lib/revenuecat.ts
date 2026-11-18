@@ -22,6 +22,7 @@ import Purchases, {
 
 const ANDROID_KEY = process.env.EXPO_PUBLIC_RC_ANDROID_KEY ?? "";
 const IOS_KEY = process.env.EXPO_PUBLIC_RC_IOS_KEY ?? "";
+const WEB_KEY = process.env.EXPO_PUBLIC_RC_WEB_KEY ?? "";
 
 /** RevenueCat entitlement identifier for the paid tier. */
 export const UNLIMITED_ENTITLEMENT = "unlimited";
@@ -58,6 +59,17 @@ export function isRevenueCatConfigured(): boolean {
 
 /** Alias the RevenueCat customer to the Firebase UID so purchases follow the user. */
 export async function identifyRevenueCatUser(firebaseUid: string): Promise<void> {
+  // Web Billing needs the member's id up front, so web configures at sign-in
+  if (Platform.OS === "web") {
+    if (!WEB_KEY) return;
+    try {
+      if (!configured) { Purchases.configure({ apiKey: WEB_KEY, appUserID: firebaseUid }); configured = true; }
+      else await Purchases.logIn(firebaseUid);
+    } catch (e) {
+      console.log("[revenuecat] web configure failed", e);
+    }
+    return;
+  }
   if (!configured) return;
   try {
     await Purchases.logIn(firebaseUid);
@@ -133,6 +145,10 @@ export async function purchasePackage(
  */
 export async function restorePurchases(): Promise<{ ok: boolean; entitled: boolean; error?: string }> {
   if (!configured) return { ok: false, entitled: false, error: "Purchases not available" };
+  if (Platform.OS === "web") {
+    const info = await fetchCustomerInfo();
+    return { ok: !!info, entitled: hasUnlimitedEntitlement(info) };
+  }
   try {
     const info = await Purchases.restorePurchases();
     return { ok: true, entitled: hasUnlimitedEntitlement(info) };

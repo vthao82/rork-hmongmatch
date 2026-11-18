@@ -14,6 +14,8 @@ import { useOnboarding } from "@/providers/OnboardingProvider";
 import { ENROLLMENT_STEPS } from "@/constants/enrollment";
 import { useT } from "@/providers/LanguageProvider";
 import { useAuth } from "@/providers/AuthProvider";
+import { appleSignIn, appleSignInAvailable } from "@/lib/appleSignIn";
+import { AppleButton } from "@/components/AppleButton";
 
 /** Public legal pages hosted on our custom domain. */
 const LEGAL_BASE = "https://hmongdate.com";
@@ -81,6 +83,20 @@ export default function LoginScreen() {
     }, 3000);
     return () => clearInterval(interval);
   }, [emailSent, reloadUser]);
+
+  const [appleOk, setAppleOk] = useState<boolean>(false);
+  useEffect(() => { void appleSignInAvailable().then(setAppleOk); }, []);
+  const onApple = async () => {
+    if (busy) return;
+    setBusy(true);
+    update({ method: "apple" });
+    try {
+      const res = await appleSignIn();
+      if (!res.ok && res.error && res.error !== "Sign-in canceled") Alert.alert("Sign-in failed", res.error);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const onGoogle = async () => {
     if (busy) return;
@@ -341,6 +357,7 @@ export default function LoginScreen() {
                 left={busy ? <ActivityIndicator size="small" color={Colors.offwhite} /> : <GoogleG />}
                 testID="continue-google"
               />
+              {appleOk ? <AppleButton onPress={() => void onApple()} /> : null}
               <Text style={s.fine}>
                 By tapping Continue you agree to our{" "}
                 <Text style={s.link} onPress={() => Linking.openURL(TERMS_URL).catch(() => {})}>Terms</Text>

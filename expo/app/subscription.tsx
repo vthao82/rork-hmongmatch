@@ -8,6 +8,10 @@ import { UNLIMITED_FEATURES } from "@/constants/plan";
 import Colors from "@/constants/colors";
 import { useT } from "@/providers/LanguageProvider";
 import { useTier, UNLIMITED_PRICE, UNLIMITED_PRICE_LABEL } from "@/providers/TierProvider";
+import { fetchCustomerInfo } from "@/lib/revenuecat";
+
+const WEB = Platform.OS === "web";
+const STORE = Platform.OS === "ios" ? "Apple ID" : WEB ? "card" : "Google Play";
 
 /** Play Store product ID — must match the SKU created in Google Play Console. */
 const PRODUCT_ID = "unlimited_monthly";
@@ -64,7 +68,13 @@ export default function SubscriptionScreen() {
     }
   };
 
-  const manageInStore = () => {
+  const manageInStore = async () => {
+    if (WEB) {
+      const url = (await fetchCustomerInfo())?.managementURL;
+      if (url) window.open(url, "_blank");
+      else Alert.alert("Manage subscription", "If you subscribed on your phone, manage it in Google Play or the App Store. For web subscriptions, use the link in your receipt email.");
+      return;
+    }
     const url = Platform.OS === "ios" ? MANAGE_URL_IOS : MANAGE_URL_ANDROID;
     Linking.openURL(url).catch(() =>
       Alert.alert(
@@ -149,12 +159,12 @@ export default function SubscriptionScreen() {
           </TouchableOpacity>
           {isPaid && (
             <TouchableOpacity
-              onPress={manageInStore}
+              onPress={() => void manageInStore()}
               style={s.restoreBtn}
               testID="manage-subscription"
             >
               <Text style={s.restoreTxt}>
-                Manage subscription in {Platform.OS === "ios" ? "App Store" : "Google Play"}
+                {WEB ? "Manage subscription" : `Manage subscription in ${Platform.OS === "ios" ? "App Store" : "Google Play"}`}
               </Text>
             </TouchableOpacity>
           )}
@@ -162,11 +172,10 @@ export default function SubscriptionScreen() {
 
         <Text style={s.legal}>
           Hmong Date Unlimited auto-renews monthly at {UNLIMITED_PRICE} until cancelled. Payment
-          is charged to your {Platform.OS === "ios" ? "Apple ID" : "Google Play"} account at
+          is charged to your {STORE} {WEB ? "" : "account "}at
           confirmation of purchase. Your subscription renews within 24 hours before the end of the
           current period unless auto-renewal is turned off at least 24 hours before that. You can
-          manage or cancel anytime in your {Platform.OS === "ios" ? "Apple ID" : "Google Play"}{" "}
-          account settings — uninstalling the app does not cancel it.
+          {WEB ? "manage or cancel anytime from Manage subscription or your receipt email." : `manage or cancel anytime in your ${STORE} account settings — uninstalling the app does not cancel it.`}
         </Text>
 
         <View style={s.legalLinks}>

@@ -12,6 +12,7 @@ import { LanguageProvider } from "@/providers/LanguageProvider";
 import { TierProvider } from "@/providers/TierProvider";
 import { AuthProvider } from "@/providers/AuthProvider";
 import { BlockProvider } from "@/providers/BlockProvider";
+import { WebFrame } from "@/components/web/WebFrame";
 
 try { SplashScreen.preventAutoHideAsync(); } catch (e) { console.log("[splash] preventAutoHideAsync error", e); }
 const qc = new QueryClient();
@@ -61,7 +62,7 @@ export default function AppContent() {
               <LikesProvider>
                 <GestureHandlerRootView style={{ flex: 1 }}>
                   <StatusBar style="light" />
-                  <RootLayoutNav />
+                  <WebFrame><RootLayoutNav /></WebFrame>
                 </GestureHandlerRootView>
               </LikesProvider>
             </TierProvider>

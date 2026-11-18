@@ -27,7 +27,7 @@ export type Extras = {
 };
 
 export type OnboardingData = {
-  method?: "google" | "phone" | "email";
+  method?: "google" | "apple" | "phone" | "email";
   email?: string;
   phone?: string;
   phoneE164?: string;

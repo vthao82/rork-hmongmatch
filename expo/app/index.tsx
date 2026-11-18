@@ -1,5 +1,6 @@
 import React from "react";
-import { View, ActivityIndicator, StyleSheet } from "react-native";
+import { View, ActivityIndicator, StyleSheet, Platform } from "react-native";
+import WebLanding from "@/components/web/WebLanding";
 import { Redirect } from "expo-router";
 import Colors from "@/constants/colors";
 import { useOnboarding } from "@/providers/OnboardingProvider";
@@ -19,6 +20,7 @@ export default function Index() {
   }
   // Signed-in members go straight in; everyone else goes through login, which resumes unfinished sign-ups
   if (completed && user && emailVerified) return <Redirect href="/discover" />;
+  if (Platform.OS === "web" && !user) return <WebLanding />;
   return <Redirect href="/(auth)/login" />;
 }
 

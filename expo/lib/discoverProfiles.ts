@@ -118,9 +118,10 @@ const SEEK_TO_GENDER: Record<string, string> = { men: "man", women: "woman", bey
 
 /** True if someone with `theirGenders` fits the viewer's `mySeeking` choice. Empty/"everyone" = show all. */
 export function fitsSeeking(mySeeking: string[] | undefined, theirGenders: string[] | undefined): boolean {
-  const seek = (mySeeking ?? []).map((x) => x.toLowerCase());
+  const list = (v: unknown): string[] => (Array.isArray(v) ? v : typeof v === "string" ? [v] : []).map((x) => String(x).toLowerCase());
+  const seek = list(mySeeking);
   if (seek.length === 0 || seek.includes("everyone")) return true;
-  const genders = (theirGenders ?? []).map((x) => x.toLowerCase());
+  const genders = list(theirGenders);
   return seek.some((s) => genders.includes(SEEK_TO_GENDER[s] ?? s));
 }
 

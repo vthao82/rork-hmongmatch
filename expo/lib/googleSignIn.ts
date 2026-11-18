@@ -1,4 +1,5 @@
-import { GoogleAuthProvider, signInWithCredential } from "firebase/auth";
+import { Platform } from "react-native";
+import { GoogleAuthProvider, signInWithCredential, signInWithPopup } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 
 const WEB_CLIENT_ID = "1004199539174-a947opurbaftcplnl7igaof0hu76h7il.apps.googleusercontent.com";
@@ -20,6 +21,15 @@ function load(): GoogleModule | null {
 }
 
 export async function googleSignIn(): Promise<{ ok: boolean; error?: string }> {
+  if (Platform.OS === "web") {
+    try {
+      await signInWithPopup(auth, new GoogleAuthProvider());
+      return { ok: true };
+    } catch (e: any) {
+      if (e?.code === "auth/popup-closed-by-user" || e?.code === "auth/cancelled-popup-request") return { ok: false, error: "Sign-in canceled" };
+      return { ok: false, error: e?.code === "auth/popup-blocked" ? "Your browser blocked the sign-in window. Please allow pop-ups and try again." : e?.message ?? "Google sign-in failed." };
+    }
+  }
   const g = load();
   if (!g) return { ok: false, error: "Please update the app to the latest version to use Google sign-in." };
   const { GoogleSignin, isSuccessResponse, isErrorWithCode, statusCodes } = g;
@@ -42,6 +52,7 @@ export async function googleSignIn(): Promise<{ ok: boolean; error?: string }> {
 }
 
 export async function googleSignOut(): Promise<void> {
+  if (Platform.OS === "web") return;
   const g = load();
   if (!g) return;
   try { await g.GoogleSignin.signOut(); } catch {}
