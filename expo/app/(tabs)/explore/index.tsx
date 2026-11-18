@@ -1,209 +1,351 @@
-import React, { useMemo, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Modal } from "react-native";
+import React, { useCallback, useMemo, useState, useEffect } from "react";
+import { View, Text, StyleSheet, Dimensions, FlatList, TouchableOpacity, Modal, Platform, ActivityIndicator, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
-import { Lock, Crown, Plus, ChevronRight, CalendarDays } from "lucide-react-native";
-import MostCompatibleCard from "@/components/MostCompatibleCard";
-import SuggestCardModal from "@/components/SuggestCardModal";
+import { MapPin, BadgeCheck, X, Heart, RotateCcw, MessageCircle, Zap, Crown } from "lucide-react-native";
+import * as Haptics from "expo-haptics";
 import { useRouter } from "expo-router";
+import { LinearGradient } from "expo-linear-gradient";
 import Colors from "@/constants/colors";
+import { Profile } from "@/mocks/profiles";
+import { useDiscoverProfiles, recordSwipe, deleteSwipe } from "@/lib/discoverProfiles";
 import HmongMatchHeader from "@/components/HmongMatchHeader";
 import RedBackground from "@/components/RedBackground";
-import { CATEGORY_GROUPS } from "@/constants/categories";
 import { useTier } from "@/providers/TierProvider";
-import { useOnboarding } from "@/providers/OnboardingProvider";
+import { NewBadge } from "@/components/NewBadge";
+import { useLikes } from "@/providers/LikesProvider";
 import { useT } from "@/providers/LanguageProvider";
 
-const SW = Dimensions.get("window").width;
-const GAP = 12;
-const HALF = (SW - 32 - GAP) / 2;
+const W = Dimensions.get("window");
 
-export default function InterestsTab() {
-  const ins = useSafeAreaInsets();
-  const router = useRouter();
-  const t = useT();
-  const { isPaid } = useTier();
-  const { data } = useOnboarding();
-  const [lockOpen, setLockOpen] = useState<boolean>(false);
-  const [seeAll, setSeeAll] = useState<string | null>(null);
-  const [suggestFor, setSuggestFor] = useState<{ id: string; title: string } | null>(null);
-  const groups = CATEGORY_GROUPS;
-
-  // Determine user's selected interests/preferences for highlighting their primary group
-  const userTokens = useMemo(() => {
-    const t: string[] = [];
-    if (data.lookingFor) t.push(data.lookingFor);
-    if (data.dialect) t.push(data.dialect);
-    if (data.clan) t.push(data.clan.toLowerCase());
-    if (data.work) t.push(data.work);
-    if (data.education) t.push(data.education.toLowerCase());
-    (data.interests ?? []).forEach(i => t.push(i.toLowerCase()));
-    return t;
-  }, [data]);
-
-  // Auto-place: sort groups by how many cards match this user's enrollment.
-  // Groups with at least one matching card float to the top.
-  const sortedGroups = useMemo(() => {
-    const matchScore = (group: (typeof groups)[number]) => {
-      return group.cards.reduce((sum, card) => {
-        const lc = card.label.toLowerCase();
-        const hit = userTokens.some(
-          (tok) =>
-            !!tok &&
-            (lc.includes(tok) ||
-              tok.includes(card.id) ||
-              card.id === tok)
-        );
-        return sum + (hit ? 1 : 0);
-      }, 0);
-    };
-    return [...groups].sort((a, b) => {
-      const sa = matchScore(a);
-      const sb = matchScore(b);
-      if (sb !== sa) return sb - sa;
-      // Tie-break: keep free-access groups before paid ones
-      if (a.freeAccess !== b.freeAccess) return a.freeAccess ? -1 : 1;
-      return 0;
-    });
-  }, [userTokens, groups]);
-
-  const goCategory = (groupId: string, cardId: string, freeAccess: boolean) => {
-    if (!freeAccess && !isPaid) {
-      setLockOpen(true);
-      return;
-    }
-    router.push(`/category/${encodeURIComponent(`${groupId}:${cardId}`)}`);
-  };
-
+function PhotoCarousel({ photos }: { photos: string[] }) {
+  const [idx, setIdx] = useState<number>(0);
   return (
-    <View style={[s.ct, { paddingTop: ins.top }]}>
-      <RedBackground />
-      <HmongMatchHeader />
-      <ScrollView contentContainerStyle={s.scroll} showsVerticalScrollIndicator={false}>
-        <Text style={s.heroTitle}>{t("exploreTitle")}</Text>
-        <Text style={s.heroSub}>{t("exploreSub")}</Text>
-
-        <MostCompatibleCard />
-        <TouchableOpacity style={s.eventsBanner} onPress={() => router.push("/events")} testID="events-banner">
-          <View style={s.eventsIcon}><CalendarDays size={22} color={Colors.indigo} /></View>
-          <View style={{ flex: 1 }}>
-            <Text style={s.eventsTitle}>Hmong Events</Text>
-            <Text style={s.eventsSub}>New Year celebrations & meetups — see who's going</Text>
-          </View>
-          <ChevronRight size={20} color="rgba(255,255,255,0.7)" />
-        </TouchableOpacity>
-
-        {sortedGroups.map(group => {
-          const visibleCards = seeAll === group.id ? group.cards : group.cards.slice(0, 4);
-          return (
-            <View key={group.id} style={s.section}>
-              <View style={s.sectionHead}>
-                <View style={{ flex: 1 }}>
-                  <View style={s.sectionTitleRow}>
-                    <Text style={s.sectionTitle}>{group.title}</Text>
-                    {!group.freeAccess && !isPaid && (
-                      <View style={s.proPill}>
-                        <Crown size={10} color={Colors.accent} />
-                        <Text style={s.proPillTxt}>UNLIMITED</Text>
-                      </View>
-                    )}
-                  </View>
-                </View>
-                <TouchableOpacity onPress={() => setSuggestFor({ id: group.id, title: group.title })} style={s.suggestBtn} testID={`suggest-${group.id}`}>
-                  <Plus size={12} color={Colors.accent} />
-                  <Text style={s.suggestTxt}>Suggest</Text>
-                </TouchableOpacity>
-                {group.cards.length > 4 && (
-                  <TouchableOpacity onPress={() => setSeeAll(seeAll === group.id ? null : group.id)} testID={`seeall-${group.id}`}>
-                    <Text style={s.seeAll}>{seeAll === group.id ? t("showLess") : t("seeAll")}</Text>
-                  </TouchableOpacity>
-                )}
-              </View>
-
-              <View style={s.grid}>
-                {visibleCards.map(card => {
-                  const locked = !group.freeAccess && !isPaid;
-                  const highlight = userTokens.some(t => card.label.toLowerCase().includes(t) || t.includes(card.id));
-                  return (
-                    <TouchableOpacity
-                      key={card.id}
-                      style={[s.card, { width: HALF, height: 170 }, highlight && s.cardHighlight]}
-                      onPress={() => goCategory(group.id, card.id, group.freeAccess)}
-                      activeOpacity={0.85}
-                      testID={`cat-${group.id}-${card.id}`}
-                    >
-                      <Image source={{ uri: card.image }} style={s.cardImg} contentFit="cover" />
-                      <View style={s.cardTint} />
-                      
-                      {locked && (
-                        <View style={s.lockBadge}><Lock size={11} color="#FFF" /></View>
-                      )}
-                      <Text style={s.cardLabel} numberOfLines={2}>{card.label}</Text>
-                      <View style={s.addBtn}>
-                        <Plus size={14} color="#FFF" />
-                      </View>
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            </View>
-          );
-        })}
-
-        <View style={{ height: 32 }} />
-      </ScrollView>
-
-      <SuggestCardModal group={suggestFor} onClose={() => setSuggestFor(null)} />
-      <Modal visible={lockOpen} transparent animationType="fade" onRequestClose={() => setLockOpen(false)}>
-        <View style={s.modal}>
-          <View style={s.modalCard}>
-            <Crown size={36} color={Colors.accent} />
-            <Text style={s.modalTitle}>{t("upgradeGroupTitle")}</Text>
-            <Text style={s.modalSub}>{t("upgradeGroupSub")}</Text>
-            <TouchableOpacity style={s.cta} onPress={() => { setLockOpen(false); router.push("/subscription"); }} testID="upgrade-cta-interest">
-              <Text style={s.ctaTxt}>{t("seePlans")}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setLockOpen(false)}><Text style={s.later}>{t("maybeLater")}</Text></TouchableOpacity>
-          </View>
+    <View style={st.carouselWrap}>
+      <FlatList
+        data={photos}
+        horizontal
+        pagingEnabled
+        showsHorizontalScrollIndicator={false}
+        onMomentumScrollEnd={(e) => setIdx(Math.round(e.nativeEvent.contentOffset.x / W.width))}
+        keyExtractor={(_, i) => `p-${i}`}
+        renderItem={({ item }) => <Image source={{ uri: item }} style={st.photo} contentFit="cover" transition={200} />}
+      />
+      {photos.length > 1 && (
+        <View style={st.dots} pointerEvents="none">
+          {photos.map((_, i) => (
+            <View key={i} style={[st.dot, i === idx && st.dotActive]} />
+          ))}
         </View>
-      </Modal>
+      )}
     </View>
   );
 }
 
-const s = StyleSheet.create({
+function ProfileCard({ profile, height }: { profile: Profile; height: number }) {
+  const verified = profile.verified;
+  const t = useT();
+  return (
+    <View style={[st.card, { height }]} pointerEvents="box-none">
+      <PhotoCarousel photos={profile.photos} />
+      <NewBadge createdAtMs={profile.createdAtMs} style={{ top: 16, left: 16 }} />
+      <LinearGradient colors={["transparent", "rgba(0,0,0,0.9)"]} locations={[0.35, 1]} style={st.shade} pointerEvents="none" />
+      <View style={st.info} pointerEvents="none">
+        <View style={st.nameRow}>
+          <Text style={st.name}>{profile.name}</Text>
+          {verified ? (
+            <View style={st.badgeDot}>
+              <BadgeCheck size={18} color="#FFF" fill="#2a8ae0" />
+            </View>
+          ) : (
+            <View style={st.badgeDot}>
+              <BadgeCheck size={18} color="#FFF" fill="#e89216" />
+            </View>
+          )}
+        </View>
+        <Text style={st.meta}>{profile.age} · <MapPin size={11} color="rgba(255,255,255,0.85)" /> {profile.location}</Text>
+        <Text style={st.clan}>{profile.clan} Clan</Text>
+        {!!profile.bio && (
+          <View style={st.aboutBox}>
+            <Text style={st.aboutLabel}>{t("aboutMe")}</Text>
+            <Text style={st.aboutTxt} numberOfLines={3}>{profile.bio}</Text>
+          </View>
+        )}
+      </View>
+    </View>
+  );
+}
+
+/** "45m left" for a running boost, refreshed every 15s. */
+function useBoostLeft(until: number | undefined): string {
+  const [now, setNow] = useState<number>(Date.now());
+  useEffect(() => {
+    if (!until) return;
+    setNow(Date.now());
+    const t = setInterval(() => setNow(Date.now()), 15000);
+    return () => clearInterval(t);
+  }, [until]);
+  const mins = Math.ceil(Math.max(0, (until ?? 0) - now) / 60000);
+  return mins <= 1 ? "<1m left" : `${mins}m left`;
+}
+
+export default function BrowseScreen() {
+  const ins = useSafeAreaInsets();
+  const router = useRouter();
+  const t = useT();
+  const { isPaid, usage, remaining, consumeLike, consumeDislike, consumeRewind, startBoost, stopBoost, boostActive, showLimitModal, setShowLimitModal, show75Modal, setShow75Modal } = useTier();
+  const { consume: addLike } = useLikes();
+  const { profiles: liveProfiles, loading: loadingProfiles, error: profilesError, reload: reloadProfiles } = useDiscoverProfiles();
+  // Local session-only dismissed set. The Firestore swipes doc is the
+  // source of truth across sessions (filtered in useDiscoverProfiles); this
+  // set only prevents showing the same person twice within a single screen
+  // session. Importantly we DON'T touch usage.seenIds anymore — that was
+  // causing the queue to shift under us after every swipe so the user saw
+  // a different person on rewind.
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
+  const [history, setHistory] = useState<{ id: string; liked: boolean }[]>([]);
+  const cardHeight = W.height - ins.top - ins.bottom - 220;
+
+  // Queue is liveProfiles minus session dismissals. We always look at queue[0]
+  // — after a swipe the dismissed card drops out and the next person slides
+  // into position 0. No idx math, no skipping.
+  const queue = useMemo(() => liveProfiles.filter(p => !dismissedIds.has(p.id)), [liveProfiles, dismissedIds]);
+
+  const current = queue[0];
+
+  const advance = useCallback((liked: boolean) => {
+    if (!current) return;
+    setHistory(h => [...h, { id: current.id, liked }]);
+    setDismissedIds(prev => { const next = new Set(prev); next.add(current.id); return next; });
+  }, [current]);
+
+  const onLike = useCallback(() => {
+    if (!current) return;
+    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
+    const ok = consumeLike(current.id);
+    if (!ok) return;
+    addLike(current.id);
+    const liked = current;
+    advance(true);
+    // Persist swipe; a mutual like triggers the global "It's a Match!" screen
+    void recordSwipe(liked.id, true);
+  }, [current, consumeLike, addLike, advance]);
+
+  const onDislike = useCallback(() => {
+    if (!current) return;
+    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    consumeDislike();
+    const passed = current;
+    advance(false);
+    recordSwipe(passed.id, false).catch((e) => console.log("[swipe] pass error", e));
+  }, [current, consumeDislike, advance]);
+
+  const onMessage = useCallback(() => {
+    if (!current) return;
+    if (!isPaid) {
+      Alert.alert(
+        "Chat is a paid feature",
+        "You must match with a user to use chat option, or you can upgrade to use this feature freely.",
+        [
+          { text: "Maybe later", style: "cancel" },
+          { text: "Upgrade", onPress: () => router.push("/subscription") },
+        ]
+      );
+      return;
+    }
+    router.push(`/chat/${current.id}`);
+  }, [current, router, isPaid]);
+
+  const onRewind = useCallback(() => {
+    if (history.length === 0) return;
+    if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
+    const ok = consumeRewind();
+    if (!ok) return;
+    const last = history[history.length - 1];
+    // Paid users get a true undo — also wipe the Firestore swipe doc so the
+    // person can re-appear in future sessions. Free users keep sticky dislike.
+    if (isPaid && last?.id) {
+      deleteSwipe(last.id).catch((e) => console.log("[rewind] deleteSwipe", e));
+    }
+    // Restore the dismissed person to the front of the queue
+    setDismissedIds(prev => { const next = new Set(prev); next.delete(last.id); return next; });
+    setHistory(h => h.slice(0, -1));
+  }, [history, consumeRewind, isPaid]);
+
+  const boostLeft = useBoostLeft(boostActive ? usage.boostActiveUntil : undefined);
+
+  const toggleBoost = useCallback(() => {
+    if (boostActive) {
+      Alert.alert("Turn off boost?", "Your boost for this hour will end now and still counts toward this month.", [
+        { text: "Keep boosting", style: "cancel" },
+        { text: "Turn off", style: "destructive", onPress: stopBoost },
+      ]);
+      return;
+    }
+    if (startBoost()) {
+      Alert.alert("Boost is on", "Your profile is boosted and will expire in 1 hour.");
+    } else if (!isPaid) {
+      setShowLimitModal(true);
+    } else {
+      Alert.alert("No boosts left", "You've used your boosts for this month. They refresh 30 days after each boost.");
+    }
+  }, [boostActive, startBoost, stopBoost, setShowLimitModal, isPaid]);
+
+  return (
+    <View style={[st.ct, { paddingTop: ins.top }]}>
+      <RedBackground />
+      <HmongMatchHeader right={
+        <TouchableOpacity onPress={toggleBoost} style={[st.boost, boostActive && st.boostActive]} testID="boost-toggle">
+          <Zap size={14} color={boostActive ? "#1a1404" : Colors.accent} fill={boostActive ? "#1a1404" : "transparent"} />
+          <Text style={[st.boostTxt, boostActive && { color: "#1a1404" }]}>{boostActive ? `${t("boost")} · ${boostLeft}` : t("boost")}</Text>
+        </TouchableOpacity>
+      } />
+
+      <View style={st.topCounter}>
+        <View style={st.counterPill}>
+          <Heart size={12} color={Colors.like} fill={Colors.like} />
+          <Text style={st.counterPillTxt}>{isPaid ? "∞" : remaining.likes} likes</Text>
+        </View>
+        <View style={st.counterPill}>
+          <X size={12} color={Colors.nope} strokeWidth={3} />
+          <Text style={st.counterPillTxt}>{isPaid ? "∞" : remaining.dislikes} passes</Text>
+        </View>
+        <View style={st.counterPill}>
+          <RotateCcw size={12} color={Colors.accent} />
+          <Text style={st.counterPillTxt}>{isPaid ? "∞" : remaining.rewinds} rewinds</Text>
+        </View>
+      </View>
+
+      <View style={st.cardArea}>
+        {loadingProfiles ? (
+          <View style={st.empty}>
+            <ActivityIndicator size="large" color={Colors.gold} />
+            <Text style={st.emptyTitle}>Finding people…</Text>
+          </View>
+        ) : profilesError ? (
+          <View style={st.empty}>
+            <Heart size={48} color={Colors.dark.textFaint} />
+            <Text style={st.emptyTitle}>Couldn’t load profiles</Text>
+            <Text style={st.emptySub}>{profilesError}</Text>
+            <TouchableOpacity onPress={() => reloadProfiles()} style={st.retryBtn} testID="retry-discover">
+              <Text style={st.retryTxt}>Try again</Text>
+            </TouchableOpacity>
+          </View>
+        ) : !current ? (
+          <View style={st.empty}>
+            <Heart size={48} color={Colors.dark.textFaint} />
+            <Text style={st.emptyTitle}>{t("seenEveryoneTitle")}</Text>
+            <Text style={st.emptySub}>{t("seenEveryoneSub")}</Text>
+            <TouchableOpacity onPress={() => reloadProfiles()} style={st.retryBtn} testID="refresh-discover">
+              <Text style={st.retryTxt}>Refresh</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <View style={{ flex: 1 }}>
+            <View style={{ height: cardHeight }}>
+              <ProfileCard profile={current} height={cardHeight} />
+            </View>
+            <View style={st.actions}>
+              <TouchableOpacity onPress={onDislike} style={[st.actBtn, { borderColor: Colors.nope }]} testID={`dislike-${current.id}`} activeOpacity={0.75} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <X size={26} color={Colors.nope} strokeWidth={3} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={onMessage} style={[st.actBtn, { borderColor: "#2a8ae0" }]} testID={`msg-${current.id}`} activeOpacity={0.75} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <MessageCircle size={24} color="#2a8ae0" strokeWidth={2.5} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={onLike} style={[st.actBtn, { borderColor: Colors.like }]} testID={`like-${current.id}`} activeOpacity={0.75} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
+                <Heart size={26} color={Colors.like} strokeWidth={3} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+
+        <TouchableOpacity onPress={onRewind} disabled={history.length === 0} style={[st.rewindBtn, history.length === 0 && { opacity: 0.4 }]} testID="rewind-button">
+          <RotateCcw size={18} color={Colors.accent} />
+          <Text style={st.rewindTxt}>{isPaid ? t("rewind") : `${t("rewind")} (${remaining.rewinds})`}</Text>
+        </TouchableOpacity>
+      </View>
+
+      {/* Limit reached modal */}
+      <Modal visible={showLimitModal} transparent animationType="fade" onRequestClose={() => setShowLimitModal(false)}>
+        <View style={st.modal}>
+          <View style={st.modalCard}>
+            <Crown size={32} color={Colors.accent} />
+            <Text style={st.modalTitle}>{t("hitDailyTitle")}</Text>
+            <Text style={st.modalSub}>{t("hitDailySub")}</Text>
+            <TouchableOpacity style={st.cta} onPress={() => { setShowLimitModal(false); router.push("/subscription"); }} testID="upgrade-cta">
+              <Text style={st.ctaTxt}>{t("upgradeNow")}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setShowLimitModal(false)}><Text style={st.later}>{t("maybeLater")}</Text></TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* 75% warning */}
+      <Modal visible={show75Modal} transparent animationType="fade" onRequestClose={() => setShow75Modal(false)}>
+        <View style={st.modal}>
+          <View style={st.modalCard}>
+            <Zap size={32} color={Colors.accent} />
+            <Text style={st.modalTitle}>{t("runningLowTitle")}</Text>
+            <Text style={st.modalSub}>{t("runningLowSub")}</Text>
+            <TouchableOpacity style={st.cta} onPress={() => { setShow75Modal(false); router.push("/subscription"); }}>
+              <Text style={st.ctaTxt}>{t("seePlans")}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setShow75Modal(false)}><Text style={st.later}>{t("keepBrowsing")}</Text></TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+    </View>
+  );
+}
+
+const st = StyleSheet.create({
   ct: { flex: 1, backgroundColor: "transparent" },
-  scroll: { paddingHorizontal: 16, paddingBottom: 24 },
-  heroTitle: { color: "#FFF", fontSize: 22, fontWeight: "700" as const, textAlign: "center" as const, marginTop: 6 },
-  heroSub: { color: "rgba(255,255,255,0.6)", fontSize: 13, textAlign: "center" as const, marginTop: 6, marginBottom: 16 },
-  section: { marginBottom: 20 },
-  sectionHead: { flexDirection: "row", alignItems: "center", marginBottom: 10 },
-  sectionTitleRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  sectionTitle: { color: "#FFF", fontSize: 16, fontWeight: "700" as const },
-  seeAll: { color: Colors.accent, fontSize: 13, fontWeight: "600" as const },
-  proPill: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999, borderWidth: 1, borderColor: "rgba(212,168,67,0.5)", backgroundColor: "rgba(212,168,67,0.12)" },
-  proPillTxt: { color: Colors.accent, fontSize: 10, fontWeight: "700" as const },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: GAP },
-  card: { borderRadius: 16, overflow: "hidden", backgroundColor: "#111", borderWidth: 1, borderColor: "transparent" },
-  cardHighlight: { borderColor: Colors.accent },
-  cardImg: { ...StyleSheet.absoluteFillObject },
-  cardTint: { ...StyleSheet.absoluteFillObject, backgroundColor: "transparent" },
-  badge: { position: "absolute", top: 10, right: 10, flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: "rgba(0,0,0,0.65)", borderRadius: 6, paddingHorizontal: 7, paddingVertical: 3 },
-  badgeTxt: { color: "#FFF", fontSize: 11, fontWeight: "700" as const },
-  lockBadge: { position: "absolute", top: 10, left: 10, width: 22, height: 22, borderRadius: 11, backgroundColor: "rgba(0,0,0,0.7)", justifyContent: "center", alignItems: "center" },
-  cardLabel: { position: "absolute", bottom: 14, left: 12, right: 40, color: "#FFF", fontSize: 15, fontWeight: "700" as const, letterSpacing: -0.2 },
-  addBtn: { position: "absolute", bottom: 12, right: 12, width: 28, height: 28, borderRadius: 14, backgroundColor: Colors.crimson, justifyContent: "center", alignItems: "center" },
+  boost: { flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999, borderWidth: 1, borderColor: Colors.accent },
+  boostActive: { backgroundColor: Colors.accent },
+  boostTxt: { color: Colors.accent, fontWeight: "700" as const, fontSize: 12 },
+  counterRow: { paddingTop: 8, alignItems: "center" },
+  counterTxt: { color: "rgba(255,255,255,0.55)", fontSize: 11 },
+  topCounter: { flexDirection: "row", justifyContent: "center", gap: 8, paddingHorizontal: 12, paddingTop: 4, paddingBottom: 6 },
+  counterPill: { flexDirection: "row", alignItems: "center", gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, backgroundColor: "rgba(0,0,0,0.45)", borderWidth: 1, borderColor: "rgba(255,255,255,0.12)" },
+  counterPillTxt: { color: "#FFF", fontSize: 11, fontWeight: "700" as const },
+  cardArea: { flex: 1, paddingHorizontal: 12, paddingTop: 4, paddingBottom: 10 },
+  card: { borderRadius: 22, overflow: "hidden", backgroundColor: "#111", borderWidth: 1, borderColor: "rgba(212,168,67,0.18)" },
+  carouselWrap: { flex: 1 },
+  photo: { width: W.width - 24, height: "100%" },
+  shade: { position: "absolute", left: 0, right: 0, bottom: 0, height: "55%" },
+  dots: { position: "absolute", top: 12, left: 0, right: 0, flexDirection: "row", justifyContent: "center", gap: 4 },
+  dot: { width: 24, height: 3, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.35)" },
+  dotActive: { backgroundColor: "#FFF" },
+  info: { position: "absolute", left: 18, right: 18, bottom: 24 },
+  nameRow: { flexDirection: "row", alignItems: "center", gap: 10, flexWrap: "wrap" as const },
+  name: { color: "#FFF", fontSize: 30, fontWeight: "700" as const },
+  badge: { flexDirection: "row", alignItems: "center", gap: 4, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999 },
+  badgeTxt: { color: "#FFF", fontSize: 10, fontWeight: "700" as const, letterSpacing: 0.4 },
+  badgeDot: { width: 26, height: 26, borderRadius: 13, alignItems: "center", justifyContent: "center" },
+  meta: { color: "rgba(255,255,255,0.92)", fontSize: 14, marginTop: 4 },
+  clan: { color: Colors.accentLight, fontSize: 14, fontWeight: "600" as const, marginTop: 4 },
+  actions: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 22, paddingTop: 14, paddingBottom: 6 },
+  actBtn: { width: 60, height: 60, borderRadius: 30, backgroundColor: "rgba(0,0,0,0.65)", borderWidth: 2, justifyContent: "center", alignItems: "center" },
+  rewindBtn: { position: "absolute", top: 12, right: 16, flexDirection: "row", alignItems: "center", gap: 6, paddingHorizontal: 12, paddingVertical: 7, borderRadius: 999, borderWidth: 1, borderColor: Colors.accent, backgroundColor: "rgba(0,0,0,0.4)" },
+  aboutBox: { marginTop: 10, backgroundColor: "transparent", borderWidth: 0, borderColor: "transparent", borderRadius: 12, paddingHorizontal: 0, paddingVertical: 4 },
+  aboutLabel: { color: Colors.accentLight, fontSize: 10, fontWeight: "800" as const, letterSpacing: 1, textTransform: "uppercase" as const, marginBottom: 4 },
+  aboutTxt: { color: "rgba(255,255,255,0.92)", fontSize: 13, lineHeight: 18 },
+  rewindTxt: { color: Colors.accent, fontSize: 12, fontWeight: "700" as const },
+  empty: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10 },
+  emptyTitle: { color: "#FFF", fontSize: 18, fontWeight: "700" as const, marginTop: 10 },
+  emptySub: { color: "rgba(255,255,255,0.6)", fontSize: 13, textAlign: "center" as const, paddingHorizontal: 40 },
   modal: { flex: 1, backgroundColor: "rgba(0,0,0,0.75)", justifyContent: "center", alignItems: "center", padding: 28 },
   modalCard: { backgroundColor: "#16060c", borderRadius: 22, padding: 26, alignItems: "center", width: "100%", borderWidth: 1, borderColor: "rgba(212,168,67,0.3)" },
-  modalTitle: { color: "#FFF", fontSize: 19, fontWeight: "700" as const, marginTop: 12, textAlign: "center" as const },
+  modalTitle: { color: "#FFF", fontSize: 20, fontWeight: "700" as const, marginTop: 12, textAlign: "center" as const },
   modalSub: { color: "rgba(255,255,255,0.7)", fontSize: 13, textAlign: "center" as const, marginTop: 8, lineHeight: 19 },
   cta: { backgroundColor: Colors.accent, paddingHorizontal: 32, paddingVertical: 14, borderRadius: 999, marginTop: 18 },
   ctaTxt: { color: "#1a1404", fontSize: 14, fontWeight: "700" as const },
   later: { color: "rgba(255,255,255,0.5)", marginTop: 14, fontSize: 13 },
-  eventsBanner: { flexDirection: "row", alignItems: "center", gap: 12, marginTop: 12, marginBottom: 8, padding: 14, borderRadius: 20, backgroundColor: "rgba(15,6,31,0.55)", borderWidth: 1, borderColor: "rgba(255,255,255,0.15)" },
-  eventsIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: Colors.gold, alignItems: "center", justifyContent: "center" },
-  eventsTitle: { color: "#FFF", fontSize: 16, fontWeight: "800" as const },
-  eventsSub: { color: "rgba(255,255,255,0.7)", fontSize: 12, marginTop: 2 },
-  suggestBtn: { flexDirection: "row", alignItems: "center", gap: 3, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, borderWidth: 1, borderColor: "rgba(212,168,67,0.6)", marginRight: 10 },
-  suggestTxt: { color: Colors.accent, fontSize: 12, fontWeight: "700" as const },
+  retryBtn: { marginTop: 16, paddingHorizontal: 22, paddingVertical: 10, borderRadius: 999, borderWidth: 1, borderColor: Colors.gold },
+  retryTxt: { color: Colors.gold, fontSize: 13, fontWeight: "700" as const },
+  matchCard: { backgroundColor: "#16060c", borderRadius: 22, padding: 26, alignItems: "center", width: "100%", borderWidth: 1, borderColor: "rgba(212,168,67,0.4)" },
+  matchTitle: { color: Colors.gold, fontSize: 26, fontWeight: "800" as const, textAlign: "center" as const, letterSpacing: -0.5 },
+  matchSub: { color: "rgba(255,255,255,0.85)", fontSize: 14, textAlign: "center" as const, marginTop: 8, lineHeight: 20 },
+  matchPhoto: { width: 160, height: 200, borderRadius: 16, marginTop: 18, borderWidth: 2, borderColor: Colors.gold },
 });

@@ -40,7 +40,7 @@ export default function CompleteScreen() {
   const finishAndGo = async () => {
     // Navigate immediately for snappy UX; sync to Firestore in the background.
     setShowFreeTier(false);
-    router.replace("/discover");
+    router.replace("/explore");
     void finish().catch((e) => console.log("[complete] background sync error", e));
   };
 

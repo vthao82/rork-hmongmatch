@@ -68,7 +68,7 @@ export default function LoginScreen() {
     // Wait until this user's saved profile / sign-up progress has loaded
     if (!hydrated) return;
     if (completed) {
-      router.replace("/discover");
+      router.replace("/explore");
       return;
     }
     const step = onb.resumeStep && ENROLLMENT_STEPS.includes(onb.resumeStep) ? onb.resumeStep : "terms";

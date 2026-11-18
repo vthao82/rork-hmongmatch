@@ -24,7 +24,7 @@ export function WebFrame({ children }: { children: React.ReactNode }) {
   );
 }
 
-const PRIVATE = ["/discover", "/explore", "/matches", "/messages", "/profile", "/user", "/chat", "/events", "/settings", "/subscription", "/category", "/profile-stack", "/edit-profile", "/blocked", "/unmatched", "/date-safety", "/report", "/feedback"];
+const PRIVATE = ["/explore", "/interests", "/likes", "/profile", "/user", "/chat", "/events", "/settings", "/subscription", "/category", "/profile-stack", "/edit-profile", "/blocked", "/unmatched", "/date-safety", "/report", "/feedback"];
 
 const s = StyleSheet.create({
   page: { flex: 1, alignItems: "center", overflow: "hidden" },

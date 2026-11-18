@@ -163,6 +163,12 @@ service cloud.firestore {
     }
 
     // -------- Community events (members suggest, admins approve) --------
+    // Website previews (written only by Cloud Functions; no member data)
+    match /publicEvents/{eventId} {
+      allow read: if true;
+      allow write: if false;
+    }
+
     match /events/{eventId} {
       allow read: if request.auth != null
                   && (resource.data.status == 'approved' || resource.data.createdBy == request.auth.uid || isAdmin());

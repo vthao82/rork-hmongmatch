@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import { ShieldCheck, CalendarDays, Users, Heart, Smartphone, Sparkles } from "lucide-react-native";
 import RedBackground from "@/components/RedBackground";
 import { PLAY_STORE_URL } from "@/lib/invite";
+import { EventPreviews } from "@/components/web/EventPreviews";
 
 const SERIF = "'Playfair Display', Georgia, serif";
 const SANS = "'Manrope', 'Helvetica Neue', Arial, sans-serif";
@@ -157,6 +158,8 @@ export default function WebLanding() {
             {FEATURES.map((f) => <FeatureCard key={f.title} f={f} wide={wide} />)}
           </View>
         </View>
+
+        <EventPreviews wide={wide} onJoin={login} />
 
         <View style={[s.section, s.steps, wide && { flexDirection: "row" }]}>
           {STEPS.map((x) => (

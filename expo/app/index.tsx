@@ -19,7 +19,7 @@ export default function Index() {
     );
   }
   // Signed-in members go straight in; everyone else goes through login, which resumes unfinished sign-ups
-  if (completed && user && emailVerified) return <Redirect href="/discover" />;
+  if (completed && user && emailVerified) return <Redirect href="/explore" />;
   if (Platform.OS === "web" && !user) return <WebLanding />;
   return <Redirect href="/(auth)/login" />;
 }

@@ -96,7 +96,7 @@ export default function SubscriptionScreen() {
             if (router.canGoBack && router.canGoBack()) {
               router.back();
             } else {
-              router.replace("/(tabs)/discover" as never);
+              router.replace("/(tabs)/explore" as never);
             }
           }}
           testID="close-sub"

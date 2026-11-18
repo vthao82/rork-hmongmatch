@@ -44,11 +44,11 @@ export default function HmongDateTabLayout() {
         tabBarBadgeStyle: { backgroundColor: Colors.crimson, color: "#fff", fontWeight: "700" as const, fontSize: 10, minWidth: 18, height: 18, lineHeight: 14, paddingHorizontal: 4 },
       }}
     >
-      <Tabs.Screen name="discover" options={{ title: "Explore", tabBarIcon: ({ color, size }) => <Home size={size} color={color} /> }} />
-      <Tabs.Screen name="explore" options={{ title: "Interests", tabBarIcon: ({ color, size }) => <Compass size={size} color={color} /> }} />
-      <Tabs.Screen name="matches" options={{ title: "Likes", tabBarIcon: ({ color, size, focused }) => <Heart size={size} color={color} fill={focused ? color : "transparent"} /> }} />
+      <Tabs.Screen name="explore" options={{ title: "Explore", tabBarIcon: ({ color, size }) => <Home size={size} color={color} /> }} />
+      <Tabs.Screen name="interests" options={{ title: "Interests", tabBarIcon: ({ color, size }) => <Compass size={size} color={color} /> }} />
+      <Tabs.Screen name="likes" options={{ title: "Likes", tabBarIcon: ({ color, size, focused }) => <Heart size={size} color={color} fill={focused ? color : "transparent"} /> }} />
       <Tabs.Screen
-        name="messages"
+        name="chat"
         options={{
           title: "Chat",
           tabBarIcon: ({ color, size, focused }) => <MessageCircle size={size} color={color} fill={focused ? color : "transparent"} />,

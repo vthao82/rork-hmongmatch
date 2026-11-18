@@ -222,3 +222,14 @@ export const eventReminders = onSchedule({ schedule: "0 18 * * *", timeZone: "Am
   }
 });
 
+
+/** Public, member-free copy of approved events for the signed-out website. */
+export const onEventMirror = onDocumentWritten("events/{eventId}", async (event) => {
+  const ref = db.doc(`publicEvents/${event.params.eventId}`);
+  const e = event.data?.after.data();
+  if (!e || e.status !== "approved") { await ref.delete().catch(() => {}); return; }
+  await ref.set({
+    title: e.title ?? "", description: e.description ?? "", venue: e.venue ?? "", city: e.city ?? "", state: e.state ?? "",
+    dateText: e.dateText ?? "", timeText: e.timeText ?? "", startsAt: e.startsAt ?? 0, goingCount: listOf(e.going).length,
+  });
+});

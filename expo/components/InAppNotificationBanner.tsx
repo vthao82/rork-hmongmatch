@@ -35,7 +35,7 @@ export default function InAppNotificationBanner() {
       return {
         icon: <MessageCircle size={18} color="#FFF" />,
         text: totalUnread === 1 ? "You have a new message" : `You have ${totalUnread} new messages`,
-        onTap: () => router.push("/(tabs)/messages" as never),
+        onTap: () => router.push("/(tabs)/chat" as never),
       };
     }
     // New matches are announced once by MatchCelebration, not here

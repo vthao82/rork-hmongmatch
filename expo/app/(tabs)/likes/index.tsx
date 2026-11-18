@@ -89,7 +89,7 @@ export default function LikesScreen() {
               <Heart size={36} color={Colors.dark.textFaint} />
               <Text style={s.emptyTitle}>{t("noLikedYetTitle")}</Text>
               <Text style={s.emptySub}>{t("noLikedYetSub")}</Text>
-              <TouchableOpacity onPress={() => router.push("/(tabs)/discover" as never)} style={s.startBtn} testID="start-swiping-likes">
+              <TouchableOpacity onPress={() => router.push("/(tabs)/explore" as never)} style={s.startBtn} testID="start-swiping-likes">
                 <Text style={s.startBtnText}>{t("startSwiping")}</Text>
                 <ArrowRight size={16} color="#FFF" />
               </TouchableOpacity>
