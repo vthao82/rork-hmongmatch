@@ -3,24 +3,22 @@ import { View, StyleSheet, Platform, ActivityIndicator } from "react-native";
 import { useAuth } from "@/providers/AuthProvider";
 import { usePathname, Redirect } from "expo-router";
 import RedBackground from "@/components/RedBackground";
-import { WEB_FRAME_WIDTH, useWideWeb } from "@/lib/webSetup";
+import { WEB_FRAME_WIDTH } from "@/lib/webSetup";
 import { WebAlertHost } from "@/components/web/WebAlertHost";
 
-/** On desktop browsers the app sits in a phone-width column over the red background; the landing page stays full width. */
+/** In browsers the app sits in a centered column over the red background; the landing page stays full width. */
 export function WebFrame({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const { loading, user } = useAuth();
-  const wideWin = useWideWeb();
   if (Platform.OS !== "web") return <>{children}</>;
   // Browsers restore the sign-in a moment after load; wait so deep links don't read data signed out
   if (loading) return <View style={[s.page, { justifyContent: "center" }]}><RedBackground /><ActivityIndicator color="#FFF" /></View>;
   if (!user && PRIVATE.some((p) => path === p || path.startsWith(`${p}/`))) return <Redirect href="/" />;
   const full = path === "/";
-  const wideChat = wideWin && path === "/chat";
   return (
     <View style={s.page}>
       <RedBackground />
-      <View style={full ? s.full : [s.column, wideChat && { maxWidth: 1240 }]}>{children}</View>
+      <View style={full ? s.full : s.column}>{children}</View>
       <WebAlertHost />
     </View>
   );

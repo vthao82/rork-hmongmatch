@@ -16,9 +16,11 @@ import { NewBadge } from "@/components/NewBadge";
 import { useLikes } from "@/providers/LikesProvider";
 import { useT } from "@/providers/LanguageProvider";
 
-const W = Dimensions.get("window");
+// Browsers: keep the swipe card a comfortable size, centered on wide screens
+const CARD_MAX = 540;
+const W = Platform.OS === "web" ? { ...Dimensions.get("window"), width: Math.min(Dimensions.get("window").width, CARD_MAX) } : Dimensions.get("window");
 
-function PhotoCarousel({ photos }: { photos: string[] }) {
+function PhotoCarousel({ photos, height }: { photos: string[]; height: number }) {
   const [idx, setIdx] = useState<number>(0);
   return (
     <View style={st.carouselWrap}>
@@ -29,7 +31,7 @@ function PhotoCarousel({ photos }: { photos: string[] }) {
         showsHorizontalScrollIndicator={false}
         onMomentumScrollEnd={(e) => setIdx(Math.round(e.nativeEvent.contentOffset.x / W.width))}
         keyExtractor={(_, i) => `p-${i}`}
-        renderItem={({ item }) => <Image source={{ uri: item }} style={st.photo} contentFit="cover" transition={200} />}
+        renderItem={({ item }) => <Image source={{ uri: item }} style={[st.photo, { height }]} contentFit="cover" transition={200} />}
       />
       {photos.length > 1 && (
         <View style={st.dots} pointerEvents="none">
@@ -47,7 +49,7 @@ function ProfileCard({ profile, height }: { profile: Profile; height: number }) 
   const t = useT();
   return (
     <View style={[st.card, { height }]} pointerEvents="box-none">
-      <PhotoCarousel photos={profile.photos} />
+      <PhotoCarousel photos={profile.photos} height={height} />
       <NewBadge createdAtMs={profile.createdAtMs} style={{ top: 16, left: 16 }} />
       <LinearGradient colors={["transparent", "rgba(0,0,0,0.9)"]} locations={[0.35, 1]} style={st.shade} pointerEvents="none" />
       <View style={st.info} pointerEvents="none">
@@ -216,7 +218,7 @@ export default function BrowseScreen() {
         </View>
       </View>
 
-      <View style={st.cardArea}>
+      <View style={[st.cardArea, Platform.OS === "web" && { width: "100%", maxWidth: CARD_MAX, alignSelf: "center" }]}>
         {loadingProfiles ? (
           <View style={st.empty}>
             <ActivityIndicator size="large" color={Colors.gold} />
