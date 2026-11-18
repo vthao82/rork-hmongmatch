@@ -16,6 +16,7 @@ import { spendCategoryView, useCategoryViewsLeft, resetsInLabel } from "@/lib/ca
 import { NewBadge } from "@/components/NewBadge";
 import { dialectText, lookingForText } from "@/lib/profileLabels";
 import PromptCards from "@/components/PromptCards";
+import RedBackground from "@/components/RedBackground";
 
 /**
  * Swipeable profile viewer route. Drives the "tap a card → swipe up to next
@@ -116,10 +117,14 @@ export default function ProfileStackScreen() {
     else router.back();
   };
 
+  const interests = Array.from(new Map((profile.interests ?? []).map((i) => [i.trim().toLowerCase(), i.trim()])).values()).filter(Boolean);
+
   return (
     <>
-      <Stack.Screen options={{ title: stack.title ?? profile.name }} />
-      <ScrollView style={s.ct} contentContainerStyle={{ paddingBottom: 80 }} showsVerticalScrollIndicator={false}>
+      <Stack.Screen options={{ title: stack.title ?? profile.name, headerStyle: { backgroundColor: "#0a0207" }, headerTintColor: "#FFF", headerShadowVisible: false }} />
+      <View style={s.ct}>
+      <RedBackground />
+      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 80 }} showsVerticalScrollIndicator={false}>
         <View style={s.ph}>
           <PhotoCarousel key={profile.id} photos={profile.photos} counterTop={ins.top + 12} />
           <View style={[s.counterWrap, { top: ins.top + 12 }]} pointerEvents="none" testID="profile-position">
@@ -131,53 +136,53 @@ export default function ProfileStackScreen() {
               <VerifiedBadge verified={!!profile.verified} size={22} />
               <NewBadge createdAtMs={profile.createdAtMs} inline />
             </View>
-            <Text style={s.cl}>{profile.clan} Clan</Text>
+            {profile.clan && profile.clan !== "—" ? <View style={s.clanPill}><Text style={s.cl}>{profile.clan} Clan</Text></View> : null}
           </View>
         </View>
 
         <View style={s.actions}>
           <Pressable style={({ pressed }) => [s.iconBtn, pressed && { opacity: 0.6 }]} onPress={prev} disabled={idx === 0} testID="prev-profile">
-            <ChevronUp size={26} color={idx === 0 ? Colors.textTertiary : Colors.text} />
-            <Text style={[s.iconLbl, idx === 0 && { color: Colors.textTertiary }]}>Prev</Text>
+            <ChevronUp size={26} color={idx === 0 ? DIM : "#FFF"} />
+            <Text style={[s.iconLbl, idx === 0 && { color: DIM }]}>Prev</Text>
           </Pressable>
           <TouchableOpacity style={s.likeBtn} onPress={() => onLike()} testID="stack-like">
             <Heart size={22} color="#FFF" fill="#FFF" />
             <Text style={s.likeTxt}>Like</Text>
           </TouchableOpacity>
           <TouchableOpacity style={s.msgBtn} onPress={onMessage} testID="stack-message">
-            <MessageCircle size={20} color={Colors.text} />
+            <MessageCircle size={20} color="#FFF" />
             <Text style={s.iconLbl}>Chat</Text>
           </TouchableOpacity>
           <Pressable style={({ pressed }) => [s.iconBtn, pressed && { opacity: 0.6 }]} onPress={next} disabled={idx === total - 1} testID="next-profile">
-            <ChevronDown size={26} color={idx === total - 1 ? Colors.textTertiary : Colors.text} />
-            <Text style={[s.iconLbl, idx === total - 1 && { color: Colors.textTertiary }]}>Next</Text>
+            <ChevronDown size={26} color={idx === total - 1 ? DIM : "#FFF"} />
+            <Text style={[s.iconLbl, idx === total - 1 && { color: DIM }]}>Next</Text>
           </Pressable>
         </View>
 
         <View style={s.cn}>
+          {profile.bio ? (
+            <View style={[s.glass, s.se]}><Text style={s.st}>ABOUT</Text><Text style={s.bt}>{profile.bio}</Text></View>
+          ) : null}
+          <PromptCards prompts={profile.prompts} name={profile.name} dark onLike={(c) => onLike(c)} />
           <View style={s.se}>
-            <Text style={s.st}>About</Text>
-            <Text style={s.bt}>{profile.bio || "—"}</Text>
-          </View>
-          <PromptCards prompts={profile.prompts} name={profile.name} onLike={(c) => onLike(c)} />
-          <View style={s.se}>
-            <Text style={s.st}>Details</Text>
-            <View style={s.dc}>
-              <View style={s.di}><MapPin size={16} color={Colors.primary} /><Text style={s.dt}>{profile.location}{profile.distance ? ` · ${profile.distance}` : ""}</Text></View>
-              {dialectText(profile.languages) ? <View style={s.di}><Globe size={16} color={Colors.primary} /><Text style={s.dt}>{dialectText(profile.languages)}</Text></View> : null}
-              {profile.lookingFor ? <View style={s.di}><Heart size={16} color={Colors.primary} /><Text style={s.dt}>{lookingForText(profile.lookingFor)}</Text></View> : null}
+            <Text style={[s.st, { marginLeft: 4 }]}>DETAILS</Text>
+            <View style={[s.glass, s.dc]}>
+              <View style={s.di}><MapPin size={16} color={Colors.gold} /><Text style={s.dt}>{profile.location}{profile.distance ? ` · ${profile.distance}` : ""}</Text></View>
+              {dialectText(profile.languages) ? <View style={s.di}><Globe size={16} color={Colors.gold} /><Text style={s.dt}>{dialectText(profile.languages)}</Text></View> : null}
+              {profile.lookingFor ? <View style={s.di}><Heart size={16} color={Colors.gold} /><Text style={s.dt}>{lookingForText(profile.lookingFor)}</Text></View> : null}
             </View>
           </View>
-          {profile.interests?.length ? (
+          {interests.length ? (
             <View style={s.se}>
-              <Text style={s.st}>Interests</Text>
+              <Text style={[s.st, { marginLeft: 4 }]}>INTERESTS</Text>
               <View style={s.ir}>
-                {profile.interests.map((i) => <View key={i} style={s.ic}><Text style={s.it}>{i}</Text></View>)}
+                {interests.map((i) => <View key={i} style={s.ic}><Text style={s.it}>{i}</Text></View>)}
               </View>
             </View>
           ) : null}
         </View>
       </ScrollView>
+      </View>
 
       <View style={[s.closeWrap, { top: ins.top + 6 }]}>
         <TouchableOpacity style={s.closeBtn} onPress={() => router.back()} testID="close-stack">
@@ -195,35 +200,39 @@ export default function ProfileStackScreen() {
   );
 }
 
+const DIM = "rgba(255,255,255,0.3)";
+
 const s = StyleSheet.create({
-  ct: { flex: 1, backgroundColor: Colors.background },
+  ct: { flex: 1, backgroundColor: Colors.indigo },
   cen: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: Colors.background, padding: 20 },
   err: { fontSize: 16, color: Colors.textSecondary, textAlign: "center" as const },
-  ph: { position: "relative", backgroundColor: "#000" },
+  ph: { position: "relative", backgroundColor: "#000", borderBottomLeftRadius: 28, borderBottomRightRadius: 28, overflow: "hidden" },
   counterWrap: { position: "absolute", left: 0, right: 0, alignItems: "center" },
   counter: { backgroundColor: "rgba(0,0,0,0.55)", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999 },
   counterTxt: { color: "#FFF", fontSize: 12, fontWeight: "700" as const },
   pf: { position: "absolute", bottom: 24, left: 20, right: 20 },
   nr: { flexDirection: "row", alignItems: "center", gap: 8 },
-  nm: { fontSize: 30, fontWeight: "800" as const, color: "#FFF", textShadowColor: "rgba(0,0,0,0.75)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },
-  cl: { fontSize: 16, fontWeight: "600" as const, color: Colors.accentLight, marginTop: 4, textShadowColor: "rgba(0,0,0,0.75)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 6 },
+  nm: { fontSize: 34, fontWeight: "800" as const, color: "#FFF", letterSpacing: -0.8, textShadowColor: "rgba(0,0,0,0.75)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 8 },
+  clanPill: { alignSelf: "flex-start", marginTop: 8, paddingHorizontal: 12, paddingVertical: 5, borderRadius: 999, backgroundColor: "rgba(212,168,67,0.9)" },
+  cl: { fontSize: 13, fontWeight: "800" as const, color: Colors.indigo, letterSpacing: 0.4 },
   closeWrap: { position: "absolute", left: 16, zIndex: 10 },
   closeBtn: { width: 38, height: 38, borderRadius: 19, backgroundColor: "rgba(0,0,0,0.55)", justifyContent: "center", alignItems: "center" },
-  actions: { flexDirection: "row", alignItems: "center", justifyContent: "space-around", paddingVertical: 14, backgroundColor: Colors.surface, marginTop: -22, marginHorizontal: 16, borderRadius: 18, shadowColor: "#000", shadowOpacity: 0.1, shadowOffset: { width: 0, height: 4 }, shadowRadius: 12, elevation: 4 },
+  actions: { flexDirection: "row", alignItems: "center", justifyContent: "space-around", paddingVertical: 14, backgroundColor: "rgba(20,4,12,0.85)", borderWidth: 1, borderColor: "rgba(212,168,67,0.3)", marginTop: 16, marginHorizontal: 16, borderRadius: 22 },
   iconBtn: { alignItems: "center", paddingHorizontal: 8 },
-  iconLbl: { fontSize: 12, color: Colors.text, fontWeight: "600" as const, marginTop: 2 },
-  likeBtn: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: Colors.primary, paddingHorizontal: 22, paddingVertical: 12, borderRadius: 999 },
+  iconLbl: { fontSize: 12, color: "#FFF", fontWeight: "600" as const, marginTop: 2 },
+  likeBtn: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: Colors.crimson, paddingHorizontal: 26, paddingVertical: 13, borderRadius: 999, borderWidth: 1, borderColor: "rgba(255,255,255,0.2)" },
   likeTxt: { color: "#FFF", fontSize: 14, fontWeight: "700" as const },
   msgBtn: { alignItems: "center", paddingHorizontal: 8 },
-  cn: { paddingHorizontal: 20, paddingTop: 24 },
-  se: { marginBottom: 24 },
-  st: { fontSize: 17, fontWeight: "700" as const, color: Colors.text, marginBottom: 10 },
-  bt: { fontSize: 15, color: Colors.textSecondary, lineHeight: 23 },
-  dc: { backgroundColor: Colors.surface, borderRadius: 16, padding: 16, gap: 12 },
-  di: { flexDirection: "row", alignItems: "center", gap: 10 },
-  dt: { fontSize: 14, color: Colors.text, flex: 1 },
+  cn: { paddingHorizontal: 18, paddingTop: 20 },
+  glass: { backgroundColor: "rgba(255,255,255,0.08)", borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", borderRadius: 20, padding: 18 },
+  se: { marginBottom: 18 },
+  st: { fontSize: 12, fontWeight: "800" as const, color: Colors.goldLight, letterSpacing: 1.6, marginBottom: 10 },
+  bt: { fontSize: 17, color: "#FFF", lineHeight: 26, fontWeight: "500" as const },
+  dc: { gap: 14 },
+  di: { flexDirection: "row", alignItems: "center", gap: 12 },
+  dt: { fontSize: 15, color: "#FFF", flex: 1, fontWeight: "600" as const },
   ir: { flexDirection: "row", flexWrap: "wrap", gap: 8 },
-  ic: { backgroundColor: Colors.surfaceAlt, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 18 },
-  it: { fontSize: 13, fontWeight: "500" as const, color: Colors.text },
+  ic: { backgroundColor: "rgba(255,255,255,0.1)", borderWidth: 1, borderColor: "rgba(212,168,67,0.45)", paddingHorizontal: 14, paddingVertical: 9, borderRadius: 999 },
+  it: { fontSize: 14, fontWeight: "700" as const, color: "#FFF" },
   hint: { color: "rgba(255,255,255,0.6)", fontSize: 11, backgroundColor: "rgba(0,0,0,0.4)", paddingHorizontal: 12, paddingVertical: 5, borderRadius: 999 },
 });
