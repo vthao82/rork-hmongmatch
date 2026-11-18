@@ -18,7 +18,9 @@ import { setProfileStack } from "@/lib/profileStackStore";
 import VerifiedBadge from "@/components/VerifiedBadge";
 
 const SW = Dimensions.get("window").width;
-const CW = (SW - 32 - 12) / 2;
+// Wide browser windows: 4 per row, same card width as the Interests tab
+const PER_ROW = SW >= 900 ? 4 : 2;
+const CW = (SW - 32 - 12 * (PER_ROW - 1)) / PER_ROW;
 
 export default function LikesScreen() {
   const ins = useSafeAreaInsets();
@@ -234,7 +236,7 @@ const s = StyleSheet.create({
   sectionHead: { color: "#FFF", fontSize: 18, fontWeight: "800" as const, marginTop: 24, marginBottom: 12 },
   topGrid: { padding: 16 },
   topPrompt: { color: "#FFF", fontSize: 18, textAlign: "center", marginBottom: 16 },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: 12, justifyContent: "space-between" },
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: 12, justifyContent: PER_ROW === 4 ? "flex-start" : "space-between" },
   pick: { height: CW * 1.25, borderRadius: 14, overflow: "hidden", backgroundColor: "#111" },
   pickImg: { ...StyleSheet.absoluteFillObject },
   pickOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.35)" },
