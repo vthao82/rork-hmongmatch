@@ -1,4 +1,4 @@
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo } from "react";
 import { Platform, View } from "react-native";
 import { Tabs } from "expo-router";
 import { Heart, MessageCircle, User, Compass, Home } from "lucide-react-native";
@@ -11,6 +11,21 @@ import { usePushRouting } from "@/lib/notifications";
 import { useAuth } from "@/providers/AuthProvider";
 import { useOnboarding } from "@/providers/OnboardingProvider";
 
+/** Browsers: "(2) Hmong Date" in the tab name while chats are unread. */
+function useUnreadTabTitle(unread: number) {
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    const want = unread > 0 ? `(${unread > 99 ? "99+" : unread}) Hmong Date` : "Hmong Date";
+    const apply = () => { if (document.title !== want) document.title = want; };
+    apply();
+    // Navigation can rename the page, so put our title back whenever that happens
+    const el = document.querySelector("title");
+    const obs = el ? new MutationObserver(apply) : null;
+    if (el && obs) obs.observe(el, { childList: true, characterData: true, subtree: true });
+    return () => { obs?.disconnect(); document.title = "Hmong Date"; };
+  }, [unread]);
+}
+
 export default function HmongDateTabLayout() {
   const { threads } = useChatThreads();
   const { user } = useAuth();
@@ -22,6 +37,7 @@ export default function HmongDateTabLayout() {
     () => threads.filter((t) => (t.unreadCount ?? 0) > 0).length,
     [threads]
   );
+  useUnreadTabTitle(unread);
   const chatBadge: string | number | undefined =
     unread > 99 ? "99+" : unread > 0 ? unread : undefined;
 
