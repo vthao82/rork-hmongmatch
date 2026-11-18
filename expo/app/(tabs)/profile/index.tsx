@@ -1,3 +1,4 @@
+import { WEB_READABLE } from "@/lib/webSetup";
 import React from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -81,7 +82,7 @@ export default function ProfileScreen() {
     <View style={[s.ct, { paddingTop: ins.top }]}>
       <RedBackground />
       <HmongMatchHeader />
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scroll}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[s.scroll, WEB_READABLE]}>
         <View style={s.topRow}>
           <Image source={{ uri: photo }} style={s.avatar} contentFit="cover" />
           <View style={s.nameCol}>

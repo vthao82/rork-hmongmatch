@@ -37,3 +37,6 @@ export function useWideWeb(): boolean {
   }, []);
   return wide;
 }
+
+/** Browsers: keep reading screens (Profile, Settings) at a comfortable width inside the wide layout. */
+export const WEB_READABLE = Platform.OS === "web" ? ({ width: "100%", maxWidth: 720, alignSelf: "center" } as const) : null;

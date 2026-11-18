@@ -18,7 +18,7 @@ export function WebFrame({ children }: { children: React.ReactNode }) {
   return (
     <View style={s.page}>
       <RedBackground />
-      <View style={full ? s.full : [s.column, STEPS.has(path.slice(1)) && { maxWidth: WEB_STEP_WIDTH }, COMPACT.has(path) && { maxWidth: 720 }]}>{children}</View>
+      <View style={full ? s.full : [s.column, STEPS.has(path.slice(1)) && { maxWidth: WEB_STEP_WIDTH }]}>{children}</View>
       <WebAlertHost />
     </View>
   );
@@ -26,9 +26,6 @@ export function WebFrame({ children }: { children: React.ReactNode }) {
 
 // Sign-up steps use a compact centered column like the login form
 const STEPS = new Set(["bio", "birthday", "clan", "complete", "dialect", "distance", "education", "extras", "gender", "hometown", "pick-interests", "invite-code", "lifestyle", "location", "looking-for", "name", "orientation", "photo-verify", "photos", "prompts", "religion", "rules", "seeking", "terms", "work"]);
-
-// Profile and Settings read better at a medium width than stretched across the screen
-const COMPACT = new Set(["/profile", "/settings"]);
 
 const PRIVATE = ["/explore", "/interests", "/likes", "/profile", "/user", "/chat", "/events", "/settings", "/subscription", "/category", "/profile-stack", "/edit-profile", "/blocked", "/unmatched", "/date-safety", "/report", "/feedback"];
 

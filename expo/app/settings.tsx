@@ -1,3 +1,4 @@
+import { WEB_READABLE } from "@/lib/webSetup";
 import React, { useState, useCallback, useMemo, useEffect } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Platform, Modal, TextInput, Alert, Linking } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -136,7 +137,7 @@ function PickerModal({ visible, config, selected, onClose, onSave, t }: { visibl
             <Text style={s.modalSave}>{t("save")}</Text>
           </TouchableOpacity>
         </View>
-        <ScrollView contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+        <ScrollView contentContainerStyle={[{ padding: 16, paddingBottom: 40 }, WEB_READABLE]}>
           {config.options.map(opt => {
             const on = local.includes(opt.value);
             return (
@@ -281,7 +282,7 @@ export default function SettingsScreen() {
         <View style={{ width: 24 }} />
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingBottom: 40 }} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={[{ paddingBottom: 40 }, WEB_READABLE]} showsVerticalScrollIndicator={false}>
         <Section title={t("yourPlan")}>
           <TouchableOpacity style={s.planCard} onPress={() => router.push("/subscription")} activeOpacity={0.85} testID="plan-card">
             <Crown size={22} color={Colors.accent} />
