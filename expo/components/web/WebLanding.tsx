@@ -117,14 +117,14 @@ export default function WebLanding() {
   const w = useWidth();
   const wide = w >= 980;
   const login = () => router.push("/(auth)/login");
-  const logoW = w < 640 ? w - 170 : Math.min(w * 0.42, 620);
+  const logoW = w < 640 ? w - 180 : Math.min(w * 0.36, 540);
 
   return (
     <View style={{ flex: 1 }}>
       <RedBackground />
       <ScrollView style={{ flex: 1 }} contentContainerStyle={[s.page, w < 640 && { paddingHorizontal: 20 }]} testID="web-landing">
         <View style={s.nav}>
-          <Image source={{ uri: "/landing/logo.png" }} style={{ width: logoW, height: logoW / 4.23 }} resizeMode="contain" accessibilityLabel="Hmong Date" testID="landing-logo" />
+          <Image source={{ uri: "/landing/logo.webp" }} style={{ width: logoW, height: logoW / 4.08 }} resizeMode="contain" accessibilityLabel="Hmong Date" testID="landing-logo" />
           <View style={s.navRight}>
             {wide ? <Text style={s.navLink} onPress={() => go("/support")} testID="landing-nav-support">Support</Text> : null}
             <TouchableOpacity style={[s.navBtn, w < 640 && { paddingHorizontal: 18, paddingVertical: 10 }]} onPress={login} testID="landing-nav-login"><Text style={s.navBtnTxt}>Log in</Text></TouchableOpacity>
@@ -179,7 +179,7 @@ export default function WebLanding() {
         </View>
 
         <View style={s.footer}>
-          <Image source={{ uri: "/landing/logo.png" }} style={{ width: 200, height: 47 }} resizeMode="contain" />
+          <Image source={{ uri: "/landing/logo.webp" }} style={{ width: 200, height: 49 }} resizeMode="contain" />
           <View style={s.footLinks}>
             {LEGAL.map((l) => <Text key={l.href} style={s.footLink} onPress={() => go(l.href)} testID={`landing-link-${l.label}`}>{l.label}</Text>)}
           </View>
