@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Alert, Dimensions, Platform, type AlertButton } from "react-native";
 
 /** Phone-width column the app renders in on desktop browsers. */
@@ -21,4 +22,17 @@ if (Platform.OS === "web") {
     if (show) show({ title, message, buttons: list });
     else window.alert([title, message].filter(Boolean).join("\n\n"));
   };
+}
+
+/** True on desktop-size browser windows (used for the side-by-side chat). */
+export function useWideWeb(): boolean {
+  const get = () => Platform.OS === "web" && typeof window !== "undefined" && window.innerWidth >= 1024;
+  const [wide, setWide] = useState<boolean>(get);
+  useEffect(() => {
+    if (Platform.OS !== "web") return;
+    const on = () => setWide(get());
+    window.addEventListener("resize", on);
+    return () => window.removeEventListener("resize", on);
+  }, []);
+  return wide;
 }

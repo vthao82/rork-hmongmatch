@@ -12,6 +12,8 @@ import { useAllProfiles } from "@/lib/discoverProfiles";
 import { useChatThreads, formatRelative, type ChatThread } from "@/lib/chat";
 import { useT } from "@/providers/LanguageProvider";
 import VerifiedBadge from "@/components/VerifiedBadge";
+import { useWideWeb } from "@/lib/webSetup";
+import { ChatConversation } from "@/app/chat/[id]";
 
 type Row = {
   otherUid: string;
@@ -43,6 +45,8 @@ export default function ChatTab() {
   const { threads } = useChatThreads();
   const [q, setQ] = useState<string>("");
   const [newOpen, setNewOpen] = useState<boolean>(false);
+  const wide = useWideWeb();
+  const [sel, setSel] = useState<string | null>(null);
 
   const rows = useMemo<Row[]>(() => {
     const list: Row[] = [];
@@ -77,8 +81,12 @@ export default function ChatTab() {
     return rows.filter((r) => r.name.toLowerCase().includes(needle));
   }, [q, rows]);
 
-  return (
-    <View style={[s.ct, { paddingTop: ins.top }]}>
+  // Desktop: list on the left, the chosen (or latest) conversation on the right
+  const active = wide ? (sel && rows.some((r) => r.otherUid === sel) ? sel : rows[0]?.otherUid ?? sel) : null;
+  const openChat = (uid: string) => (wide ? setSel(uid) : router.push(`/chat/${uid}`));
+
+  const listPane = (
+    <View style={[s.ct, { paddingTop: ins.top }, wide && s.listWide]}>
       <RedBackground />
       <HmongMatchHeader right={
         <TouchableOpacity onPress={() => setNewOpen(true)} testID="new-message-btn" hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
@@ -119,7 +127,7 @@ export default function ChatTab() {
           keyExtractor={i => i.otherUid}
           contentContainerStyle={{ paddingHorizontal: 16, paddingTop: 8, paddingBottom: 24 }}
           renderItem={({ item }) => (
-            <TouchableOpacity style={s.row} onPress={() => router.push(`/chat/${item.otherUid}`)} testID={`conv-${item.otherUid}`} activeOpacity={0.75}>
+            <TouchableOpacity style={[s.row, item.otherUid === active && s.rowActive]} onPress={() => openChat(item.otherUid)} testID={`conv-${item.otherUid}`} activeOpacity={0.75}>
               <TouchableOpacity style={{ position: "relative" }} onPress={() => router.push(`/user/${item.otherUid}`)} testID={`conv-avatar-${item.otherUid}`}>
                 {item.photo ? (
                   <Image source={{ uri: item.photo }} style={s.avatar} contentFit="cover" />
@@ -159,7 +167,7 @@ export default function ChatTab() {
             keyExtractor={i => i.id}
             contentContainerStyle={{ padding: 16 }}
             renderItem={({ item }) => (
-              <TouchableOpacity style={s.matchRow} onPress={() => { setNewOpen(false); router.push(`/chat/${item.id}`); }} testID={`new-${item.id}`}>
+              <TouchableOpacity style={s.matchRow} onPress={() => { setNewOpen(false); openChat(item.id); }} testID={`new-${item.id}`}>
                 <Image source={{ uri: item.photos[0] }} style={s.avatar} contentFit="cover" />
                 <View style={{ flex: 1 }}>
                   <View style={s.nameRow}>
@@ -174,6 +182,20 @@ export default function ChatTab() {
           />
         </View>
       </Modal>
+    </View>
+  );
+
+  if (!wide) return listPane;
+  return (
+    <View style={s.split} testID="chat-split-view">
+      {listPane}
+      <View style={s.pane} testID="chat-split-pane">
+        {active ? (
+          <ChatConversation key={active} id={active} embedded onClose={() => setSel(null)} />
+        ) : (
+          <View style={s.paneEmpty}><Text style={s.paneEmptyTxt}>{t("getSwipingSub")}</Text></View>
+        )}
+      </View>
     </View>
   );
 }
@@ -191,6 +213,12 @@ const s = StyleSheet.create({
   likeText: { color: Colors.like, fontSize: 16, fontWeight: "800" as const, letterSpacing: 1 },
   title: { color: "rgba(255,255,255,0.7)", fontSize: 22, fontWeight: "700" as const, marginBottom: 10 },
   sub: { color: "rgba(255,255,255,0.55)", fontSize: 15, textAlign: "center", lineHeight: 22 },
+  split: { flex: 1, flexDirection: "row" },
+  listWide: { width: 380, flexGrow: 0, flexShrink: 0, flexBasis: 380, borderRightWidth: 1, borderRightColor: "rgba(232,194,122,0.2)" },
+  pane: { flex: 1, minWidth: 0, backgroundColor: "#FFF" },
+  paneEmpty: { flex: 1, alignItems: "center", justifyContent: "center", padding: 40 },
+  paneEmptyTxt: { color: Colors.textSecondary, fontSize: 15, textAlign: "center" },
+  rowActive: { backgroundColor: "rgba(232,194,122,0.14)", borderRadius: 14, paddingHorizontal: 8, marginHorizontal: -8 },
   row: { flexDirection: "row", gap: 12, paddingVertical: 12, alignItems: "center", borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.08)" },
   avatar: { width: 56, height: 56, borderRadius: 28, backgroundColor: "#222" },
   onlineDot: { position: "absolute", bottom: 2, right: 2, width: 12, height: 12, borderRadius: 6, backgroundColor: Colors.online, borderWidth: 2, borderColor: "#190614" },

@@ -43,7 +43,8 @@ export default function InAppNotificationBanner() {
   }, [totalUnread, router]);
 
   // Show banner once per app-foreground burst, only on top-level tabs
-  const onTab = pathname?.startsWith("/(tabs)") || pathname === "/" || (pathname?.split("/").filter(Boolean).length ?? 0) <= 1;
+  // Not on the Chat tab itself: the list already shows what's unread
+  const onTab = pathname !== "/chat" && (pathname?.startsWith("/(tabs)") || pathname === "/" || (pathname?.split("/").filter(Boolean).length ?? 0) <= 1);
   const shouldShow = !dismissed && !!summary && onTab && Date.now() - lastShown > 30_000;
 
   useEffect(() => {

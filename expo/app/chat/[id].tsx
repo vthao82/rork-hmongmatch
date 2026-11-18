@@ -27,6 +27,12 @@ import { CONVO_STARTERS } from "@/constants/prompts";
 export default function ChatScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
+  return <ChatConversation id={id} onClose={() => router.back()} />;
+}
+
+/** One conversation; `embedded` renders its own header (desktop side-by-side chat). */
+export function ChatConversation({ id, embedded, onClose }: { id?: string; embedded?: boolean; onClose: () => void }) {
+  const router = useRouter();
   const ins = useSafeAreaInsets();
   const t = useT();
   const { consumeMessage } = useTier();
@@ -138,7 +144,7 @@ export default function ChatScreen() {
   if (!pr) return (
     <View style={s.cen}>
       <Text style={s.err}>{t("convNotFound")}</Text>
-      <TouchableOpacity style={{ marginTop: 16 }} onPress={() => router.back()}>
+      <TouchableOpacity style={{ marginTop: 16 }} onPress={() => onClose()}>
         <Text style={{ color: Colors.primary, fontSize: 14, fontWeight: "700" as const }}>{t("back")}</Text>
       </TouchableOpacity>
     </View>
@@ -227,7 +233,7 @@ export default function ChatScreen() {
                     style: "destructive",
                     onPress: async () => {
                       if (!(await unmatchUser(pr.id))) { Alert.alert("Couldn't unmatch", "Please try again."); return; }
-                      router.back();
+                      onClose();
                     },
                   },
                 ]),
@@ -250,7 +256,7 @@ export default function ChatScreen() {
                     const ok = await blockUser(me.uid, pr);
                     if (!ok) { Alert.alert("Couldn't block", "Please try again."); return; }
                     Alert.alert("Blocked", `${pr.name} has been blocked. You can unblock them in Settings.`);
-                    router.back();
+                    onClose();
                   },
                 },
               ]
@@ -259,34 +265,40 @@ export default function ChatScreen() {
       ]);
   };
 
+  const headerTitle = (
+    <TouchableOpacity onPress={openProfile} testID="header-name">
+      <Text style={s.htitle} numberOfLines={1}>{pr.name}</Text>
+      {otherTyping ? (
+        <Text style={[s.hsub, { color: Colors.primary }]} testID="chat-typing-status">typing…</Text>
+      ) : activeText ? (
+        <Text style={[s.hsub, activeText === "Active now" && { color: Colors.online }]} testID="chat-active-status">{activeText}</Text>
+      ) : null}
+    </TouchableOpacity>
+  );
+  const headerRight = (
+    <View style={s.headerRight}>
+      <TouchableOpacity onPress={onVideo} style={s.headerVideo} testID="header-video">
+        <Video size={20} color={Colors.accent} />
+      </TouchableOpacity>
+      <TouchableOpacity onPress={openSafetyMenu} style={s.headerVideo} testID="header-safety">
+        <MoreVertical size={20} color={Colors.text} />
+      </TouchableOpacity>
+      <TouchableOpacity onPress={openProfile} testID="header-avatar" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+        <Image source={{ uri: pr.photos[0] }} style={s.ha} contentFit="cover" />
+      </TouchableOpacity>
+    </View>
+  );
+
   return (
     <>
-      <Stack.Screen options={{
-        title: pr.name,
-        headerTitle: () => (
-          <TouchableOpacity onPress={openProfile} testID="header-name">
-            <Text style={s.htitle} numberOfLines={1}>{pr.name}</Text>
-            {otherTyping ? (
-              <Text style={[s.hsub, { color: Colors.primary }]} testID="chat-typing-status">typing…</Text>
-            ) : activeText ? (
-              <Text style={[s.hsub, activeText === "Active now" && { color: Colors.online }]} testID="chat-active-status">{activeText}</Text>
-            ) : null}
-          </TouchableOpacity>
-        ),
-        headerRight: () => (
-          <View style={s.headerRight}>
-            <TouchableOpacity onPress={onVideo} style={s.headerVideo} testID="header-video">
-              <Video size={20} color={Colors.accent} />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={openSafetyMenu} style={s.headerVideo} testID="header-safety">
-              <MoreVertical size={20} color={Colors.text} />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={openProfile} testID="header-avatar" hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
-              <Image source={{ uri: pr.photos[0] }} style={s.ha} contentFit="cover" />
-            </TouchableOpacity>
-          </View>
-        )
-      }} />
+      {embedded ? (
+        <View style={s.embHeader} testID="chat-embedded-header">
+          <View style={{ flex: 1 }}>{headerTitle}</View>
+          {headerRight}
+        </View>
+      ) : (
+        <Stack.Screen options={{ title: pr.name, headerTitle: () => headerTitle, headerRight: () => headerRight }} />
+      )}
       <KeyboardAvoidingView style={s.ct} behavior={Platform.OS === "ios" ? "padding" : "height"} keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}>
         {messages.length === 0 ? (
           <View style={s.ec}>
@@ -366,6 +378,7 @@ const s = StyleSheet.create({
   cen: { flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: Colors.background },
   err: { fontSize: 16, color: Colors.textSecondary },
   headerRight: { flexDirection: "row", alignItems: "center", gap: 10 },
+  embHeader: { flexDirection: "row", alignItems: "center", paddingHorizontal: 18, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: Colors.borderLight, backgroundColor: "#FFF" },
   headerVideo: { width: 34, height: 34, borderRadius: 17, justifyContent: "center", alignItems: "center", backgroundColor: "rgba(0,0,0,0.04)" },
   lockOverlay: { position: "absolute", bottom: 4, right: 4 },
   ha: { width: 32, height: 32, borderRadius: 16 },
