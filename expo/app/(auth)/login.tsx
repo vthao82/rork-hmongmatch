@@ -9,6 +9,8 @@ import Colors from "@/constants/colors";
 import PajNtaubPattern from "@/components/onboarding/PajNtaubPattern";
 import PillButton from "@/components/onboarding/PillButton";
 import HmongLogo from "@/components/onboarding/HmongLogo";
+import { Image } from "react-native";
+import { useWideWeb } from "@/lib/webSetup";
 import BackButton from "@/components/onboarding/BackButton";
 import { useOnboarding } from "@/providers/OnboardingProvider";
 import { ENROLLMENT_STEPS } from "@/constants/enrollment";
@@ -38,6 +40,9 @@ export default function LoginScreen() {
   const { update, data: onb, hydrated, completed } = useOnboarding();
   const { signInWithGoogle, signInWithEmail, signUpWithEmail, resendVerificationEmail, user, emailVerified, reloadUser, signOut } = useAuth();
   const t = useT();
+  const wideWeb = useWideWeb();
+  // Same size as the landing page logo
+  const logoW = Platform.OS === "web" ? Math.min(window.innerWidth * 0.36, 540) : 0;
   const [busy, setBusy] = useState<boolean>(false);
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [email, setEmail] = useState<string>("");
@@ -248,7 +253,7 @@ export default function LoginScreen() {
           keyboardVerticalOffset={0}
         >
           <ScrollView
-            contentContainerStyle={{ flexGrow: 1, paddingBottom: 24 }}
+            contentContainerStyle={[{ flexGrow: 1, paddingBottom: 24 }, wideWeb && s.wideWrap]}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
@@ -256,9 +261,11 @@ export default function LoginScreen() {
               <BackButton tint="light" />
             </View>
             <Animated.View style={[s.top, { opacity: fade, transform: [{ translateY: rise }] }]}>
-              <HmongLogo fullWidth />
+              {wideWeb ? (
+                <Image source={{ uri: "/landing/logo.webp" }} style={{ width: logoW, height: logoW / 4.08, marginBottom: 18 }} resizeMode="contain" accessibilityLabel="Hmong Date" testID="hmongdate-logo" />
+              ) : <HmongLogo fullWidth />}
               <Text
-                style={s.tag}
+                style={[s.tag, wideWeb && { marginTop: 0 }]}
                 numberOfLines={2}
                 adjustsFontSizeToFit
                 minimumFontScale={0.7}
@@ -267,7 +274,7 @@ export default function LoginScreen() {
               </Text>
             </Animated.View>
 
-            <View style={s.middle}>
+            <View style={[s.middle, wideWeb && s.wideForm]}>
               <Animated.View style={[s.emailBox, { opacity: fade }]}>
                 <TextInput
                   style={s.input}
@@ -344,7 +351,7 @@ export default function LoginScreen() {
               </Animated.View>
             </View>
 
-            <Animated.View style={[s.bottom, { opacity: fade }]}>
+            <Animated.View style={[s.bottom, wideWeb && s.wideForm, { opacity: fade }]}>
               <View style={s.dividerRow}>
                 <View style={s.dividerLine} />
                 <Text style={s.dividerText}>or</Text>
@@ -406,6 +413,8 @@ const s = StyleSheet.create({
     lineHeight: 20,
   },
   middle: { paddingTop: 20, paddingBottom: 20 },
+  wideWrap: { justifyContent: "center", alignItems: "center", paddingTop: 30 },
+  wideForm: { width: "100%", maxWidth: 400 },
   emailBox: {
     gap: 12,
   },
