@@ -41,7 +41,7 @@ export default function AuthLayout() {
       <Stack.Screen name="work" />
       <Stack.Screen name="education" />
       <Stack.Screen name="photo-verify" />
-      <Stack.Screen name="interests" />
+      <Stack.Screen name="pick-interests" />
       <Stack.Screen name="lifestyle" />
       <Stack.Screen name="extras" />
       <Stack.Screen name="photos" />

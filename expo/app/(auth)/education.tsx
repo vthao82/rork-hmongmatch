@@ -27,7 +27,7 @@ export default function EducationScreen() {
   const onNext = () => {
     if (!selected) return;
     update({ education: selected });
-    router.push("/(auth)/interests");
+    router.push("/(auth)/pick-interests");
   };
 
   return (
