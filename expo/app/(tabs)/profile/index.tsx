@@ -216,7 +216,7 @@ export default function ProfileScreen() {
         {isAdmin && (
           <TouchableOpacity style={s.reportRow} onPress={() => router.push("/admin")} testID="admin-dashboard-link">
             <ShieldCheck size={18} color={Colors.gold} />
-            <Text style={s.reportText}>Admin dashboard: members, Unlimited list, error log</Text>
+            <Text style={s.reportText}>Admin Dashboard</Text>
           </TouchableOpacity>
         )}
 

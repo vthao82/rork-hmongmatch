@@ -52,19 +52,20 @@ export default function AdminScreen() {
   const [tab, setTab] = useState<Tab>("overview");
   const [users, setUsers] = useState<AdminUser[] | null>(null);
   const [err, setErr] = useState<string>("");
+  const [partial, setPartial] = useState(false);
   const pendingEvents = usePendingEvents(isAdmin);
   const pendingCards = usePendingCards(isAdmin);
   const errors = useErrorLogs();
   const load = useCallback(() => {
     setErr("");
-    listUsers().then(setUsers).catch((e) => setErr(e?.code === "functions/not-found" || e?.code === "functions/internal" ? "The admin tools need one Firebase update: run firebase deploy --only functions" : e?.message ?? "Couldn't load members."));
+    listUsers().then((r) => { setUsers(r.users); setPartial(!r.full); }).catch((e) => setErr(e?.message ?? "Couldn't load members."));
   }, []);
   useEffect(() => { if (isAdmin) load(); }, [isAdmin, load]);
 
   if (!isAdmin) return (<><Stack.Screen options={{ title: "Admin" }} /><View style={[s.ct, s.center]}><RedBackground /><Text style={s.muted}>Admins only.</Text></View></>);
   return (
     <>
-      <Stack.Screen options={{ title: "Admin dashboard", headerStyle: { backgroundColor: "#0a0207" }, headerTintColor: "#FFF" }} />
+      <Stack.Screen options={{ title: "Admin Dashboard", headerStyle: { backgroundColor: "#0a0207" }, headerTintColor: "#FFF" }} />
       <View style={s.ct}>
         <RedBackground />
         <ScrollView contentContainerStyle={[s.scroll, WEB_READABLE, { maxWidth: 900 }]} keyboardShouldPersistTaps="handled" testID="admin-screen">
@@ -76,6 +77,7 @@ export default function AdminScreen() {
             ))}
           </ScrollView>
           <View style={{ marginTop: 18 }}>
+            {partial && tab !== "errors" ? <Text style={[s.muted, { fontSize: 12, marginBottom: 12 }]} testID="admin-partial-note">Showing members from the database. Last sign-in dates appear once the admin sign-in tool is reachable.</Text> : null}
             {tab === "errors" ? <AdminErrors /> : tab === "unlimited" ? <AdminUnlimited users={users ?? []} /> : err ? <Text style={s.muted} testID="admin-load-error">{err}</Text> : !users ? <ActivityIndicator color="#FFF" /> : tab === "overview" ? (
               <Overview users={users} pending={pendingEvents.length + pendingCards.length} errors={errors.length} onGo={(t) => (t === "events" ? router.push("/events") : setTab(t))} />
             ) : <AdminMembers users={users} onChanged={load} />}

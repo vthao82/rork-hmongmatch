@@ -26,9 +26,9 @@ function MemberRow({ u, onChanged }: { u: AdminUser; onChanged: () => void }) {
       {u.photo ? <Image source={{ uri: u.photo }} style={a.av} contentFit="cover" /> : <View style={[a.av, a.avEmpty]}><Text style={a.avTxt}>{(u.name ?? u.email ?? "?").slice(0, 1).toUpperCase()}</Text></View>}
       <View style={{ flex: 1 }}>
         <Text style={a.name} numberOfLines={1}>{u.name ?? "(no name yet)"}</Text>
-        <Text style={a.meta} numberOfLines={1}>{u.email ?? "no email"} · {u.provider.replace(".com", "")}</Text>
-        <Text style={a.meta}>Joined {fmt(u.createdAt)}</Text>
-        <Text style={a.meta}>Last sign-in {ago(u.lastSignIn)} · {activeNow ? "Active now" : `Active ${ago(u.lastActive)}`}</Text>
+        <Text style={a.meta} numberOfLines={1}>{u.email ?? "no email"}{u.provider ? ` · ${u.provider.replace(".com", "")}` : ""}</Text>
+        {u.createdAt ? <Text style={a.meta}>Joined {fmt(u.createdAt)}</Text> : null}
+        <Text style={a.meta}>{u.lastSignIn ? `Last sign-in ${ago(u.lastSignIn)} · ` : ""}{activeNow ? "Active now" : `Active ${ago(u.lastActive)}`}</Text>
         <View style={a.badges}>
           {u.isAdmin ? <Badge label="Admin" tone="gold" /> : null}
           {u.unlimited ? <Badge label="Unlimited" tone="gold" /> : null}

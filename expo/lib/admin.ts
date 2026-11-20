@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { httpsCallable } from "firebase/functions";
-import { collection, deleteDoc, doc, limit, onSnapshot, orderBy, query, serverTimestamp, setDoc } from "firebase/firestore";
+import { collection, getDocs, deleteDoc, doc, limit, onSnapshot, orderBy, query, serverTimestamp, setDoc } from "firebase/firestore";
 import { auth, db, functions } from "@/lib/firebase";
 
 export type AdminUser = {
@@ -10,9 +10,28 @@ export type AdminUser = {
 };
 export type ErrorLog = { id: string; uid: string | null; message: string; stack: string; platform: string; screen: string; version: string; fatal: boolean; createdAt: number };
 
-export async function listUsers(): Promise<AdminUser[]> {
-  const r = await httpsCallable<unknown, { users: AdminUser[] }>(functions, "adminListUsers", { timeout: 120000 })({});
-  return r.data.users;
+const ms = (t: unknown): number | null => (t as { toMillis?: () => number })?.toMillis?.() ?? null;
+
+// Reads members straight from the database; the sign-in tool only adds extra detail when reachable.
+export async function listUsers(): Promise<{ users: AdminUser[]; full: boolean }> {
+  const fromDb: AdminUser[] = (await getDocs(collection(db, "users"))).docs.map((s) => {
+    const d = s.data();
+    return {
+      uid: s.id, email: d.email ?? null, name: d.fullName ?? d.name ?? null, photo: Array.isArray(d.photos) ? d.photos[0] ?? null : null,
+      provider: "", createdAt: ms(d.createdAt) ?? ms(d.updatedAt) ?? 0, lastSignIn: null, lastActive: ms(d.lastActiveAt),
+      disabled: d.blockedByAdmin === true, onboarded: d.onboardingComplete === true,
+      unlimited: d.complimentaryUnlimited === true || d.complimentary === true || d.tier === "unlimited", isAdmin: d.isAdmin === true,
+      state: d.hometownState ?? null, referralCount: d.referralCount ?? 0,
+    };
+  });
+  try {
+    const r = await httpsCallable<unknown, { users: AdminUser[] }>(functions, "adminListUsers", { timeout: 60000 })({});
+    const dbById = new Map(fromDb.map((u) => [u.uid, u]));
+    return { users: r.data.users.map((u) => ({ ...dbById.get(u.uid), ...u, name: u.name ?? dbById.get(u.uid)?.name ?? null })), full: true };
+  } catch (e) {
+    console.warn("[admin] adminListUsers unavailable, using database list", e);
+    return { users: fromDb, full: false };
+  }
 }
 export const setBlocked = (uid: string, blocked: boolean) => httpsCallable(functions, "adminSetBlocked")({ uid, blocked });
 
