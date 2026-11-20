@@ -38,9 +38,9 @@ export default function PromptCards({ prompts, name, dark, onLike }: Props) {
 const s = StyleSheet.create({
   card: { borderRadius: 18, padding: 18, paddingRight: 56, backgroundColor: "#fbf7f2", borderWidth: 1, borderColor: "#f0e6d8" },
   q: { fontSize: 13, fontWeight: "700" as const, color: Colors.textSecondary },
-  a: { fontSize: 20, fontWeight: "700" as const, color: Colors.text, marginTop: 6, lineHeight: 27 },
+  a: { fontSize: 13, fontWeight: "700" as const, color: Colors.textSecondary, marginTop: 6, lineHeight: 19 },
   cardDark: { backgroundColor: "rgba(255,255,255,0.08)", borderColor: "rgba(212,168,67,0.4)" },
   qDark: { color: Colors.goldLight },
-  aDark: { color: "#FFF" },
+  aDark: { color: Colors.goldLight },
   heart: { position: "absolute", right: 12, bottom: 12, width: 38, height: 38, borderRadius: 19, backgroundColor: "#FFF", alignItems: "center", justifyContent: "center", borderWidth: 1, borderColor: "#f0e6d8" },
 });

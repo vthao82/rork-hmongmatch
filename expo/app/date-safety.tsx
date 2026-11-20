@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useKeyboardHeight } from "@/lib/keyboard";
 import { View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Share } from "react-native";
 import { Stack, useLocalSearchParams } from "expo-router";
 import { ShieldCheck, Send } from "lucide-react-native";
@@ -6,6 +7,7 @@ import Colors from "@/constants/colors";
 import { SAFETY_TIPS } from "@/constants/prompts";
 
 export default function DateSafetyScreen() {
+  const kb = useKeyboardHeight();
   const { name } = useLocalSearchParams<{ name?: string }>();
   const [where, setWhere] = useState<string>("");
   const [when, setWhen] = useState<string>("");
@@ -49,6 +51,7 @@ export default function DateSafetyScreen() {
             <Text style={s.tipText}>{t}</Text>
           </View>
         ))}
+      {kb > 0 ? <View style={{ height: kb }} /> : null}
       </ScrollView>
     </>
   );

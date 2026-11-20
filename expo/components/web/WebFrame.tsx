@@ -27,7 +27,7 @@ export function WebFrame({ children }: { children: React.ReactNode }) {
 // Sign-up steps use a compact centered column like the login form
 const STEPS = new Set(["bio", "birthday", "clan", "complete", "dialect", "distance", "education", "extras", "gender", "hometown", "pick-interests", "invite-code", "lifestyle", "location", "looking-for", "name", "orientation", "photo-verify", "photos", "prompts", "religion", "rules", "seeking", "terms", "work"]);
 
-const PRIVATE = ["/explore", "/interests", "/likes", "/profile", "/user", "/chat", "/events", "/settings", "/subscription", "/category", "/profile-stack", "/edit-profile", "/blocked", "/unmatched", "/date-safety", "/report", "/feedback"];
+const PRIVATE = ["/explore", "/interests", "/likes", "/profile", "/user", "/chat", "/events", "/settings", "/subscription", "/category", "/profile-stack", "/edit-profile", "/blocked", "/unmatched", "/date-safety", "/report", "/feedback", "/admin"];
 
 const s = StyleSheet.create({
   page: { flex: 1, alignItems: "center", overflow: "hidden" },

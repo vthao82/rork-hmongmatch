@@ -29,7 +29,7 @@ service cloud.firestore {
     // A match-list field may only change by adding/removing the caller's own uid
     // Fields only the server/admin may set on a user profile
     function serverOnlyUserFields() {
-      return ['complimentaryUnlimited', 'isAdmin', 'inviteCode', 'referralCount', 'referralUnlimitedUntil', 'referralCredited', 'referredBy'];
+      return ['complimentaryUnlimited', 'isAdmin', 'inviteCode', 'referralCount', 'referralUnlimitedUntil', 'referralCredited', 'referredBy', 'compChecked', 'compSource', 'blockedByAdmin'];
     }
 
     function isAdmin() {
@@ -163,6 +163,20 @@ service cloud.firestore {
     }
 
     // -------- Community events (members suggest, admins approve) --------
+    // Admin "Unlimited list" (emails get Unlimited when they sign in)
+    match /compEmails/{email} {
+      allow read, write: if isAdmin();
+    }
+
+    // App error log for the admin page
+    match /errorLogs/{logId} {
+      allow create: if request.resource.data.keys().hasOnly(['uid', 'message', 'stack', 'platform', 'screen', 'version', 'fatal', 'createdAt'])
+                    && request.resource.data.message is string && request.resource.data.message.size() <= 600
+                    && request.resource.data.get('stack', '') is string && request.resource.data.get('stack', '').size() <= 3000
+                    && request.resource.data.createdAt == request.time;
+      allow read, delete: if isAdmin();
+    }
+
     // Website previews (written only by Cloud Functions; no member data)
     match /publicEvents/{eventId} {
       allow read: if true;

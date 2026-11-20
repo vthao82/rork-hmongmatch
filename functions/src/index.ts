@@ -1,6 +1,8 @@
 import { onDocumentCreated, onDocumentWritten } from "firebase-functions/v2/firestore";
 import { setGlobalOptions, logger } from "firebase-functions/v2";
 import { onSchedule } from "firebase-functions/v2/scheduler";
+import { onCall, HttpsError } from "firebase-functions/v2/https";
+import { getAuth } from "firebase-admin/auth";
 import { initializeApp } from "firebase-admin/app";
 import { getFirestore, FieldValue, Timestamp } from "firebase-admin/firestore";
 import { Expo, ExpoPushMessage } from "expo-server-sdk";
@@ -118,6 +120,17 @@ export const onUserWrite = onDocumentWritten("users/{uid}", async (event) => {
   if (!after) return;
   const userRef = db.doc(`users/${uid}`);
 
+  // Admin "Unlimited list": grant once the member's sign-in email is on it
+  if (after.compChecked !== true) {
+    try {
+      const email = (await getAuth().getUser(uid)).email?.toLowerCase();
+      const listed = email ? (await db.doc(`compEmails/${email}`).get()).exists : false;
+      await userRef.update(listed ? { compChecked: true, complimentaryUnlimited: true, compSource: "admin-list" } : { compChecked: true });
+    } catch (e) {
+      logger.error("comp check failed", { uid, e });
+    }
+  }
+
   if (!after.inviteCode) {
     try {
       await userRef.update({ inviteCode: await createInviteCode(uid, after.clan) });
@@ -232,4 +245,55 @@ export const onEventMirror = onDocumentWritten("events/{eventId}", async (event)
     title: e.title ?? "", description: e.description ?? "", venue: e.venue ?? "", city: e.city ?? "", state: e.state ?? "",
     dateText: e.dateText ?? "", timeText: e.timeText ?? "", startsAt: e.startsAt ?? 0, goingCount: listOf(e.going).length,
   });
+});
+
+async function requireAdmin(uid: string | undefined) {
+  if (!uid) throw new HttpsError("unauthenticated", "Sign in first.");
+  if ((await db.doc(`users/${uid}`).get()).get("isAdmin") !== true) throw new HttpsError("permission-denied", "Admins only.");
+}
+
+/** Admin: every account with sign-up date, last sign-in, last active and status. */
+export const adminListUsers = onCall({ memory: "512MiB", timeoutSeconds: 120 }, async (req) => {
+  await requireAdmin(req.auth?.uid);
+  const docs = new Map((await db.collection("users").get()).docs.map((d) => [d.id, d.data()]));
+  const out: Record<string, unknown>[] = [];
+  let token: string | undefined;
+  do {
+    const page = await getAuth().listUsers(1000, token);
+    for (const u of page.users) {
+      const d = docs.get(u.uid) ?? {};
+      out.push({
+        uid: u.uid, email: u.email ?? null, name: d.name ?? u.displayName ?? null, photo: Array.isArray(d.photos) ? d.photos[0] ?? null : null,
+        provider: u.providerData[0]?.providerId ?? "password", createdAt: Date.parse(u.metadata.creationTime),
+        lastSignIn: u.metadata.lastSignInTime ? Date.parse(u.metadata.lastSignInTime) : null,
+        lastActive: d.lastActiveAt?.toMillis?.() ?? null, disabled: u.disabled, onboarded: d.onboardingComplete === true,
+        unlimited: d.complimentaryUnlimited === true || d.complimentary === true || d.tier === "unlimited", isAdmin: d.isAdmin === true,
+        state: d.hometownState ?? null, referralCount: d.referralCount ?? 0,
+      });
+    }
+    token = page.pageToken;
+  } while (token);
+  return { users: out };
+});
+
+/** Admin: block (can't sign in, hidden) or unblock an account. */
+export const adminSetBlocked = onCall(async (req) => {
+  await requireAdmin(req.auth?.uid);
+  const uid = String(req.data?.uid ?? "");
+  const blocked = req.data?.blocked === true;
+  if (!uid || uid === req.auth?.uid) throw new HttpsError("invalid-argument", "Pick another member.");
+  await getAuth().updateUser(uid, { disabled: blocked });
+  if (blocked) await getAuth().revokeRefreshTokens(uid);
+  await db.doc(`users/${uid}`).set({ blockedByAdmin: blocked }, { merge: true });
+  return { ok: true };
+});
+
+/** Admin "Unlimited list": adding an email grants an existing member right away; removing takes it back. */
+export const onCompEmailWrite = onDocumentWritten("compEmails/{email}", async (event) => {
+  const email = event.params.email;
+  let uid: string;
+  try { uid = (await getAuth().getUserByEmail(email)).uid; } catch { return; }
+  const ref = db.doc(`users/${uid}`);
+  if (event.data?.after.exists) await ref.set({ complimentaryUnlimited: true, compSource: "admin-list", compChecked: true }, { merge: true });
+  else if ((await ref.get()).get("compSource") === "admin-list") await ref.set({ complimentaryUnlimited: false, compSource: null }, { merge: true });
 });

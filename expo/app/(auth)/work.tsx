@@ -12,6 +12,7 @@ const OPTIONS: { id: WorkId; title: string }[] = [
   { id: "wfh", title: "Work from home" },
   { id: "full-time", title: "Full-time job" },
   { id: "part-time", title: "Part-time job" },
+  { id: "own-business", title: "Own business" },
   { id: "school", title: "Still in school" },
   { id: "government", title: "Government job" },
   { id: "labor", title: "Labor" },

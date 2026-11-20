@@ -53,6 +53,7 @@ const CATEGORY_MAP: Record<string, { match: (p: Profile) => boolean; subtitle: s
   // Work
   "Full-time job":     { match: p => /full.?time|ft\b/i.test((p as { work?: string }).work ?? ""),       subtitle: "Hustlers" },
   "Work from home":    { match: p => /wfh|home|remote/i.test((p as { work?: string }).work ?? ""),       subtitle: "Remote workers unite" },
+  "Own Business":      { match: p => /own.?business|business.?owner|self.?employ|entrepreneur/i.test((p as { work?: string }).work ?? ""), subtitle: "Business owners" },
   "Part-time job":     { match: p => /part.?time|pt\b/i.test((p as { work?: string }).work ?? ""),       subtitle: "Part-timers" },
   // Education
   "High School":       { match: p => /high.?school/i.test((p as { education?: string }).education ?? ""), subtitle: "High School" },

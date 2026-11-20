@@ -213,6 +213,12 @@ export default function ProfileScreen() {
             <Text style={s.reportText}>Review events or requested changes{waiting ? ` (${waiting} waiting)` : ""}</Text>
           </TouchableOpacity>
         )}
+        {isAdmin && (
+          <TouchableOpacity style={s.reportRow} onPress={() => router.push("/admin")} testID="admin-dashboard-link">
+            <ShieldCheck size={18} color={Colors.gold} />
+            <Text style={s.reportText}>Admin dashboard: members, Unlimited list, error log</Text>
+          </TouchableOpacity>
+        )}
 
         <TouchableOpacity
           style={s.signOut}

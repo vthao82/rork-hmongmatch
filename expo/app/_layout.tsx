@@ -13,6 +13,9 @@ import { TierProvider } from "@/providers/TierProvider";
 import { AuthProvider } from "@/providers/AuthProvider";
 import { BlockProvider } from "@/providers/BlockProvider";
 import { WebFrame } from "@/components/web/WebFrame";
+import { installErrorLogging } from "@/lib/errorLog";
+
+installErrorLogging();
 
 try { SplashScreen.preventAutoHideAsync(); } catch (e) { console.log("[splash] preventAutoHideAsync error", e); }
 const qc = new QueryClient();

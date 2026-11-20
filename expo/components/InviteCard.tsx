@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity, Image } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { Share2, Gift } from "lucide-react-native";
@@ -7,8 +7,22 @@ import { shareInvite, useMyReferral, FRIENDS_PER_REWARD } from "@/lib/invite";
 
 const LOGO = require("@/assets/images/hmongdate-logo.png");
 
+/** "6d 23h 14m left", refreshed every 30s. */
+function useTimeLeft(until: number): string {
+  const [now, setNow] = useState<number>(Date.now());
+  useEffect(() => {
+    if (until <= Date.now()) return;
+    const t = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(t);
+  }, [until]);
+  const ms = Math.max(0, until - now);
+  const d = Math.floor(ms / 864e5), h = Math.floor((ms % 864e5) / 36e5), m = Math.floor((ms % 36e5) / 6e4);
+  return d > 0 ? `${d}d ${h}h ${m}m left` : h > 0 ? `${h}h ${m}m left` : `${Math.max(m, 1)}m left`;
+}
+
 export default function InviteCard() {
   const { code, count, rewardUntil } = useMyReferral();
+  const left = useTimeLeft(rewardUntil);
   const progress = count % FRIENDS_PER_REWARD;
   const active = rewardUntil > Date.now();
   return (
@@ -39,8 +53,12 @@ export default function InviteCard() {
         </View>
         {active ? (
           <View style={s.reward} testID="invite-reward-active">
-            <Gift size={14} color={Colors.gold} />
-            <Text style={s.rewardText}>Free Unlimited until {new Date(rewardUntil).toLocaleDateString("en-US", { month: "short", day: "numeric" })}</Text>
+            <Gift size={16} color={Colors.gold} />
+            <View style={{ flex: 1 }}>
+              <Text style={s.rewardText}>Free Unlimited is on</Text>
+              <Text style={s.rewardSub}>Ends {new Date(rewardUntil).toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</Text>
+            </View>
+            <Text style={s.timer} testID="invite-reward-timer">{left}</Text>
           </View>
         ) : null}
       </LinearGradient>
@@ -64,6 +82,8 @@ const s = StyleSheet.create({
   dot: { width: 10, height: 10, borderRadius: 5, backgroundColor: "rgba(255,255,255,0.25)" },
   dotOn: { backgroundColor: Colors.gold },
   progress: { color: "rgba(255,255,255,0.85)", fontSize: 12, marginLeft: 6 },
-  reward: { flexDirection: "row", alignItems: "center", gap: 6, marginTop: 10 },
-  rewardText: { color: Colors.goldLight, fontSize: 12, fontWeight: "700" as const },
+  reward: { flexDirection: "row", alignItems: "center", gap: 10, marginTop: 10, padding: 12, borderRadius: 12, backgroundColor: "rgba(232,194,122,0.12)", borderWidth: 1, borderColor: "rgba(232,194,122,0.45)" },
+  rewardText: { color: Colors.goldLight, fontSize: 13, fontWeight: "800" as const },
+  rewardSub: { color: "rgba(255,255,255,0.7)", fontSize: 11, marginTop: 2 },
+  timer: { color: "#FFF", fontSize: 15, fontWeight: "800" as const },
 });

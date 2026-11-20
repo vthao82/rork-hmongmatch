@@ -25,6 +25,11 @@ export function EventRow({ e, onPress, badge }: { e: HmongEvent; onPress: () => 
   );
 }
 
+const STATE_FILTERS = ["Minnesota", "Wisconsin", "California", "North Carolina", "Michigan"];
+const ABBR: Record<string, string> = { mn: "minnesota", wi: "wisconsin", ca: "california", nc: "north carolina", mi: "michigan", co: "colorado", tx: "texas", ok: "oklahoma", ga: "georgia", ar: "arkansas", wa: "washington", or: "oregon", pa: "pennsylvania" };
+/** "MN", "Minn.", "Minnesota" → "minnesota" so filters match however the state was typed. */
+const stateKey = (v: string) => { const k = v.trim().toLowerCase().replace(/\./g, ""); return ABBR[k] ?? k; };
+
 export default function EventsScreen() {
   const router = useRouter();
   const { data } = useOnboarding();
@@ -34,12 +39,12 @@ export default function EventsScreen() {
   const mine = useMyEvents();
   const pendingCards = usePendingCards(isAdmin);
   const review = (id: string, status: "approved" | "rejected") => reviewCard(id, status).catch(() => Alert.alert("Couldn't update", "Please try again."));
-  const [nearOnly, setNearOnly] = useState<boolean>(false);
+  const [stateFilter, setStateFilter] = useState<string>("All");
 
   const todayStart = new Date().setHours(0, 0, 0, 0);
   const upcoming = useMemo(
-    () => approved.filter((e) => e.startsAt >= todayStart && (!nearOnly || !data.hometownState || e.state.toLowerCase() === data.hometownState.toLowerCase())),
-    [approved, todayStart, nearOnly, data.hometownState]
+    () => approved.filter((e) => e.startsAt >= todayStart && (stateFilter === "All" || stateKey(e.state) === stateKey(stateFilter))),
+    [approved, todayStart, stateFilter]
   );
   const myPending = mine.filter((e) => e.status !== "approved");
 
@@ -55,12 +60,14 @@ export default function EventsScreen() {
             <Plus size={18} color="#FFF" />
             <Text style={s.suggestText}>Suggest an event</Text>
           </TouchableOpacity>
-          {data.hometownState ? (
-            <TouchableOpacity style={[s.chip, nearOnly && s.chipOn]} onPress={() => setNearOnly((v) => !v)} testID="events-near-toggle">
-              <Text style={[s.chipText, nearOnly && s.chipTextOn]}>{data.hometownState} only</Text>
-            </TouchableOpacity>
-          ) : null}
         </View>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.chips} testID="events-state-filters">
+          {["All", ...STATE_FILTERS.filter((x) => stateKey(x) !== stateKey(data.hometownState ?? "")), ...(data.hometownState ? [data.hometownState] : [])].sort((a, b) => (a === "All" ? -1 : b === "All" ? 1 : 0)).map((st) => (
+            <TouchableOpacity key={st} style={[s.chip, stateFilter === st && s.chipOn]} onPress={() => setStateFilter(st)} testID={`events-filter-${stateKey(st) || "all"}`}>
+              <Text style={[s.chipText, stateFilter === st && s.chipTextOn]}>{st}</Text>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
 
         {isAdmin && pendingCards.length > 0 && (
           <View style={s.section} testID="requested-cards">
@@ -109,6 +116,7 @@ const s = StyleSheet.create({
   actions: { flexDirection: "row", gap: 10, marginTop: 18, alignItems: "center" },
   suggest: { flexDirection: "row", gap: 6, alignItems: "center", backgroundColor: Colors.primary, borderRadius: 999, paddingVertical: 11, paddingHorizontal: 18 },
   suggestText: { color: "#FFF", fontWeight: "800" as const },
+  chips: { gap: 8, paddingVertical: 4, marginBottom: 6 },
   chip: { borderWidth: 1, borderColor: Colors.border, borderRadius: 999, paddingVertical: 10, paddingHorizontal: 14 },
   chipOn: { backgroundColor: Colors.text, borderColor: Colors.text },
   chipText: { color: Colors.text, fontWeight: "600" as const },

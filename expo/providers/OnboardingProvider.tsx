@@ -11,7 +11,7 @@ export type GenderId = "man" | "woman" | "beyond";
 export type SeekingId = "men" | "women" | "beyond" | "everyone";
 export type LookingForId = "long" | "long-open" | "short-open" | "short" | "friends" | "unsure";
 export type DialectId = "green" | "white" | "other";
-export type WorkId = "wfh" | "full-time" | "part-time" | "school" | "government" | "labor" | "other";
+export type WorkId = "wfh" | "full-time" | "part-time" | "own-business" | "school" | "government" | "labor" | "other";
 
 export type Lifestyle = {
   drink?: string;

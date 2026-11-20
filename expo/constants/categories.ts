@@ -82,6 +82,7 @@ export const CATEGORY_GROUPS: CategoryGroup[] = [
     freeAccess: false,
     cards: [
       { id: "ft", label: "Full-time job", members: "1.4K", image: "https://static.prod-images.emergentagent.com/jobs/dac90db4-482a-4458-9b08-d5188ee46b56/images/edfe6d6841b6ac6710fa027d8e105a3e6bd95551fd207262a14033f73ee77d55.jpeg" },
+      { id: "own-biz", label: "Own Business", members: "390", image: "https://static.prod-images.emergentagent.com/jobs/dac90db4-482a-4458-9b08-d5188ee46b56/images/09176419d605f881d8625b0d4328188492b0e7d9ed5485e01a6f8bf381f2ff28.jpeg" },
       { id: "wfh", label: "Work from home", members: "612", image: "https://images.unsplash.com/photo-1593642632559-0c6d3fc62b89?w=600" },
       { id: "pt", label: "Part-time job", members: "388", image: "https://static.prod-images.emergentagent.com/jobs/dac90db4-482a-4458-9b08-d5188ee46b56/images/dd256e52f46bcf073b8322443cbf6980119b96359b339646d35171aed4a68fb3.jpeg" },
     ],
@@ -106,6 +107,7 @@ export const CATEGORY_GROUPS: CategoryGroup[] = [
     cards: [
       { id: "fishing", label: "Fishing", members: "510", image: "https://static.prod-images.emergentagent.com/jobs/dac90db4-482a-4458-9b08-d5188ee46b56/images/9bb32b29cf0ab6eb3bb30135a2f1094c8b6680d22765d517ae02c07fadd47c91.jpeg" },
       { id: "hiking", label: "Hiking", members: "812", image: "https://images.unsplash.com/photo-1551632811-561732d1e306?w=600" },
+      { id: "hunting", label: "Hunting", members: "430", image: "https://static.prod-images.emergentagent.com/jobs/dac90db4-482a-4458-9b08-d5188ee46b56/images/6a23763de1cc95cadc92ec408802e469304a8792ec96a6448e7158301ade6e94.jpeg" },
       { id: "camping", label: "Camping", members: "640", image: "https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=600" },
     ],
   },

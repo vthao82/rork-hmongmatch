@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo } from "react";
+import RewardCelebration from "@/components/RewardCelebration";
 import { Platform, View } from "react-native";
 import { Tabs } from "expo-router";
 import { Heart, MessageCircle, User, Compass, Home } from "lucide-react-native";
@@ -75,6 +76,7 @@ export default function HmongDateTabLayout() {
     </Tabs>
     <InAppNotificationBanner />
     <MatchCelebration />
+    <RewardCelebration />
     </View>
   );
 }

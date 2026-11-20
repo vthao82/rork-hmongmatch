@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useKeyboardHeight } from "@/lib/keyboard";
 import { View, Text, StyleSheet, TouchableOpacity, TextInput, Modal, ScrollView } from "react-native";
 import { Plus, X, ChevronRight } from "lucide-react-native";
 import Colors from "@/constants/colors";
@@ -8,6 +9,7 @@ type Props = { value: PromptAnswer[]; onChange: (v: PromptAnswer[]) => void };
 
 /** Pick up to 3 prompts and write answers (dark theme). */
 export default function PromptsEditor({ value, onChange }: Props) {
+  const kb = useKeyboardHeight();
   const [picking, setPicking] = useState<number | null>(null);
   const used = value.map((p) => p.q);
 
@@ -59,14 +61,15 @@ export default function PromptsEditor({ value, onChange }: Props) {
               <Text style={s.sheetTitle}>Pick a prompt</Text>
               <TouchableOpacity onPress={() => setPicking(null)} testID="prompt-picker-close"><X size={22} color="#FFF" /></TouchableOpacity>
             </View>
-            <ScrollView>
+            <ScrollView keyboardShouldPersistTaps="handled">
               {PROMPTS.filter((q) => !used.includes(q)).map((q) => (
                 <TouchableOpacity key={q} style={s.row} onPress={() => choose(q)} testID={`prompt-option-${PROMPTS.indexOf(q)}`}>
                   <Text style={s.rowText}>{q}</Text>
                   <ChevronRight size={18} color="rgba(255,255,255,0.4)" />
                 </TouchableOpacity>
               ))}
-            </ScrollView>
+            {kb > 0 ? <View style={{ height: kb }} /> : null}
+      </ScrollView>
           </View>
         </View>
       </Modal>

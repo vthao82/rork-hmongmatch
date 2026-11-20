@@ -216,7 +216,7 @@ export function useDiscoverProfiles() {
         const row = d.data();
         // Require at least one photo so swipe cards look right
         const hasPhotos = Array.isArray(row.photos) && row.photos.some((u: unknown) => typeof u === "string" && /^https?:\/\//i.test(u));
-        if (!hasPhotos) return;
+        if (!hasPhotos || row.blockedByAdmin === true) return;
         list.push(rowToProfile(d.id, row));
       });
 

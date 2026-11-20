@@ -1,4 +1,5 @@
 import { WEB_READABLE } from "@/lib/webSetup";
+import { useKeyboardHeight } from "@/lib/keyboard";
 import RedBackground from "@/components/RedBackground";
 import React, { useState, useCallback, useMemo, useEffect } from "react";
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Switch, Platform, Modal, TextInput, Alert, Linking } from "react-native";
@@ -121,6 +122,7 @@ function RangeSlider({ low, high, onChange, min = 18, max = 80 }: { low: number;
 }
 
 function PickerModal({ visible, config, selected, onClose, onSave, t }: { visible: boolean; config: PickerConfig | null; selected: string[]; onClose: () => void; onSave: (vals: string[]) => void; t: (k: any, vars?: any) => string }) {
+  const kb = useKeyboardHeight();
   const [local, setLocal] = useState<string[]>(selected);
   useEffect(() => { setLocal(selected); }, [selected, visible]);
   if (!config) return null;
@@ -138,7 +140,7 @@ function PickerModal({ visible, config, selected, onClose, onSave, t }: { visibl
             <Text style={s.modalSave}>{t("save")}</Text>
           </TouchableOpacity>
         </View>
-        <ScrollView contentContainerStyle={[{ padding: 16, paddingBottom: 40 }, WEB_READABLE]}>
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={[{ padding: 16, paddingBottom: 40 }, WEB_READABLE]}>
           {config.options.map(opt => {
             const on = local.includes(opt.value);
             return (
@@ -148,13 +150,15 @@ function PickerModal({ visible, config, selected, onClose, onSave, t }: { visibl
               </TouchableOpacity>
             );
           })}
-        </ScrollView>
+        {kb > 0 ? <View style={{ height: kb }} /> : null}
+      </ScrollView>
       </View>
     </Modal>
   );
 }
 
 export default function SettingsScreen() {
+  const kb = useKeyboardHeight();
   const ins = useSafeAreaInsets();
   const router = useRouter();
   const referral = useMyReferral();
@@ -554,6 +558,7 @@ export default function SettingsScreen() {
             >Use the web form.</Text>
           </Text>
         </Section>
+      {kb > 0 ? <View style={{ height: kb }} /> : null}
       </ScrollView>
 
       <PickerModal visible={picker !== null} config={picker} selected={picker ? values[picker.key] ?? [] : []} onClose={() => setPicker(null)} onSave={savePicker} t={t} />

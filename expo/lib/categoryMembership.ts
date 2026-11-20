@@ -12,7 +12,7 @@ export type MemberFields = {
 };
 
 const STATE_NAMES: Record<string, string> = { mn: "minnesota", ca: "california", wi: "wisconsin", nc: "north carolina" };
-const WORK_IDS: Record<string, string[]> = { ft: ["full-time"], pt: ["part-time"], wfh: ["wfh"] };
+const WORK_IDS: Record<string, string[]> = { ft: ["full-time"], pt: ["part-time"], wfh: ["wfh"], "own-biz": ["own-business"] };
 const EDU_NAMES: Record<string, string[]> = { hs: ["high school"], college: ["in college"], bachelor: ["bachelors", "bachelor"], masters: ["masters", "in grad school"], phd: ["phd"], trade: ["trade school"] };
 const lc = (v?: string | null) => (v ?? "").toString().toLowerCase();
 

@@ -1,10 +1,12 @@
 import React, { useState } from "react";
+import { useKeyboardHeight } from "@/lib/keyboard";
 import { Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, Alert, ActivityIndicator, View } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import Colors from "@/constants/colors";
 import { suggestEvent, parseEventDate } from "@/lib/events";
 
 export default function NewEventScreen() {
+  const kb = useKeyboardHeight();
   const router = useRouter();
   const [f, setF] = useState({ title: "", venue: "", city: "", state: "", dateText: "", timeText: "", description: "" });
   const [busy, setBusy] = useState<boolean>(false);
@@ -47,6 +49,7 @@ export default function NewEventScreen() {
         <TouchableOpacity style={s.btn} onPress={submit} disabled={busy} testID="event-submit">
           {busy ? <ActivityIndicator color="#FFF" /> : <Text style={s.btnText}>Send for review</Text>}
         </TouchableOpacity>
+      {kb > 0 ? <View style={{ height: kb }} /> : null}
       </ScrollView>
     </>
   );

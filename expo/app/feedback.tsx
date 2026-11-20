@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useKeyboardHeight } from "@/lib/keyboard";
 import { View, Text, StyleSheet, TextInput, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Image, Platform, Linking } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -23,6 +24,7 @@ function deviceInfo() {
 }
 
 export default function FeedbackScreen() {
+  const kb = useKeyboardHeight();
   const ins = useSafeAreaInsets();
   const router = useRouter();
   const [text, setText] = useState<string>("");
@@ -81,6 +83,7 @@ export default function FeedbackScreen() {
         <TouchableOpacity style={[s.submit, disabled && s.submitDisabled]} onPress={submit} disabled={disabled} testID="feedback-submit">
           {busy ? <ActivityIndicator color="#FFF" /> : <Text style={s.submitText}>Send feedback</Text>}
         </TouchableOpacity>
+      {kb > 0 ? <View style={{ height: kb }} /> : null}
       </ScrollView>
     </View>
   );

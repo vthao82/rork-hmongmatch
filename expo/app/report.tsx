@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useKeyboardHeight } from "@/lib/keyboard";
 import { View, Text, StyleSheet, TextInput, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
 import { Stack, useRouter, useLocalSearchParams } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -18,6 +19,7 @@ const REASONS = [
 ];
 
 export default function ReportScreen() {
+  const kb = useKeyboardHeight();
   const ins = useSafeAreaInsets();
   const router = useRouter();
   // `userId` (target of the report) + `userName` (for display) are optional —
@@ -68,7 +70,7 @@ export default function ReportScreen() {
         <Text style={s.title}>{reportedName ? `Report ${reportedName}` : "Report a problem"}</Text>
         <View style={{ width: 22 }} />
       </View>
-      <ScrollView contentContainerStyle={s.scroll}>
+      <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={s.scroll}>
         <View style={s.banner}>
           <AlertTriangle size={18} color={Colors.crimsonLight} />
           <Text style={s.bannerText}>Reports are confidential. Help us keep Hmong Date safe.</Text>
@@ -100,6 +102,7 @@ export default function ReportScreen() {
         <TouchableOpacity style={[s.submit, (!reason || busy) && s.submitDisabled]} onPress={submit} disabled={!reason || busy} testID="submit-report">
           {busy ? <ActivityIndicator color="#FFF" /> : <Text style={s.submitText}>Submit report</Text>}
         </TouchableOpacity>
+      {kb > 0 ? <View style={{ height: kb }} /> : null}
       </ScrollView>
     </View>
   );
