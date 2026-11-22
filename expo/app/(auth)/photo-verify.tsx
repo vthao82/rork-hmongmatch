@@ -11,6 +11,9 @@ import PillButton from "@/components/onboarding/PillButton";
 import { useOnboarding } from "@/providers/OnboardingProvider";
 import { auth, db } from "@/lib/firebase";
 import { uploadPhotoAsync } from "@/lib/photoUpload";
+import { WebcamCapture } from "@/components/web/WebcamCapture";
+
+const WEB = Platform.OS === "web";
 
 export default function PhotoVerifyScreen() {
   const { update } = useOnboarding();
@@ -18,6 +21,7 @@ export default function PhotoVerifyScreen() {
   const onboarding = mode === "onboarding";
   const [selfie, setSelfie] = useState<string | undefined>(undefined);
   const [busy, setBusy] = useState<boolean>(false);
+  const [camOpen, setCamOpen] = useState<boolean>(false);
 
   const advance = () => {
     if (onboarding) {
@@ -33,6 +37,7 @@ export default function PhotoVerifyScreen() {
   };
 
   const takeSelfie = async () => {
+    if (WEB) { setCamOpen(true); return; }
     try {
       if (Platform.OS !== "web") {
         const perm = await ImagePicker.requestCameraPermissionsAsync();
@@ -112,7 +117,16 @@ export default function PhotoVerifyScreen() {
         </Pressable>
       )}
 
+      {WEB && (
+        <View style={s.webBox} testID="verify-web-help">
+          <Text style={s.webTitle}>Signing up on a computer?</Text>
+          <Text style={s.webTxt}>Use your webcam: tap Take selfie and allow camera access when your browser asks.</Text>
+          <Text style={s.webTxt}>No webcam? Tap Do this later, then open the Hmong Date app on your phone and go to Profile, then Verify your photos.</Text>
+        </View>
+      )}
+
       <Text style={s.note}>Uploads from your library are not allowed for verification. You can skip this and verify later — your profile will not show the blue verified badge until you complete it.</Text>
+      {WEB && <WebcamCapture visible={camOpen} onClose={() => setCamOpen(false)} onCapture={(uri) => { setSelfie(uri); setCamOpen(false); }} />}
     </OnboardingScreen>
   );
 }
@@ -126,6 +140,9 @@ const s = StyleSheet.create({
   placeholder: { flex: 1, alignItems: "center", justifyContent: "center" },
   retake: { color: Colors.gold, textAlign: "center" as const, fontWeight: "700" as const, fontSize: 14 },
   note: { color: Colors.dark.textDim, fontSize: 12, marginTop: 24, lineHeight: 18 },
+  webBox: { marginTop: 22, padding: 14, borderRadius: 14, backgroundColor: "rgba(212,168,67,0.1)", borderWidth: 1, borderColor: "rgba(212,168,67,0.35)", gap: 6 },
+  webTitle: { color: Colors.goldLight, fontSize: 14, fontWeight: "800" as const },
+  webTxt: { color: Colors.dark.text, fontSize: 13, lineHeight: 19 },
   skipBtn: { paddingVertical: 6, alignItems: "center" },
   skipText: { color: Colors.dark.textDim, fontSize: 13, fontWeight: "600" as const },
 });

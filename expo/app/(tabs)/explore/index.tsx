@@ -106,7 +106,9 @@ export default function BrowseScreen() {
   // a different person on rewind.
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
   const [history, setHistory] = useState<{ id: string; liked: boolean }[]>([]);
-  const cardHeight = W.height - ins.top - ins.bottom - 220;
+  // Browsers: fit the card to the space actually left so the buttons never fall below the tab bar
+  const [areaH, setAreaH] = useState<number>(0);
+  const cardHeight = Platform.OS === "web" && areaH ? Math.max(320, areaH - 96) : W.height - ins.top - ins.bottom - 220;
 
   // Queue is liveProfiles minus session dismissals. We always look at queue[0]
   // — after a swipe the dismissed card drops out and the next person slides
@@ -218,7 +220,7 @@ export default function BrowseScreen() {
         </View>
       </View>
 
-      <View style={[st.cardArea, Platform.OS === "web" && { width: "100%", maxWidth: CARD_MAX, alignSelf: "center" }]}>
+      <View style={[st.cardArea, Platform.OS === "web" && { width: "100%", maxWidth: CARD_MAX, alignSelf: "center" }]} onLayout={Platform.OS === "web" ? (e) => setAreaH(e.nativeEvent.layout.height) : undefined}>
         {loadingProfiles ? (
           <View style={st.empty}>
             <ActivityIndicator size="large" color={Colors.gold} />
