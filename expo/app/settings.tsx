@@ -162,7 +162,8 @@ export default function SettingsScreen() {
   const ins = useSafeAreaInsets();
   const router = useRouter();
   const referral = useMyReferral();
-  const { isPaid, subEndsAt, cancelSubscription } = useTier();
+  const { isPaid, hasStoreSub, subEndsAt, freeUntil, manageSubscription } = useTier();
+  const formatEndDate = (ts: number) => new Date(ts).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
   const t = useT();
 
   const [worldwide, setWorldwide] = useState<boolean>(false);
@@ -294,37 +295,33 @@ export default function SettingsScreen() {
             <Crown size={22} color={Colors.accent} />
             <View style={{ flex: 1 }}>
               <Text style={s.planTitle}>{isPaid ? "Hmong Date Unlimited" : "Hmong Date Free"}</Text>
-              <Text style={s.planSub}>{isPaid ? (subEndsAt ? `Ends ${new Date(subEndsAt).toLocaleDateString()}` : t("allFeaturesUnlocked")) : t("upgradeForUnlimited")}</Text>
+              <Text style={s.planSub}>{isPaid ? (subEndsAt ? `Ends ${formatEndDate(subEndsAt)}` : freeUntil ? `Free until ${formatEndDate(freeUntil)}` : t("allFeaturesUnlocked")) : t("upgradeForUnlimited")}</Text>
             </View>
             <Text style={s.upgradeLink}>{isPaid ? t("manage") : t("upgrade")}</Text>
           </TouchableOpacity>
-          {isPaid && (
+          {hasStoreSub && (
             <TouchableOpacity
               style={[s.card, { marginTop: 8, alignItems: "center" }]}
               onPress={() => {
                 if (subEndsAt) {
-                  Alert.alert("Already cancelled", `Your Unlimited access will end on ${new Date(subEndsAt).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })}. Re-subscribe anytime.`);
+                  Alert.alert("Auto-renew is off", `Your Unlimited access ends on ${formatEndDate(subEndsAt)}. You can turn it back on in Google Play.`, [
+                    { text: "OK", style: "cancel" },
+                    { text: "Open Google Play", onPress: () => void manageSubscription() },
+                  ]);
                   return;
                 }
                 Alert.alert(
-                  "Cancel subscription?",
-                  "You will keep Unlimited until the end of your current billing cycle. After that you'll be on the Free plan.",
+                  "Cancel in Google Play",
+                  "Subscriptions are cancelled in Google Play. You keep Unlimited until the end of your billing period, then you're on the Free plan.",
                   [
                     { text: "Keep Unlimited", style: "cancel" },
-                    {
-                      text: "Cancel subscription",
-                      style: "destructive",
-                      onPress: async () => {
-                        const res = await cancelSubscription();
-                        Alert.alert("Subscription cancelled", `Your Unlimited access will end on ${new Date(res.endsAt).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" })}. You can re-subscribe anytime.`);
-                      },
-                    },
+                    { text: "Open Google Play", onPress: async () => { if (!(await manageSubscription())) Alert.alert("Couldn't open Google Play", "Open the Play Store → Payments & subscriptions → Subscriptions."); } },
                   ]
                 );
               }}
               testID="cancel-sub-settings"
             >
-              <Text style={[s.link, { color: Colors.primary }]}>{subEndsAt ? "Cancellation pending" : "Cancel subscription"}</Text>
+              <Text style={[s.link, { color: Colors.primary }]}>{subEndsAt ? "Auto-renew off · manage in Google Play" : "Cancel subscription"}</Text>
             </TouchableOpacity>
           )}
         </Section>

@@ -59,7 +59,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const t = useT();
   const { data } = useOnboarding();
-  const { isPaid, subEndsAt, cancelSubscription } = useTier();
+  const { isPaid, hasStoreSub, subEndsAt, freeUntil, manageSubscription } = useTier();
   const { signOut } = useAuth();
   const isAdmin = useIsAdmin();
   const pendingEvents = usePendingEvents(isAdmin);
@@ -137,37 +137,34 @@ export default function ProfileScreen() {
               <Text style={s.goldWordmark}>Hmong Date</Text>
               <View style={s.goldChip}><Text style={s.goldChipText}>{isPaid ? "UNLIMITED" : "FREE"}</Text></View>
             </View>
-            {isPaid ? (
+            {hasStoreSub ? (
               <TouchableOpacity
                 style={[s.upgradeBtn, { backgroundColor: "rgba(255,255,255,0.08)", borderWidth: 1, borderColor: "rgba(255,255,255,0.2)" }]}
                 onPress={() => {
                   if (subEndsAt) {
-                    Alert.alert("Already cancelled", `Your Unlimited access will end on ${formatEndDate(subEndsAt)}. Re-subscribe anytime.`);
+                    Alert.alert("Auto-renew is off", `Your Unlimited access ends on ${formatEndDate(subEndsAt)}. You can turn it back on in Google Play.`, [
+                      { text: "OK", style: "cancel" },
+                      { text: "Open Google Play", onPress: () => void manageSubscription() },
+                    ]);
                     return;
                   }
                   Alert.alert(
-                    "Cancel subscription?",
-                    "You will keep Unlimited until the end of your current billing cycle. After that you'll be on the Free plan.",
+                    "Cancel in Google Play",
+                    "Subscriptions are cancelled in Google Play. You keep Unlimited until the end of your billing period, then you're on the Free plan.",
                     [
                       { text: "Keep Unlimited", style: "cancel" },
-                      {
-                        text: "Cancel subscription",
-                        style: "destructive",
-                        onPress: async () => {
-                          const res = await cancelSubscription();
-                          Alert.alert(
-                            "Subscription cancelled",
-                            `Your Unlimited access will end on ${formatEndDate(res.endsAt)}. You can re-subscribe anytime.`
-                          );
-                        },
-                      },
+                      { text: "Open Google Play", onPress: async () => { if (!(await manageSubscription())) Alert.alert("Couldn't open Google Play", "Open the Play Store → Payments & subscriptions → Subscriptions."); } },
                     ]
                   );
                 }}
                 testID="cancel-sub"
               >
-                <Text style={[s.upgradeText, { color: "#FFF" }]}>{subEndsAt ? "Cancelled" : "Cancel"}</Text>
+                <Text style={[s.upgradeText, { color: "#FFF" }]}>{subEndsAt ? `Ends ${formatEndDate(subEndsAt)}` : "Manage"}</Text>
               </TouchableOpacity>
+            ) : isPaid ? (
+              <View style={[s.upgradeBtn, { backgroundColor: "rgba(255,255,255,0.08)", borderWidth: 1, borderColor: "rgba(255,255,255,0.2)" }]} testID="gift-status">
+                <Text style={[s.upgradeText, { color: "#FFF" }]}>{freeUntil ? `Free until ${formatEndDate(freeUntil)}` : "Gift"}</Text>
+              </View>
             ) : (
               <View style={s.upgradeBtn}><Text style={s.upgradeText}>{t("upgrade")}</Text></View>
             )}

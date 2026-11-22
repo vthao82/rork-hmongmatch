@@ -1,7 +1,13 @@
 import createContextHook from "@nkzw/create-context-hook";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useCallback, useEffect, useState } from "react";
+import { AppState, Linking, Platform } from "react-native";
 import {
+  ANDROID_PACKAGE,
+  PLAY_PRODUCT_ID,
+  pickUnlimitedPackage,
+  storeSubFrom,
+  type StoreSub,
   fetchCurrentOffering,
   fetchCustomerInfo,
   hasUnlimitedEntitlement,
@@ -46,7 +52,6 @@ export const UNLIMITED_LIMITS = {
 };
 
 const KEY = "hmongdate.tier.v1";
-const SUB_END_KEY = "hmongdate.subEndsAt.v1";
 const USAGE_KEY = "hmongdate.usage.v2";
 
 type Usage = {
@@ -92,7 +97,9 @@ function normalizeTier(raw: string | null): Tier {
 
 export const [TierProvider, useTier] = createContextHook(() => {
   const [tier, setTier] = useState<Tier>("free");
-  const [subEndsAt, setSubEndsAt] = useState<number | null>(null);
+  // Real store subscription status from RevenueCat (null until loaded)
+  const [sub, setSub] = useState<StoreSub | null>(null);
+  const [storePrice, setStorePrice] = useState<string | null>(null);
   const [usage, setUsage] = useState<Usage>(emptyUsage());
   const [hydrated, setHydrated] = useState<boolean>(false);
   const [showLimitModal, setShowLimitModal] = useState<boolean>(false);
@@ -105,23 +112,18 @@ export const [TierProvider, useTier] = createContextHook(() => {
   useEffect(() => {
     let cancelled = false;
     setHydrated(false);
-    setTier("free"); setSubEndsAt(null); setUsage(emptyUsage());
+    setTier("free"); setSub(null); setUsage(emptyUsage());
     (async () => {
       try {
-        const [t, u, e] = await Promise.all([
+        const [t, u] = await Promise.all([
           AsyncStorage.getItem(KEY + sfx),
           AsyncStorage.getItem(USAGE_KEY + sfx),
-          AsyncStorage.getItem(SUB_END_KEY + sfx),
         ]);
         if (cancelled) return;
         const normalized = normalizeTier(t);
         setTier(normalized);
         if (t && t !== normalized) {
           try { await AsyncStorage.setItem(KEY + sfx, normalized); } catch (_e) {}
-        }
-        if (e) {
-          const parsed = parseInt(e, 10);
-          if (!isNaN(parsed) && parsed > 0) setSubEndsAt(parsed);
         }
         if (u && u !== "null") {
           try { const parsed = JSON.parse(u) as Usage; if (parsed?.date === today()) setUsage({ ...emptyUsage(), ...parsed }); else setUsage(emptyUsage()); } catch (_e) { setUsage(emptyUsage()); }
@@ -155,21 +157,25 @@ export const [TierProvider, useTier] = createContextHook(() => {
       await identifyRevenueCatUser(uid);
       const info = await fetchCustomerInfo();
       if (disposed) return;
-      if (info) {
-        const entitled = hasUnlimitedEntitlement(info);
-        setTier(entitled ? "unlimited" : "free");
-        try { await AsyncStorage.setItem(KEY + sfx, entitled ? "unlimited" : "free"); } catch (_e) {}
-      }
+      if (info) apply(info);
+      const offering = await fetchCurrentOffering();
+      const pkg = offering ? pickUnlimitedPackage(offering) : null;
+      if (!disposed && pkg) setStorePrice(pkg.product.priceString);
     })();
-    const unsub = onCustomerInfoUpdate((info) => {
-      if (disposed || !uid) return;
+    function apply(info: Parameters<typeof hasUnlimitedEntitlement>[0]) {
+      if (disposed || !uid || !info) return;
       const entitled = hasUnlimitedEntitlement(info);
       setTier(entitled ? "unlimited" : "free");
+      setSub(storeSubFrom(info));
       AsyncStorage.setItem(KEY + sfx, entitled ? "unlimited" : "free").catch(() => {});
-    });
+    }
+    const unsub = onCustomerInfoUpdate(apply);
+    // Coming back from Google Play (e.g. after cancelling) → re-check the real status
+    const appSub = AppState.addEventListener("change", (st) => { if (st === "active") fetchCustomerInfo().then(apply); });
     return () => {
       disposed = true;
       unsub();
+      appSub.remove();
     };
   }, [hydrated, uid, sfx]);
 
@@ -181,7 +187,7 @@ export const [TierProvider, useTier] = createContextHook(() => {
     }
 
     // 2. Prefer the monthly package; fall back to the first available.
-    const pkg = offering.monthly ?? offering.availablePackages[0];
+    const pkg = pickUnlimitedPackage(offering);
     if (!pkg) {
       return { ok: false, error: "No subscription plans are available yet." };
     }
@@ -194,53 +200,30 @@ export const [TierProvider, useTier] = createContextHook(() => {
       return { ok: false, error: "Purchase completed but entitlement not yet active. Try Restore Purchases in a moment." };
     }
 
-    // 4. Success — flip tier and clear any pending cancellation
+    // 4. Success — flip tier and load the real renewal status
     await setTierAndPersist("unlimited");
-    setSubEndsAt(null);
-    try { await AsyncStorage.removeItem(SUB_END_KEY + sfx); } catch (_e) {}
+    const info = await fetchCustomerInfo();
+    if (info) setSub(storeSubFrom(info));
     return { ok: true };
   }, [setTierAndPersist]);
 
-  /**
-   * Cancel the subscription but keep Unlimited active until the next renewal
-   * date. Returns the timestamp until which access remains.
-   */
-  const cancelSubscription = useCallback(async (): Promise<{ ok: boolean; endsAt: number }> => {
-    // 30-day grace by default. When RevenueCat is wired, replace with the
-    // real `expirationDate` from the customer info.
-    const endsAt = Date.now() + 30 * 24 * 60 * 60 * 1000;
-    setSubEndsAt(endsAt);
-    try { await AsyncStorage.setItem(SUB_END_KEY + sfx, String(endsAt)); } catch (_e) {}
-    return { ok: true, endsAt };
-  }, [sfx]);
-
-  // Effective paid state — flips to free automatically once the subscription
-  // grace period expires (checked once on hydration; UI re-renders normally).
-  useEffect(() => {
-    if (tier === "unlimited" && subEndsAt && subEndsAt < Date.now()) {
-      // Past the end date — downgrade silently
-      setTier("free");
-      setSubEndsAt(null);
-      AsyncStorage.setItem(KEY + sfx, "free").catch(() => {});
-      AsyncStorage.removeItem(SUB_END_KEY + sfx).catch(() => {});
-    }
-  }, [tier, subEndsAt, sfx]);
+  // Cancelling happens in Google Play; the status above refreshes when the member comes back
+  const manageSubscription = useCallback(async (): Promise<boolean> => {
+    const fallback = Platform.OS === "ios"
+      ? "itms-apps://apps.apple.com/account/subscriptions"
+      : `https://play.google.com/store/account/subscriptions?sku=${PLAY_PRODUCT_ID}&package=${ANDROID_PACKAGE}`;
+    const url = sub?.managementURL ?? fallback;
+    if (Platform.OS === "web") { window.open(url, "_blank"); return true; }
+    try { await Linking.openURL(url); return true; } catch (_e) { return false; }
+  }, [sub?.managementURL]);
 
   const restorePurchases = useCallback(async (): Promise<{ ok: boolean; entitled: boolean; error?: string }> => {
     const res = await rcRestorePurchases();
     if (!res.ok) return { ok: false, entitled: false, error: res.error };
-    if (res.entitled) {
-      await setTierAndPersist("unlimited");
-      setSubEndsAt(null);
-      try { await AsyncStorage.removeItem(SUB_END_KEY + sfx); } catch (_e) {}
-    }
+    if (res.entitled) await setTierAndPersist("unlimited");
+    const info = await fetchCustomerInfo();
+    if (info) setSub(storeSubFrom(info));
     return { ok: true, entitled: res.entitled };
-  }, [setTierAndPersist]);
-
-  // Legacy alias used by older screens. Still expects a tier argument but we now
-  // coerce to "unlimited" regardless of input.
-  const upgrade = useCallback(async (_legacyTier?: string) => {
-    await setTierAndPersist("unlimited");
   }, [setTierAndPersist]);
 
   // Complimentary Unlimited (e.g. Google Play reviewer) — set only by an admin, rules block self-grant
@@ -264,6 +247,12 @@ export const [TierProvider, useTier] = createContextHook(() => {
   }, [referralUntil]);
 
   const isPaid = tier === "unlimited" || complimentary || referralUntil > Date.now();
+  // Paying through the store (vs. a free gift); only these members can cancel/manage
+  const hasStoreSub = tier === "unlimited";
+  // Set only when RevenueCat reports auto-renew is off
+  const subEndsAt = hasStoreSub && sub?.active && !sub.willRenew ? sub.expiresAt : null;
+  const freeUntil = !hasStoreSub && !complimentary && referralUntil > Date.now() ? referralUntil : null;
+  const priceLabel = storePrice ? `${storePrice} / mo` : UNLIMITED_PRICE;
 
   const checkAndPrompt = useCallback((next: Usage) => {
     if (isPaid) return;
@@ -401,8 +390,10 @@ export const [TierProvider, useTier] = createContextHook(() => {
     isPaid,
     boostsLeft,
     subEndsAt,
-    cancelSubscription,
-    upgrade,
+    hasStoreSub,
+    freeUntil,
+    priceLabel,
+    manageSubscription,
     purchaseUnlimited,
     restorePurchases,
     usage,

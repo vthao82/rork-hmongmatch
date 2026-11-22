@@ -7,19 +7,10 @@ import { LinearGradient } from "expo-linear-gradient";
 import { UNLIMITED_FEATURES } from "@/constants/plan";
 import Colors from "@/constants/colors";
 import { useT } from "@/providers/LanguageProvider";
-import { useTier, UNLIMITED_PRICE, UNLIMITED_PRICE_LABEL } from "@/providers/TierProvider";
-import { fetchCustomerInfo } from "@/lib/revenuecat";
+import { useTier } from "@/providers/TierProvider";
 
 const WEB = Platform.OS === "web";
 const STORE = Platform.OS === "ios" ? "Apple ID" : WEB ? "card" : "Google Play";
-
-/** Play Store product ID — must match the SKU created in Google Play Console. */
-const PRODUCT_ID = "unlimited_monthly";
-const PACKAGE_NAME = "com.hmongdate.app";
-
-/** Deep-link URLs for managing the subscription in the platform store. */
-const MANAGE_URL_IOS = "itms-apps://apps.apple.com/account/subscriptions";
-const MANAGE_URL_ANDROID = `https://play.google.com/store/account/subscriptions?sku=${PRODUCT_ID}&package=${PACKAGE_NAME}`;
 
 type Perk = { label: string; desc?: string };
 
@@ -27,7 +18,7 @@ export default function SubscriptionScreen() {
   const ins = useSafeAreaInsets();
   const router = useRouter();
   const t = useT();
-  const { isPaid, purchaseUnlimited, restorePurchases } = useTier();
+  const { isPaid, hasStoreSub, subEndsAt, priceLabel, purchaseUnlimited, restorePurchases, manageSubscription } = useTier();
   const [busy, setBusy] = useState<"buy" | "restore" | null>(null);
 
   const PERKS: Perk[] = UNLIMITED_FEATURES.map((label) => ({ label }));
@@ -69,24 +60,14 @@ export default function SubscriptionScreen() {
   };
 
   const manageInStore = async () => {
-    if (WEB) {
-      const url = (await fetchCustomerInfo())?.managementURL;
-      if (url) window.open(url, "_blank");
-      else Alert.alert("Manage subscription", "If you subscribed on your phone, manage it in Google Play or the App Store. For web subscriptions, use the link in your receipt email.");
-      return;
-    }
-    const url = Platform.OS === "ios" ? MANAGE_URL_IOS : MANAGE_URL_ANDROID;
-    Linking.openURL(url).catch(() =>
-      Alert.alert(
-        "Couldn't open store",
-        Platform.OS === "ios"
-          ? "Open Settings → [Your Name] → Subscriptions to manage Hmong Date Unlimited."
-          : "Open the Google Play Store → Menu → Subscriptions to manage Hmong Date Unlimited."
-      )
+    if (await manageSubscription()) return;
+    Alert.alert(
+      "Couldn't open store",
+      Platform.OS === "ios"
+        ? "Open Settings → [Your Name] → Subscriptions to manage Hmong Date Unlimited."
+        : "Open the Google Play Store → Menu → Payments & subscriptions → Subscriptions to manage Hmong Date Unlimited."
     );
   };
-
-
 
   return (
     <View style={[s.ct, { paddingTop: ins.top }]}>
@@ -118,7 +99,7 @@ export default function SubscriptionScreen() {
             <Text style={s.brand}>Hmong Date</Text>
             <Text style={s.planName}>UNLIMITED</Text>
             <View style={s.priceRow}>
-              <Text style={s.priceBig}>{UNLIMITED_PRICE}</Text>
+              <Text style={s.priceBig} testID="sub-price">{priceLabel}</Text>
             </View>
             <Text style={s.heroSub}>One plan. Everything unlocked.</Text>
           </LinearGradient>
@@ -157,7 +138,7 @@ export default function SubscriptionScreen() {
               <Text style={s.restoreTxt}>Restore purchases</Text>
             )}
           </TouchableOpacity>
-          {isPaid && (
+          {hasStoreSub && (
             <TouchableOpacity
               onPress={() => void manageInStore()}
               style={s.restoreBtn}
@@ -171,7 +152,7 @@ export default function SubscriptionScreen() {
         </View>
 
         <Text style={s.legal}>
-          Hmong Date Unlimited auto-renews monthly at {UNLIMITED_PRICE} until cancelled. Payment
+          Hmong Date Unlimited auto-renews monthly at {priceLabel} until cancelled. Payment
           is charged to your {STORE} {WEB ? "" : "account "}at
           confirmation of purchase. Your subscription renews within 24 hours before the end of the
           current period unless auto-renewal is turned off at least 24 hours before that. You can
@@ -193,7 +174,7 @@ export default function SubscriptionScreen() {
         {isPaid ? (
           <View style={[s.cta, { backgroundColor: "rgba(255,255,255,0.08)", borderWidth: 1, borderColor: "rgba(255,255,255,0.2)" }]}>
             <Crown size={18} color={Colors.accent} />
-            <Text style={[s.ctaText, { color: "#FFF", marginLeft: 8 }]}>You&apos;re on Unlimited</Text>
+            <Text style={[s.ctaText, { color: "#FFF", marginLeft: 8 }]} testID="sub-status">{subEndsAt ? `Unlimited ends ${new Date(subEndsAt).toLocaleDateString()}` : "You're on Unlimited"}</Text>
           </View>
         ) : (
           <TouchableOpacity activeOpacity={0.9} onPress={buy} disabled={!!busy} testID="buy-unlimited">
@@ -206,7 +187,7 @@ export default function SubscriptionScreen() {
               {busy === "buy" ? (
                 <ActivityIndicator color="#FFF" />
               ) : (
-                <Text style={s.ctaText}>GO UNLIMITED · {UNLIMITED_PRICE_LABEL}</Text>
+                <Text style={s.ctaText}>GO UNLIMITED · {priceLabel.replace(" / ", "/")}</Text>
               )}
             </LinearGradient>
           </TouchableOpacity>

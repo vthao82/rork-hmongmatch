@@ -110,6 +110,27 @@ export async function fetchCurrentOffering(): Promise<PurchasesOffering | null> 
   }
 }
 
+export const PLAY_PRODUCT_ID = "unlimited_monthly";
+export const ANDROID_PACKAGE = "com.hmongdate.app";
+
+/** Monthly package from the Current offering (falls back to the first one). */
+export function pickUnlimitedPackage(offering: PurchasesOffering): PurchasesPackage | null {
+  return offering.monthly ?? offering.availablePackages[0] ?? null;
+}
+
+export type StoreSub = { active: boolean; willRenew: boolean; expiresAt: number | null; managementURL: string | null };
+
+/** Real renewal status of the "unlimited" entitlement as RevenueCat reports it. */
+export function storeSubFrom(info: CustomerInfo): StoreSub {
+  const e = info.entitlements.active[UNLIMITED_ENTITLEMENT];
+  return {
+    active: !!e,
+    willRenew: e?.willRenew ?? false,
+    expiresAt: e?.expirationDate ? Date.parse(e.expirationDate) : null,
+    managementURL: info.managementURL ?? null,
+  };
+}
+
 /** Convenience: is the "unlimited" entitlement currently active for this user? */
 export function hasUnlimitedEntitlement(info: CustomerInfo | null | undefined): boolean {
   if (!info) return false;
