@@ -212,9 +212,9 @@ export const [TierProvider, useTier] = createContextHook(() => {
     const fallback = Platform.OS === "ios"
       ? "itms-apps://apps.apple.com/account/subscriptions"
       : `https://play.google.com/store/account/subscriptions?sku=${PLAY_PRODUCT_ID}&package=${ANDROID_PACKAGE}`;
-    const url = sub?.managementURL ?? fallback;
-    if (Platform.OS === "web") { window.open(url, "_blank"); return true; }
-    try { await Linking.openURL(url); return true; } catch (_e) { return false; }
+    const url = sub?.managementURL ?? (Platform.OS === "web" ? null : fallback);
+    if (Platform.OS === "web") { if (!url) return false; window.open(url, "_blank"); return true; }
+    try { await Linking.openURL(url ?? fallback); return true; } catch (_e) { return false; }
   }, [sub?.managementURL]);
 
   const restorePurchases = useCallback(async (): Promise<{ ok: boolean; entitled: boolean; error?: string }> => {
@@ -252,6 +252,9 @@ export const [TierProvider, useTier] = createContextHook(() => {
   // Set only when RevenueCat reports auto-renew is off
   const subEndsAt = hasStoreSub && sub?.active && !sub.willRenew ? sub.expiresAt : null;
   const freeUntil = !hasStoreSub && !complimentary && referralUntil > Date.now() ? referralUntil : null;
+  // Where the member manages billing: the store they actually bought from
+  const store = sub?.store ?? (Platform.OS === "web" ? null : Platform.OS === "ios" ? "APP_STORE" : "PLAY_STORE");
+  const storeName = store === "PLAY_STORE" ? "Google Play" : store === "APP_STORE" ? "the App Store" : "your billing page";
   const priceLabel = storePrice ? `${storePrice} / mo` : UNLIMITED_PRICE;
 
   const checkAndPrompt = useCallback((next: Usage) => {
@@ -394,6 +397,7 @@ export const [TierProvider, useTier] = createContextHook(() => {
     freeUntil,
     priceLabel,
     manageSubscription,
+    storeName,
     purchaseUnlimited,
     restorePurchases,
     usage,

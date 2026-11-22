@@ -59,7 +59,7 @@ export default function ProfileScreen() {
   const router = useRouter();
   const t = useT();
   const { data } = useOnboarding();
-  const { isPaid, hasStoreSub, subEndsAt, freeUntil, manageSubscription } = useTier();
+  const { isPaid, hasStoreSub, subEndsAt, freeUntil, manageSubscription, storeName } = useTier();
   const { signOut } = useAuth();
   const isAdmin = useIsAdmin();
   const pendingEvents = usePendingEvents(isAdmin);
@@ -142,18 +142,18 @@ export default function ProfileScreen() {
                 style={[s.upgradeBtn, { backgroundColor: "rgba(255,255,255,0.08)", borderWidth: 1, borderColor: "rgba(255,255,255,0.2)" }]}
                 onPress={() => {
                   if (subEndsAt) {
-                    Alert.alert("Auto-renew is off", `Your Unlimited access ends on ${formatEndDate(subEndsAt)}. You can turn it back on in Google Play.`, [
+                    Alert.alert("Auto-renew is off", `Your Unlimited access ends on ${formatEndDate(subEndsAt)}. You can turn it back on in ${storeName}.`, [
                       { text: "OK", style: "cancel" },
-                      { text: "Open Google Play", onPress: () => void manageSubscription() },
+                      { text: `Open ${storeName}`, onPress: () => void manageSubscription() },
                     ]);
                     return;
                   }
                   Alert.alert(
-                    "Cancel in Google Play",
-                    "Subscriptions are cancelled in Google Play. You keep Unlimited until the end of your billing period, then you're on the Free plan.",
+                    `Cancel in ${storeName}`,
+                    `Subscriptions are cancelled in ${storeName}. You keep Unlimited until the end of your billing period, then you're on the Free plan.`,
                     [
                       { text: "Keep Unlimited", style: "cancel" },
-                      { text: "Open Google Play", onPress: async () => { if (!(await manageSubscription())) Alert.alert("Couldn't open Google Play", "Open the Play Store → Payments & subscriptions → Subscriptions."); } },
+                      { text: `Open ${storeName}`, onPress: async () => { if (!(await manageSubscription())) Alert.alert("Couldn't open it", storeName === "Google Play" ? "Open the Play Store → Payments & subscriptions → Subscriptions." : "Use the manage link in your receipt email."); } },
                     ]
                   );
                 }}

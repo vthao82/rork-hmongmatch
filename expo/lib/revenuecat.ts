@@ -118,7 +118,7 @@ export function pickUnlimitedPackage(offering: PurchasesOffering): PurchasesPack
   return offering.monthly ?? offering.availablePackages[0] ?? null;
 }
 
-export type StoreSub = { active: boolean; willRenew: boolean; expiresAt: number | null; managementURL: string | null };
+export type StoreSub = { active: boolean; willRenew: boolean; expiresAt: number | null; managementURL: string | null; store: string | null };
 
 /** Real renewal status of the "unlimited" entitlement as RevenueCat reports it. */
 export function storeSubFrom(info: CustomerInfo): StoreSub {
@@ -128,6 +128,7 @@ export function storeSubFrom(info: CustomerInfo): StoreSub {
     willRenew: e?.willRenew ?? false,
     expiresAt: e?.expirationDate ? Date.parse(e.expirationDate) : null,
     managementURL: info.managementURL ?? null,
+    store: e?.store ?? null,
   };
 }
 

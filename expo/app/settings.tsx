@@ -162,7 +162,7 @@ export default function SettingsScreen() {
   const ins = useSafeAreaInsets();
   const router = useRouter();
   const referral = useMyReferral();
-  const { isPaid, hasStoreSub, subEndsAt, freeUntil, manageSubscription } = useTier();
+  const { isPaid, hasStoreSub, subEndsAt, freeUntil, manageSubscription, storeName } = useTier();
   const formatEndDate = (ts: number) => new Date(ts).toLocaleDateString(undefined, { month: "long", day: "numeric", year: "numeric" });
   const t = useT();
 
@@ -304,24 +304,24 @@ export default function SettingsScreen() {
               style={[s.card, { marginTop: 8, alignItems: "center" }]}
               onPress={() => {
                 if (subEndsAt) {
-                  Alert.alert("Auto-renew is off", `Your Unlimited access ends on ${formatEndDate(subEndsAt)}. You can turn it back on in Google Play.`, [
+                  Alert.alert("Auto-renew is off", `Your Unlimited access ends on ${formatEndDate(subEndsAt)}. You can turn it back on in ${storeName}.`, [
                     { text: "OK", style: "cancel" },
-                    { text: "Open Google Play", onPress: () => void manageSubscription() },
+                    { text: `Open ${storeName}`, onPress: () => void manageSubscription() },
                   ]);
                   return;
                 }
                 Alert.alert(
-                  "Cancel in Google Play",
-                  "Subscriptions are cancelled in Google Play. You keep Unlimited until the end of your billing period, then you're on the Free plan.",
+                  `Cancel in ${storeName}`,
+                  `Subscriptions are cancelled in ${storeName}. You keep Unlimited until the end of your billing period, then you're on the Free plan.`,
                   [
                     { text: "Keep Unlimited", style: "cancel" },
-                    { text: "Open Google Play", onPress: async () => { if (!(await manageSubscription())) Alert.alert("Couldn't open Google Play", "Open the Play Store → Payments & subscriptions → Subscriptions."); } },
+                    { text: `Open ${storeName}`, onPress: async () => { if (!(await manageSubscription())) Alert.alert("Couldn't open it", storeName === "Google Play" ? "Open the Play Store → Payments & subscriptions → Subscriptions." : "Use the manage link in your receipt email."); } },
                   ]
                 );
               }}
               testID="cancel-sub-settings"
             >
-              <Text style={[s.link, { color: Colors.primary }]}>{subEndsAt ? "Auto-renew off · manage in Google Play" : "Cancel subscription"}</Text>
+              <Text style={[s.link, { color: Colors.primary }]}>{subEndsAt ? `Auto-renew off · manage in ${storeName}` : "Cancel subscription"}</Text>
             </TouchableOpacity>
           )}
         </Section>

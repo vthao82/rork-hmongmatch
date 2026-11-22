@@ -18,7 +18,7 @@ export default function SubscriptionScreen() {
   const ins = useSafeAreaInsets();
   const router = useRouter();
   const t = useT();
-  const { isPaid, hasStoreSub, subEndsAt, priceLabel, purchaseUnlimited, restorePurchases, manageSubscription } = useTier();
+  const { isPaid, hasStoreSub, subEndsAt, priceLabel, purchaseUnlimited, restorePurchases, manageSubscription, storeName } = useTier();
   const [busy, setBusy] = useState<"buy" | "restore" | null>(null);
 
   const PERKS: Perk[] = UNLIMITED_FEATURES.map((label) => ({ label }));
@@ -62,10 +62,12 @@ export default function SubscriptionScreen() {
   const manageInStore = async () => {
     if (await manageSubscription()) return;
     Alert.alert(
-      "Couldn't open store",
-      Platform.OS === "ios"
-        ? "Open Settings → [Your Name] → Subscriptions to manage Hmong Date Unlimited."
-        : "Open the Google Play Store → Menu → Payments & subscriptions → Subscriptions to manage Hmong Date Unlimited."
+      "Couldn't open it",
+      storeName === "Google Play"
+        ? "Open the Google Play Store → Menu → Payments & subscriptions → Subscriptions to manage Hmong Date Unlimited."
+        : storeName === "the App Store"
+          ? "Open Settings → [Your Name] → Subscriptions to manage Hmong Date Unlimited."
+          : "Use the manage link in your receipt email."
     );
   };
 
@@ -135,7 +137,7 @@ export default function SubscriptionScreen() {
             {busy === "restore" ? (
               <ActivityIndicator color="rgba(255,255,255,0.7)" />
             ) : (
-              <Text style={s.restoreTxt}>Restore purchases</Text>
+              <Text style={s.restoreTxt}>{WEB ? "Refresh my plan" : "Restore purchases"}</Text>
             )}
           </TouchableOpacity>
           {hasStoreSub && (
@@ -145,7 +147,7 @@ export default function SubscriptionScreen() {
               testID="manage-subscription"
             >
               <Text style={s.restoreTxt}>
-                {WEB ? "Manage subscription" : `Manage subscription in ${Platform.OS === "ios" ? "App Store" : "Google Play"}`}
+                {storeName === "your billing page" ? "Manage subscription" : `Manage subscription in ${storeName.replace("the ", "")}`}
               </Text>
             </TouchableOpacity>
           )}
