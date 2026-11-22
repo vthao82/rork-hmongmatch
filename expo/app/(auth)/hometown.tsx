@@ -7,6 +7,7 @@ import OnboardingScreen from "@/components/onboarding/OnboardingScreen";
 import PillButton from "@/components/onboarding/PillButton";
 import { useOnboarding } from "@/providers/OnboardingProvider";
 import { useT } from "@/providers/LanguageProvider";
+import { WEB_SHEET, WEB_SHEET_WRAP } from "@/lib/webSetup";
 
 const COUNTRIES = [
   "United States", "Laos", "Thailand", "France", "Australia", "Canada",
@@ -151,8 +152,8 @@ export default function HometownScreen() {
       ) : null}
 
       <Modal visible={picker !== null} animationType="slide" transparent onRequestClose={() => setPicker(null)}>
-        <View style={s.modalWrap}>
-          <View style={s.modal}>
+        <View style={[s.modalWrap, WEB_SHEET_WRAP]}>
+          <View style={[s.modal, WEB_SHEET]}>
             <View style={s.modalHead}>
               <Text style={s.modalTitle}>Select {picker}</Text>
               <Pressable onPress={() => setPicker(null)}><X size={22} color={Colors.dark.text} /></Pressable>

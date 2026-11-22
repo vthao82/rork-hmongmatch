@@ -6,6 +6,7 @@ import OnboardingScreen from "@/components/onboarding/OnboardingScreen";
 import PillButton from "@/components/onboarding/PillButton";
 import { useOnboarding } from "@/providers/OnboardingProvider";
 import { useT } from "@/providers/LanguageProvider";
+import { WEB_DIALOG } from "@/lib/webSetup";
 import { clanFromLastName } from "@/lib/clanFromLastName";
 
 export default function NameScreen() {
@@ -119,7 +120,7 @@ export default function NameScreen() {
 
       <Modal visible={showWelcome} transparent animationType="fade" onRequestClose={onEditName}>
         <View style={s.backdrop}>
-          <Animated.View style={[s.card, { opacity: modalOpacity, transform: [{ scale: modalScale }] }]} testID="welcome-card">
+          <Animated.View style={[s.card, WEB_DIALOG, { opacity: modalOpacity, transform: [{ scale: modalScale }] }]} testID="welcome-card">
             <Animated.Text style={[s.wave, { transform: [{ rotate: waveRotate }] }]}>👋</Animated.Text>
             <Text style={s.welcomeTitle}>{t("welcomeName", { name: first })}</Text>
             <Text style={s.welcomeBody}>{t("welcomeBody")}</Text>

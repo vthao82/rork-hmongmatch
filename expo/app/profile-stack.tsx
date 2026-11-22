@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Pressable } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, Pressable, Platform } from "react-native";
 import { Stack, useRouter } from "expo-router";
 import { PhotoCarousel } from "@/components/PhotoCarousel";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -226,8 +226,9 @@ const s = StyleSheet.create({
   cn: { paddingHorizontal: 18, paddingTop: 20 },
   glass: { backgroundColor: "rgba(255,255,255,0.08)", borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", borderRadius: 20, padding: 18 },
   se: { marginBottom: 18 },
-  st: { fontSize: 12, fontWeight: "800" as const, color: Colors.goldLight, letterSpacing: 1.6, marginBottom: 10 },
-  bt: { fontSize: 17, color: "#FFF", lineHeight: 26, fontWeight: "500" as const },
+  // Website: section titles and text share one size and color
+  st: Platform.OS === "web" ? { fontSize: 15, fontWeight: "800" as const, color: "#FFF", letterSpacing: 0.4, marginBottom: 8 } : { fontSize: 12, fontWeight: "800" as const, color: Colors.goldLight, letterSpacing: 1.6, marginBottom: 10 },
+  bt: Platform.OS === "web" ? { fontSize: 15, color: "#FFF", lineHeight: 23, fontWeight: "500" as const } : { fontSize: 17, color: "#FFF", lineHeight: 26, fontWeight: "500" as const },
   dc: { gap: 14 },
   di: { flexDirection: "row", alignItems: "center", gap: 12 },
   dt: { fontSize: 15, color: "#FFF", flex: 1, fontWeight: "600" as const },

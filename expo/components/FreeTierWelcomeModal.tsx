@@ -4,6 +4,7 @@ import { Heart, X as XIcon, RefreshCw, Zap, Crown } from "lucide-react-native";
 import Colors from "@/constants/colors";
 import HmongLogo from "@/components/onboarding/HmongLogo";
 import { useT } from "@/providers/LanguageProvider";
+import { WEB_DIALOG } from "@/lib/webSetup";
 
 type Props = {
   visible: boolean;
@@ -25,7 +26,7 @@ export default function FreeTierWelcomeModal({ visible, onClose, onUpgrade }: Pr
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
       <View style={s.backdrop}>
-        <View style={s.card}>
+        <View style={[s.card, WEB_DIALOG]}>
           <HmongLogo width={140} />
           <Text style={s.title}>{t("freeTierTitle")}</Text>
           <Text style={s.sub}>{t("freeTierSub")}</Text>

@@ -6,6 +6,7 @@ import Colors from "@/constants/colors";
 import PajNtaubPattern from "./PajNtaubPattern";
 import ProgressBar from "./ProgressBar";
 import BackButton from "./BackButton";
+import { WEB_STEP_WIDTH } from "@/lib/webSetup";
 
 type Props = {
   children: ReactNode;
@@ -31,7 +32,7 @@ function OnboardingScreen({ children, step, total, showPattern = true, gradient,
       <StatusBar barStyle="light-content" />
       <LinearGradient colors={colors} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
       {showPattern && <PajNtaubPattern opacity={0.05} />}
-      <SafeAreaView style={s.safe} edges={["top", "left", "right"]}>
+      <SafeAreaView style={[s.safe, Platform.OS === "web" && s.webCol]} edges={["top", "left", "right"]}>
         {showBack && (
           <View style={s.backRow}>
             <BackButton onPress={onBack} />
@@ -65,6 +66,8 @@ function OnboardingScreen({ children, step, total, showPattern = true, gradient,
 const s = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.dark.bg },
   safe: { flex: 1 },
+  // Browsers: the step fills the app window; its content stays at a comfortable width
+  webCol: { width: "100%", maxWidth: WEB_STEP_WIDTH, alignSelf: "center" },
   flex: { flex: 1 },
   kb: { flex: 1 },
   scrollContent: { paddingHorizontal: 24, paddingTop: 20, paddingBottom: 120 },

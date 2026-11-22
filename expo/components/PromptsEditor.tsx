@@ -4,6 +4,7 @@ import { View, Text, StyleSheet, TouchableOpacity, TextInput, Modal, ScrollView 
 import { Plus, X, ChevronRight } from "lucide-react-native";
 import Colors from "@/constants/colors";
 import { PROMPTS, MAX_PROMPTS, type PromptAnswer } from "@/constants/prompts";
+import { WEB_SHEET, WEB_SHEET_WRAP } from "@/lib/webSetup";
 
 type Props = { value: PromptAnswer[]; onChange: (v: PromptAnswer[]) => void };
 
@@ -55,8 +56,8 @@ export default function PromptsEditor({ value, onChange }: Props) {
       )}
 
       <Modal visible={picking !== null} transparent animationType="slide" onRequestClose={() => setPicking(null)}>
-        <View style={s.backdrop}>
-          <View style={s.sheet}>
+        <View style={[s.backdrop, WEB_SHEET_WRAP]}>
+          <View style={[s.sheet, WEB_SHEET]}>
             <View style={s.sheetHead}>
               <Text style={s.sheetTitle}>Pick a prompt</Text>
               <TouchableOpacity onPress={() => setPicking(null)} testID="prompt-picker-close"><X size={22} color="#FFF" /></TouchableOpacity>

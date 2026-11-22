@@ -18,7 +18,10 @@ import { NewBadge } from "@/components/NewBadge";
 import { CATEGORY_GROUPS } from "@/constants/categories";
 
 const SW = Dimensions.get("window").width;
-const CW = (SW - 16 * 2 - 12) / 2;
+// Wide browser windows: same 4-per-row size as the Interests cards
+const PER_ROW = SW >= 900 ? 4 : 2;
+const CW = (SW - 16 * 2 - 12 * (PER_ROW - 1)) / PER_ROW;
+const CH = PER_ROW === 4 ? CW : CW * 1.4;
 
 const CATEGORY_MAP: Record<string, { match: (p: Profile) => boolean; subtitle: string }> = {
   "Foodies": { match: p => p.interests.some(i => /food|cook|pho|bbq/i.test(i)), subtitle: "People who love great food" },
@@ -252,7 +255,7 @@ const s = StyleSheet.create({
   capTxt: { color: Colors.accent, fontSize: 12, fontWeight: "700" as const },
   scroll: { paddingHorizontal: 16 },
   grid: { flexDirection: "row", flexWrap: "wrap", gap: 12 },
-  card: { height: CW * 1.4, borderRadius: 16, overflow: "hidden", backgroundColor: "#111" },
+  card: { height: CH, borderRadius: 16, overflow: "hidden", backgroundColor: "#111" },
   img: { ...StyleSheet.absoluteFillObject },
   ov: { position: "absolute", left: 0, right: 0, bottom: 0, height: "55%", backgroundColor: "rgba(0,0,0,0.5)" },
   gradOv: { position: "absolute", left: 0, right: 0, bottom: 0, height: "40%", backgroundColor: "rgba(0,0,0,0.55)" },

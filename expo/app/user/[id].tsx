@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from "react-native";
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Platform } from "react-native";
 import { useLocalSearchParams, useRouter, Stack } from "expo-router";
 import { PhotoCarousel } from "@/components/PhotoCarousel";
 import { MapPin, Globe, Heart, MessageCircle, X, MoreVertical, ArrowLeft } from "lucide-react-native";
@@ -290,8 +290,9 @@ const s = StyleSheet.create({
   se: { marginBottom: 18 },
   commentLink: { alignSelf: "center" as const, marginTop: -8, marginBottom: 20, paddingVertical: 6 },
   commentLinkText: { color: Colors.goldLight, fontWeight: "700" as const, fontSize: 14 },
-  st: { fontSize: 12, fontWeight: "800" as const, color: Colors.goldLight, letterSpacing: 1.6, marginBottom: 10 },
-  bt: { fontSize: 17, color: "#FFF", lineHeight: 26, fontWeight: "500" as const },
+  // Website: section titles and text share one size and color
+  st: Platform.OS === "web" ? { fontSize: 15, fontWeight: "800" as const, color: "#FFF", letterSpacing: 0.4, marginBottom: 8 } : { fontSize: 12, fontWeight: "800" as const, color: Colors.goldLight, letterSpacing: 1.6, marginBottom: 10 },
+  bt: Platform.OS === "web" ? { fontSize: 15, color: "#FFF", lineHeight: 23, fontWeight: "500" as const } : { fontSize: 17, color: "#FFF", lineHeight: 26, fontWeight: "500" as const },
   dc: { gap: 14 },
   di: { flexDirection: "row" as const, alignItems: "center" as const, gap: 12 },
   dt: { fontSize: 15, color: "#FFF", flex: 1, fontWeight: "600" as const },

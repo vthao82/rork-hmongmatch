@@ -7,6 +7,11 @@ import OnboardingScreen from "@/components/onboarding/OnboardingScreen";
 import PillButton from "@/components/onboarding/PillButton";
 import { useOnboarding, LookingForId } from "@/providers/OnboardingProvider";
 import { useT } from "@/providers/LanguageProvider";
+import { Heart, HeartHandshake, Wine, PartyPopper, Hand, CircleHelp } from "lucide-react-native";
+
+const WEB = Platform.OS === "web";
+// Browsers can't always draw emoji (e.g. some Windows setups), so the website uses icons
+const ICONS: Record<LookingForId, typeof Heart> = { long: Heart, "long-open": HeartHandshake, "short-open": Wine, short: PartyPopper, friends: Hand, unsure: CircleHelp };
 
 const OPTIONS: { id: LookingForId; emoji: string; label: string }[] = [
   { id: "long", emoji: "💘", label: "Long-term partner" },
@@ -49,10 +54,10 @@ export default function LookingForScreen() {
             <Pressable
               key={o.id}
               onPress={() => pick(o.id)}
-              style={[s.tile, active && s.tileActive]}
+              style={[s.tile, WEB && s.tileWeb, active && s.tileActive]}
               testID={`lf-${o.id}`}
             >
-              <Text style={s.emoji}>{o.emoji}</Text>
+              {WEB ? (() => { const I = ICONS[o.id]; return <View style={s.iconWrap}><I size={30} color={Colors.goldLight} /></View>; })() : <Text style={s.emoji}>{o.emoji}</Text>}
               <Text style={s.label} numberOfLines={2}>{o.label}</Text>
             </Pressable>
           );
@@ -76,5 +81,7 @@ const s = StyleSheet.create({
   },
   tileActive: { borderColor: Colors.crimson, backgroundColor: "rgba(192,21,47,0.08)" },
   emoji: { fontSize: 38 },
+  tileWeb: { width: "31.5%", aspectRatio: 1.15 },
+  iconWrap: { width: 54, height: 54, borderRadius: 27, backgroundColor: "rgba(212,168,67,0.14)", alignItems: "center", justifyContent: "center" },
   label: { color: Colors.dark.text, fontSize: 15, fontWeight: "700" as const, letterSpacing: -0.2 },
 });

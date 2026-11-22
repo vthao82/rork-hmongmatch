@@ -304,7 +304,7 @@ export default function SettingsScreen() {
               style={[s.card, { marginTop: 8, alignItems: "center" }]}
               onPress={() => {
                 if (subEndsAt) {
-                  Alert.alert("Auto-renew is off", `Your Unlimited access ends on ${formatEndDate(subEndsAt)}. You can turn it back on in ${storeName}.`, [
+                  Alert.alert("Auto-renew is off", `Your Unlimited access ends on ${formatEndDate(subEndsAt)}. You keep Unlimited until then. Turn auto-renew back on in ${storeName}, or email support@hmongdate.com if you cancelled by mistake.`, [
                     { text: "OK", style: "cancel" },
                     { text: `Open ${storeName}`, onPress: () => void manageSubscription() },
                   ]);
@@ -312,7 +312,7 @@ export default function SettingsScreen() {
                 }
                 Alert.alert(
                   `Cancel in ${storeName}`,
-                  `Subscriptions are cancelled in ${storeName}. You keep Unlimited until the end of your billing period, then you're on the Free plan.`,
+                  `Subscriptions are cancelled in ${storeName}. You keep Unlimited until the end of the month you already paid for, then you're on the Free plan.\n\nCancelled by mistake? Email support@hmongdate.com and we'll look into it.`,
                   [
                     { text: "Keep Unlimited", style: "cancel" },
                     { text: `Open ${storeName}`, onPress: async () => { if (!(await manageSubscription())) Alert.alert("Couldn't open it", storeName === "Google Play" ? "Open the Play Store → Payments & subscriptions → Subscriptions." : "Use the manage link in your receipt email."); } },
