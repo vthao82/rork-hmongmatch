@@ -227,8 +227,8 @@ const s = StyleSheet.create({
   glass: { backgroundColor: "rgba(255,255,255,0.08)", borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", borderRadius: 20, padding: 18 },
   se: { marginBottom: 18 },
   // Website: section titles and text share one size and color
-  st: Platform.OS === "web" ? { fontSize: 15, fontWeight: "800" as const, color: "#FFF", letterSpacing: 0.4, marginBottom: 8 } : { fontSize: 12, fontWeight: "800" as const, color: Colors.goldLight, letterSpacing: 1.6, marginBottom: 10 },
-  bt: Platform.OS === "web" ? { fontSize: 15, color: "#FFF", lineHeight: 23, fontWeight: "500" as const } : { fontSize: 17, color: "#FFF", lineHeight: 26, fontWeight: "500" as const },
+  st: Platform.OS === "web" ? { fontSize: 13, fontWeight: "700" as const, color: Colors.goldLight, marginBottom: 6 } : { fontSize: 12, fontWeight: "800" as const, color: Colors.goldLight, letterSpacing: 1.6, marginBottom: 10 },
+  bt: Platform.OS === "web" ? { fontSize: 13, color: Colors.goldLight, lineHeight: 19, fontWeight: "700" as const } : { fontSize: 17, color: "#FFF", lineHeight: 26, fontWeight: "500" as const },
   dc: { gap: 14 },
   di: { flexDirection: "row", alignItems: "center", gap: 12 },
   dt: { fontSize: 15, color: "#FFF", flex: 1, fontWeight: "600" as const },

@@ -1,8 +1,8 @@
-import React, { useMemo, useRef, useState } from "react";
-import { Animated, Modal, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from "react-native";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Animated, Modal, Platform, StyleSheet, Text, TouchableOpacity, View, useWindowDimensions } from "react-native";
 import { Gesture, GestureDetector, GestureHandlerRootView, FlatList } from "react-native-gesture-handler";
 import { Image } from "expo-image";
-import { X } from "lucide-react-native";
+import { X, ChevronLeft, ChevronRight } from "lucide-react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const MAX_ZOOM = 4;
@@ -76,7 +76,49 @@ function ZoomableImage({ uri, width, height, onZoomChange }: { uri: string; widt
 type Props = { photos: string[]; startIndex: number; visible: boolean; onClose: () => void };
 
 /** Full-screen photo viewer: swipe between photos, pinch or double-tap to zoom. */
-export function PhotoViewer({ photos, startIndex, visible, onClose }: Props) {
+export function PhotoViewer(props: Props) {
+  return Platform.OS === "web" ? <WebPhotoViewer {...props} /> : <NativePhotoViewer {...props} />;
+}
+
+/** Browsers: one photo at a time in a fixed-size frame, with arrow buttons and keyboard arrows. */
+function WebPhotoViewer({ photos, startIndex, visible, onClose }: Props) {
+  const [index, setIndex] = useState<number>(startIndex);
+  const n = photos.length;
+  const go = (d: number) => setIndex((i) => (i + d + n) % n);
+  useEffect(() => { if (visible) setIndex(startIndex); }, [visible, startIndex]);
+  useEffect(() => {
+    if (!visible) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft") go(-1);
+      else if (e.key === "ArrowRight") go(1);
+      else if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [visible, n]);
+  if (!n) return null;
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={st.webBackdrop} testID="photo-viewer">
+        <TouchableOpacity style={StyleSheet.absoluteFill} onPress={onClose} activeOpacity={1} />
+        <View style={st.webFrame}>
+          <Image source={{ uri: photos[index] }} style={st.webImg} contentFit="contain" transition={150} testID="photo-viewer-image" />
+        </View>
+        {n > 1 && (
+          <>
+            <TouchableOpacity style={[st.arrow, { left: 24 }]} onPress={() => go(-1)} testID="photo-viewer-prev"><ChevronLeft size={30} color="#FFF" /></TouchableOpacity>
+            <TouchableOpacity style={[st.arrow, { right: 24 }]} onPress={() => go(1)} testID="photo-viewer-next"><ChevronRight size={30} color="#FFF" /></TouchableOpacity>
+            <View style={[st.counter, { top: 24 }]} testID="photo-viewer-counter"><Text style={st.counterTxt}>{index + 1}/{n}</Text></View>
+          </>
+        )}
+        <TouchableOpacity style={[st.close, { top: 20 }]} onPress={onClose} testID="photo-viewer-close"><X size={22} color="#FFF" /></TouchableOpacity>
+      </View>
+    </Modal>
+  );
+}
+
+function NativePhotoViewer({ photos, startIndex, visible, onClose }: Props) {
   const { width, height } = useWindowDimensions();
   const ins = useSafeAreaInsets();
   const [index, setIndex] = useState<number>(startIndex);
@@ -116,5 +158,9 @@ const st = StyleSheet.create({
   close: { position: "absolute", left: 16, width: 40, height: 40, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.15)", alignItems: "center", justifyContent: "center" },
   counter: { position: "absolute", right: 16, backgroundColor: "rgba(255,255,255,0.15)", paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999 },
   counterTxt: { color: "#FFF", fontSize: 12, fontWeight: "700" as const },
+  webBackdrop: { flex: 1, backgroundColor: "rgba(0,0,0,0.92)", alignItems: "center", justifyContent: "center" },
+  webFrame: { width: "min(860px, 80vw)" as unknown as number, height: "82vh" as unknown as number, borderRadius: 16, overflow: "hidden", backgroundColor: "#000" },
+  webImg: { width: "100%", height: "100%" },
+  arrow: { position: "absolute", top: "50%" as unknown as number, marginTop: -28, width: 56, height: 56, borderRadius: 28, backgroundColor: "rgba(255,255,255,0.16)", alignItems: "center", justifyContent: "center" },
   hint: { position: "absolute", alignSelf: "center", color: "rgba(255,255,255,0.55)", fontSize: 12 },
 });
